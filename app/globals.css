@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --muted: #fafafa;
+  --muted-foreground: #64748b;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --accent-pink: #fff1f5;
+  --navy: #0b1b3a;
+  --border: #eaeaea;
+  --ring: #0b1b3a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --destructive: #b91c1c;
+  --radius-sm: 12px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04),
+    0 8px 24px rgb(15 23 42 / 0.06);
+  /* Manrope + Cormorant Garamond via Google Fonts when online; fallbacks always work */
+  --font-manrope: var(--font-manrope-override, "Manrope"), ui-sans-serif, system-ui,
+    sans-serif;
+  --font-cormorant: var(
+      --font-cormorant-override,
+      "Cormorant Garamond"
+    ),
+    ui-serif, Georgia, "Times New Roman", serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent-pink: var(--accent-pink);
+  --color-navy: var(--navy);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-destructive: var(--destructive);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --font-sans: var(--font-manrope);
+  --font-serif: var(--font-cormorant);
+  --shadow-soft: var(--shadow-soft);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+}
+
+.font-serif-display {
+  font-family: var(--font-cormorant), ui-serif, Georgia, serif;
+}
