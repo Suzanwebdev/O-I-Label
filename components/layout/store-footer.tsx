@@ -3,7 +3,7 @@ import { Container } from "@/components/store/container";
 import { HomeNewsletter } from "@/components/home/newsletter-block";
 
 const colLabel =
-  "mb-5 text-[10px] font-medium uppercase tracking-[0.28em] text-muted-foreground";
+  "mb-5 text-[10px] font-medium uppercase tracking-[0.28em] text-white/55";
 
 const cols = [
   {
@@ -40,20 +40,20 @@ export function StoreFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-foreground/[0.06] bg-[#f9f8f6]">
+    <footer className="border-t border-white/10 bg-[#0b1220] text-white">
       <Container className="py-16 md:py-[4.5rem]">
         <div className="grid gap-14 lg:grid-cols-12 lg:gap-0 lg:items-start">
-          <div className="lg:col-span-5 lg:border-r lg:border-foreground/[0.07] lg:pr-10 xl:pr-14">
+          <div className="lg:col-span-5 lg:border-r lg:border-white/10 lg:pr-10 xl:pr-14">
             <p className={colLabel}>Newsletter</p>
             <div className="max-w-[22rem] space-y-4">
-              <p className="font-serif-display text-[1.375rem] leading-[1.2] tracking-[-0.02em] text-foreground md:text-[1.5rem]">
+              <p className="font-serif-display text-[1.375rem] leading-[1.2] tracking-[-0.02em] text-white md:text-[1.5rem]">
                 Join the VIP List
               </p>
-              <p className="text-[13px] leading-[1.65] text-muted-foreground">
+              <p className="text-[13px] leading-[1.65] text-white/70">
                 Be the first to shop new arrivals, get access to exclusive
                 offers and sales.
               </p>
-              <div className="pt-1">
+              <div className="pt-1 [&_input]:border-white/20 [&_input]:bg-white/5 [&_input]:text-white [&_input]:placeholder:text-white/40 [&_input:focus-visible]:ring-white/30 [&_[data-slot='select-trigger']]:border-white/20 [&_[data-slot='select-trigger']]:bg-white/5 [&_[data-slot='select-trigger']]:text-white/80 [&_button]:border-white/25 [&_button]:text-white [&_button:hover]:bg-white [&_button:hover]:text-[#0b1220]">
                 <HomeNewsletter compact refined />
               </div>
             </div>
@@ -71,7 +71,7 @@ export function StoreFooter() {
                     <li key={`${col.title}-${l.label}`}>
                       <Link
                         href={l.href}
-                        className="inline-block text-[13px] leading-snug text-foreground/88 transition-colors duration-200 hover:text-navy"
+                        className="inline-block text-[13px] leading-snug text-white/82 transition-colors duration-200 hover:text-white"
                       >
                         {l.label}
                       </Link>
@@ -83,8 +83,8 @@ export function StoreFooter() {
           </nav>
         </div>
 
-        <div className="mt-16 border-t border-foreground/[0.07] pt-8 md:mt-[4.5rem] md:pt-10">
-          <p className="text-[11px] tracking-[0.06em] text-muted-foreground">
+        <div className="mt-16 border-t border-white/10 pt-8 md:mt-[4.5rem] md:pt-10">
+          <p className="text-[11px] tracking-[0.06em] text-white/50">
             © {year} O & I Label
           </p>
         </div>
