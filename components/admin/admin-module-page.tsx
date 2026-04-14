@@ -23,7 +23,7 @@ export function AdminModulePage({
         {ctaHref && ctaLabel ? (
           <Link
             href={ctaHref}
-            className="inline-flex rounded-full bg-[#b9195f] px-4 py-2 text-sm font-medium text-white hover:bg-[#a11453]"
+            className="inline-flex rounded-full bg-black px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
           >
             {ctaLabel}
           </Link>

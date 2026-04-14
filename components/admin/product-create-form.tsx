@@ -521,8 +521,8 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
               onClick={() => toggleBadge(badge)}
               className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 badges.includes(badge)
-                  ? "border-[#b9195f] bg-[#b9195f]/10 text-[#861246]"
-                  : "border-border text-muted-foreground hover:border-foreground/40"
+                  ? "border-black bg-neutral-100 text-black"
+                  : "border-border text-muted-foreground hover:border-black/30"
               }`}
               disabled={busy}
             >

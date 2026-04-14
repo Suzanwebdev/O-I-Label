@@ -42,22 +42,22 @@ export function AdminTopbar() {
   const meta = resolveMeta(pathname);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-black/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="flex h-14 items-center justify-between px-4 md:px-6">
-        <p className="text-sm font-medium text-foreground">{meta.title}</p>
+        <p className="font-serif-display text-base font-semibold tracking-tight text-black">{meta.title}</p>
         <div className="flex items-center gap-2">
           {meta.ctaHref && meta.ctaLabel ? (
-            <Button asChild size="sm" className="rounded-full bg-[#b9195f] hover:bg-[#a11453]">
+            <Button asChild size="sm" className="rounded-full bg-black text-white hover:bg-neutral-800">
               <Link href={meta.ctaHref} className="gap-1">
                 <Plus className="h-4 w-4" />
                 {meta.ctaLabel}
               </Link>
             </Button>
           ) : null}
-          <Button variant="ghost" size="icon" aria-label="Notifications">
+          <Button variant="ghost" size="icon" aria-label="Notifications" className="text-neutral-700 hover:bg-neutral-100 hover:text-black">
             <Bell className="h-4 w-4" />
           </Button>
-          <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
+          <Link href="/" className="text-xs text-neutral-600 hover:text-black">
             View storefront
           </Link>
         </div>

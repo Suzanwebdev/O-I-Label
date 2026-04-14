@@ -9,8 +9,8 @@ function linkClass(active: boolean) {
   return cn(
     "block rounded-[var(--radius-md)] px-3 py-2 text-sm transition-colors",
     active
-      ? "bg-white/15 font-medium text-white"
-      : "text-white/75 hover:bg-white/10 hover:text-white"
+      ? "bg-white font-medium text-black"
+      : "text-neutral-400 hover:bg-neutral-900 hover:text-white"
   );
 }
 
@@ -51,7 +51,7 @@ export function SuperAdminMobileNav() {
               href={n.href}
               className={cn(
                 "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                active ? "bg-white text-navy" : "bg-white/10 text-white/90 hover:bg-white/20"
+                active ? "bg-white text-black" : "bg-neutral-800 text-white hover:bg-neutral-700"
               )}
             >
               {n.label}

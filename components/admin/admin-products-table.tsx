@@ -16,9 +16,9 @@ type StockFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
 type StatusFilter = "all" | "active" | "draft";
 
 function stockState(total: number): { label: string; className: string } {
-  if (total <= 0) return { label: "Out of stock", className: "border-red-200 bg-red-50 text-red-700" };
-  if (total <= 5) return { label: "Low stock", className: "border-amber-200 bg-amber-50 text-amber-700" };
-  return { label: "In stock", className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+  if (total <= 0) return { label: "Out of stock", className: "border-neutral-400 bg-neutral-200 text-black" };
+  if (total <= 5) return { label: "Low stock", className: "border-neutral-300 bg-neutral-100 text-black" };
+  return { label: "In stock", className: "border-neutral-200 bg-white text-black" };
 }
 
 export function AdminProductsTable({ products }: { products: AdminProductRow[] }) {

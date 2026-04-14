@@ -18,7 +18,7 @@ export default async function SuperAdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-navy text-white">
+    <div className="min-h-screen bg-black text-white">
       <SuperAdminHeader />
       <SuperAdminMobileNav />
       <Container className="flex flex-col gap-8 py-8 md:flex-row md:gap-10">

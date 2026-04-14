@@ -17,11 +17,11 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb]">
+    <div className="min-h-screen bg-neutral-50 text-foreground">
       <AdminTopbar />
       <div className="flex">
         <AdminSidebar />
-        <main className="min-w-0 flex-1 px-4 py-6 md:px-6 md:py-8">{children}</main>
+        <main className="min-w-0 flex-1 bg-neutral-50 px-4 py-6 md:px-6 md:py-8">{children}</main>
       </div>
     </div>
   );
