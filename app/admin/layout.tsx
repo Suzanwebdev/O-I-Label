@@ -3,6 +3,8 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminTopbar } from "@/components/admin/admin-topbar";
 import { getRequestAuthz } from "@/lib/authz";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({
   children,
 }: {
@@ -17,7 +19,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-foreground">
+    <div data-admin-layout className="admin-layout-root min-h-screen bg-neutral-50 text-foreground">
       <AdminTopbar />
       <div className="flex">
         <AdminSidebar />

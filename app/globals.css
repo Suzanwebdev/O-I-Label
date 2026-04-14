@@ -129,3 +129,42 @@ html {
 .font-serif-display {
   font-family: var(--font-cormorant), ui-serif, Georgia, serif;
 }
+
+/* —— Admin panel: enforce O & I Label black / white chrome (survives CSS order + stale bundles) —— */
+[data-admin-layout] aside.admin-sidebar {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-right-color: #262626 !important;
+}
+
+[data-admin-layout] aside.admin-sidebar .admin-sidebar-brand-sub {
+  color: #a3a3a3 !important;
+}
+
+[data-admin-layout] aside.admin-sidebar .admin-sidebar-group-label {
+  color: #737373 !important;
+}
+
+[data-admin-layout] aside.admin-sidebar a.admin-sidebar-link--active {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+[data-admin-layout] aside.admin-sidebar a.admin-sidebar-link:not(.admin-sidebar-link--active) {
+  color: #d4d4d4 !important;
+}
+
+[data-admin-layout] aside.admin-sidebar a.admin-sidebar-link:not(.admin-sidebar-link--active):hover {
+  background-color: #171717 !important;
+  color: #ffffff !important;
+}
+
+[data-admin-layout] header.admin-topbar {
+  background-color: #ffffff !important;
+  border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+  color: #000000 !important;
+}
+
+[data-admin-layout] .admin-layout-root {
+  background-color: #fafafa !important;
+}

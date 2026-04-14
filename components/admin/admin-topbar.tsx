@@ -42,7 +42,7 @@ export function AdminTopbar() {
   const meta = resolveMeta(pathname);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-black/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <header className="admin-topbar sticky top-0 z-20 border-b border-black/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="flex h-14 items-center justify-between px-4 md:px-6">
         <p className="font-serif-display text-base font-semibold tracking-tight text-black">{meta.title}</p>
         <div className="flex items-center gap-2">
