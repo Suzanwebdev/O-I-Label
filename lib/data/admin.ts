@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { mockCategories } from "@/lib/mock-data";
 
 export type AdminCategory = {
   id: string;
@@ -80,7 +81,40 @@ export type AdminFeatureFlagsSnapshot = {
   maintenanceMode: boolean;
 };
 
+const DEFAULT_COLLECTIONS = [
+  { title: "New Arrivals", slug: "new-arrivals", is_smart: true },
+  { title: "Best Sellers", slug: "best-sellers", is_smart: true },
+  { title: "Shop The Look", slug: "shop-the-look", is_smart: false },
+  { title: "Occasion Edit", slug: "occasion-edit", is_smart: false },
+] as const;
+
+async function seedCategoriesIfEmpty() {
+  const supabase = createServiceRoleClient();
+  const { count } = await supabase.from("categories").select("id", { count: "exact", head: true });
+  if ((count ?? 0) > 0) return;
+
+  await supabase.from("categories").insert(
+    mockCategories.map((c, idx) => ({
+      slug: c.slug,
+      name: c.name,
+      description: null,
+      sort_order: idx,
+    }))
+  );
+}
+
+async function seedCollectionsIfEmpty() {
+  const supabase = createServiceRoleClient();
+  const { count } = await supabase.from("collections").select("id", { count: "exact", head: true });
+  if ((count ?? 0) > 0) return;
+
+  await supabase
+    .from("collections")
+    .insert(DEFAULT_COLLECTIONS.map((c) => ({ title: c.title, slug: c.slug, is_smart: c.is_smart })));
+}
+
 export async function listAdminCategories(): Promise<AdminCategory[]> {
+  await seedCategoriesIfEmpty();
   const supabase = createServiceRoleClient();
   const { data } = await supabase
     .from("categories")
@@ -90,6 +124,7 @@ export async function listAdminCategories(): Promise<AdminCategory[]> {
 }
 
 export async function listAdminCollections(): Promise<AdminCollection[]> {
+  await seedCollectionsIfEmpty();
   const supabase = createServiceRoleClient();
   const { data } = await supabase
     .from("collections")
