@@ -8,7 +8,7 @@ export function Section({
   return (
     <section
       className={cn(
-        "py-14 md:py-20 lg:py-24",
+        "scroll-reveal py-14 md:py-20 lg:py-24",
         muted && "bg-accent-pink/40",
         className
       )}

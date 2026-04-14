@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AtSign, MessageCircle } from "lucide-react";
 import { Container } from "@/components/store/container";
 import { HomeNewsletter } from "@/components/home/newsletter-block";
 
@@ -36,11 +37,24 @@ const cols = [
   },
 ];
 
+const socialLinks = [
+  {
+    href: "https://www.instagram.com/outfitsideas_gh?igsh=MTdqcTljZm00ZGQwbw%3D%3D&utm_source=qr",
+    label: "Instagram",
+    icon: AtSign,
+  },
+  {
+    href: "https://api.whatsapp.com/send?phone=233503163721&text=Hello%20O%20%26%20I%20Label%2C%20I%20need%20help%20with%20an%20order.",
+    label: "WhatsApp",
+    icon: MessageCircle,
+  },
+];
+
 export function StoreFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-white/10 bg-[#0b1220] text-white">
+    <footer className="border-t border-white/10 bg-black text-white">
       <Container className="py-16 md:py-[4.5rem]">
         <div className="grid gap-14 lg:grid-cols-12 lg:gap-0 lg:items-start">
           <div className="lg:col-span-5 lg:border-r lg:border-white/10 lg:pr-10 xl:pr-14">
@@ -53,8 +67,8 @@ export function StoreFooter() {
                 Be the first to shop new arrivals, get access to exclusive
                 offers and sales.
               </p>
-              <div className="pt-1 [&_input]:border-white/20 [&_input]:bg-white/5 [&_input]:text-white [&_input]:placeholder:text-white/40 [&_input:focus-visible]:ring-white/30 [&_[data-slot='select-trigger']]:border-white/20 [&_[data-slot='select-trigger']]:bg-white/5 [&_[data-slot='select-trigger']]:text-white/80 [&_button]:border-white/25 [&_button]:text-white [&_button:hover]:bg-white [&_button:hover]:text-[#0b1220]">
-                <HomeNewsletter compact refined />
+              <div className="pt-1">
+                <HomeNewsletter compact refined dark />
               </div>
             </div>
           </div>
@@ -83,10 +97,25 @@ export function StoreFooter() {
           </nav>
         </div>
 
-        <div className="mt-16 border-t border-white/10 pt-8 md:mt-[4.5rem] md:pt-10">
-          <p className="text-[11px] tracking-[0.06em] text-white/50">
-            © {year} O & I Label
-          </p>
+        <div className="mt-16 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-8 md:mt-[4.5rem] md:pt-10">
+          <p className="text-[11px] tracking-[0.06em] text-white/50">© {year} O & I Label</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {socialLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1.5 text-xs text-white/85 transition-colors hover:border-white hover:bg-white hover:text-black"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </a>
+              );
+            })}
+          </div>
         </div>
       </Container>
     </footer>

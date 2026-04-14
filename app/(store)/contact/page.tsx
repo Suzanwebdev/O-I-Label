@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageCircle, Mail } from "lucide-react";
+import { MessageCircle, Mail, AtSign } from "lucide-react";
 
 export default function ContactPage() {
   return (
@@ -19,13 +19,22 @@ export default function ContactPage() {
             WhatsApp. For partnerships and press, use the form.
           </p>
           <a
-            href="https://wa.me/233000000000"
+            href="https://api.whatsapp.com/send?phone=233503163721&text=Hello%20O%20%26%20I%20Label%2C%20I%20need%20help%20with%20an%20order."
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-muted/40 p-4 text-sm font-medium hover:border-navy"
           >
             <MessageCircle className="h-5 w-5 text-navy" />
             WhatsApp support
+          </a>
+          <a
+            href="https://www.instagram.com/outfitsideas_gh?igsh=MTdqcTljZm00ZGQwbw%3D%3D&utm_source=qr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-muted/40 p-4 text-sm font-medium hover:border-navy"
+          >
+            <AtSign className="h-5 w-5 text-navy" />
+            Instagram: @outfitsideas_gh
           </a>
           <a
             href="mailto:hello@oilabel.com"

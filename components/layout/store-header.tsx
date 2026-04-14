@@ -42,7 +42,26 @@ export function StoreHeader() {
   const router = useRouter();
   const { lines, openCart, toggleCart } = useCart();
   const [q, setQ] = React.useState("");
+  const [isScrolled, setIsScrolled] = React.useState(false);
   const count = lines.reduce((n, l) => n + l.quantity, 0);
+
+  React.useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        setIsScrolled(window.scrollY > 14);
+        raf = 0;
+      });
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, []);
 
   function onSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -51,8 +70,19 @@ export function StoreHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <Container className="flex h-16 items-center gap-4 md:h-[4.5rem]">
+    <header
+      className={cn(
+        "sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
+        "transition-[background-color,box-shadow] duration-300",
+        isScrolled && "bg-background/90 shadow-[0_10px_30px_rgb(15_23_42_/_0.08)]"
+      )}
+    >
+      <Container
+        className={cn(
+          "flex items-center gap-4 transition-[height,padding] duration-300",
+          isScrolled ? "h-14 md:h-16" : "h-16 md:h-[4.5rem]"
+        )}
+      >
         <Sheet>
           <SheetTrigger asChild className="lg:hidden">
             <Button variant="ghost" size="icon" aria-label="Open menu">
