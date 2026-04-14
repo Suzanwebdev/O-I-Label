@@ -39,12 +39,14 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 On every push to `main`, GitHub Actions runs `.github/workflows/vercel-production.yml`.
 
-**One secret required:** in GitHub → **Settings → Secrets and variables → Actions**, add:
+**Recommended (most reliable):** add a repository secret named **`VERCEL_DEPLOY_HOOK`** whose value is the **Deploy Hook URL** from Vercel:
 
-- **`VERCEL_TOKEN`** — create at [vercel.com/account/tokens](https://vercel.com/account/tokens). The token must be able to deploy the **o-i-label** project (same account/team as in Vercel).
+1. Open the **o-i-label** project on Vercel → **Settings** → **Git** → **Deploy Hooks**
+2. **Create Hook** (name e.g. `github-main`, branch **Production**: `main`)
+3. Copy the hook URL → GitHub → **Settings** → **Secrets and variables** → **Actions** → **New repository secret** → name **`VERCEL_DEPLOY_HOOK`**, paste URL
 
-The workflow uses **committed** `.vercel/project.json` (project + team IDs). You do **not** need `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` in GitHub anymore.
+The hook URL embeds authorization, so you avoid CLI token / scope problems.
 
-Builds run on **Vercel** using environment variables you already set in the Vercel project dashboard.
+**Alternative:** secret **`VERCEL_TOKEN`** only (from [vercel.com/account/tokens](https://vercel.com/account/tokens)), plus committed **`.vercel/project.json`** in this repo (already included).
 
-If deploys still fail, regenerate `VERCEL_TOKEN`, or connect the repo under **Vercel → Project → Settings → Git** so Vercel deploys from Git directly.
+**Also:** under **Vercel → Project → Settings → Git**, connect **Suzanwebdev/O-I-Label** and production branch **`main`** so Vercel can deploy from Git even when Actions is misconfigured.

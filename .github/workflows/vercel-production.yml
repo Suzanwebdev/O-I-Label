@@ -17,7 +17,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # `.vercel/project.json` is committed so only VERCEL_TOKEN is required.
-      # Vercel builds in the cloud using env vars from the Vercel project dashboard.
+      # Prefer a Deploy Hook (Vercel → Project → Settings → Git → Deploy Hooks): no CLI token issues.
+      # Otherwise uses VERCEL_TOKEN + committed `.vercel/project.json`.
       - name: Deploy to Vercel (production)
-        run: npx --yes vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${VERCEL_DEPLOY_HOOK:-}" ]; then
+            echo "Triggering production deploy via Deploy Hook…"
+            curl -fsS -X POST "$VERCEL_DEPLOY_HOOK"
+            exit 0
+          fi
+          if [ -n "${VERCEL_TOKEN:-}" ]; then
+            echo "Deploying with Vercel CLI…"
+            npx --yes vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN"
+            exit 0
+          fi
+          echo "::error::Add a GitHub Actions secret: VERCEL_DEPLOY_HOOK (recommended) or VERCEL_TOKEN."
+          echo "Deploy hook: Vercel dashboard → o-i-label → Settings → Git → Deploy Hooks → Create (Production branch)."
+          echo "Token (alternative): https://vercel.com/account/tokens"
+          exit 1
