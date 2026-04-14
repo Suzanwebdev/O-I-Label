@@ -39,8 +39,12 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 This repo includes `.github/workflows/vercel-production.yml` and deploys to Vercel production on every push to `main`.
 
-Set these GitHub repository secrets before the workflow can deploy:
+Set these **GitHub → Settings → Secrets and variables → Actions** repository secrets (values must match your Vercel project):
 
-- `VERCEL_TOKEN`: a Vercel personal token
-- `VERCEL_ORG_ID`: `suzanwebdev-6773s-projects`
-- `VERCEL_PROJECT_ID`: `prj_zHiA0csAwJYZISjI55HOPzpASkF8`
+- `VERCEL_TOKEN` — [Vercel account → Tokens](https://vercel.com/account/tokens) (create a token with access to this project)
+- `VERCEL_ORG_ID` — Vercel project **Settings → General → Team / Organization ID**
+- `VERCEL_PROJECT_ID` — Vercel project **Settings → General → Project ID**
+
+If pushes update GitHub but **production never changes**, open **Actions → Deploy to Vercel (Production)** and read the failed step log. A bad or expired `VERCEL_TOKEN` is the most common cause.
+
+**Alternative:** In the Vercel dashboard, connect this GitHub repo under **Project → Settings → Git** so Vercel deploys on every push even when the Action is turned off or misconfigured.
