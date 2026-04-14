@@ -35,16 +35,16 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-## Automatic Vercel Deploys
+## Automatic Vercel deploys
 
-This repo includes `.github/workflows/vercel-production.yml` and deploys to Vercel production on every push to `main`.
+On every push to `main`, GitHub Actions runs `.github/workflows/vercel-production.yml`.
 
-Set these **GitHub → Settings → Secrets and variables → Actions** repository secrets (values must match your Vercel project):
+**One secret required:** in GitHub → **Settings → Secrets and variables → Actions**, add:
 
-- `VERCEL_TOKEN` — [Vercel account → Tokens](https://vercel.com/account/tokens) (create a token with access to this project)
-- `VERCEL_ORG_ID` — Vercel project **Settings → General → Team / Organization ID**
-- `VERCEL_PROJECT_ID` — Vercel project **Settings → General → Project ID**
+- **`VERCEL_TOKEN`** — create at [vercel.com/account/tokens](https://vercel.com/account/tokens). The token must be able to deploy the **o-i-label** project (same account/team as in Vercel).
 
-If pushes update GitHub but **production never changes**, open **Actions → Deploy to Vercel (Production)** and read the failed step log. A bad or expired `VERCEL_TOKEN` is the most common cause.
+The workflow uses **committed** `.vercel/project.json` (project + team IDs). You do **not** need `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` in GitHub anymore.
 
-**Alternative:** In the Vercel dashboard, connect this GitHub repo under **Project → Settings → Git** so Vercel deploys on every push even when the Action is turned off or misconfigured.
+Builds run on **Vercel** using environment variables you already set in the Vercel project dashboard.
+
+If deploys still fail, regenerate `VERCEL_TOKEN`, or connect the repo under **Vercel → Project → Settings → Git** so Vercel deploys from Git directly.

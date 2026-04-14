@@ -33,11 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# vercel
-.vercel
+# vercel (commit project.json so CI can deploy; never commit tokens)
+.vercel/*
+!.vercel/project.json
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-.vercel
