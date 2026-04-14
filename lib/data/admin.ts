@@ -46,6 +46,40 @@ export type AdminAnalyticsSnapshot = {
   activeProducts: number;
 };
 
+export type AdminDashboardSnapshot = {
+  revenue30d: number;
+  orders30d: number;
+  aov30d: number;
+  paidRatePct: number;
+};
+
+export type AdminBlogPost = {
+  id: string;
+  slug: string;
+  title: string;
+  published: boolean;
+  published_at: string | null;
+  created_at: string;
+};
+
+export type AdminContentSnapshot = {
+  blogCount: number;
+  publishedBlogCount: number;
+  policyCount: number;
+  hasHomepageConfig: boolean;
+};
+
+export type AdminTeamMember = {
+  user_id: string;
+  email: string;
+  role: "superadmin" | "admin" | "staff";
+};
+
+export type AdminFeatureFlagsSnapshot = {
+  featureFlags: Record<string, unknown>;
+  maintenanceMode: boolean;
+};
+
 export async function listAdminCategories(): Promise<AdminCategory[]> {
   const supabase = createServiceRoleClient();
   const { data } = await supabase
@@ -128,5 +162,124 @@ export async function getAnalyticsSnapshot(): Promise<AdminAnalyticsSnapshot> {
     grossRevenue,
     activeProducts: activeProducts ?? 0,
   };
+}
+
+export async function getDashboardSnapshot(): Promise<AdminDashboardSnapshot> {
+  const supabase = createServiceRoleClient();
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const iso = since.toISOString();
+
+  const [{ count: orders30d }, { count: paid30d }, { data: paidTotals }] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", iso),
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", iso)
+      .eq("status", "paid"),
+    supabase
+      .from("orders")
+      .select("total_ghs")
+      .gte("created_at", iso)
+      .eq("status", "paid"),
+  ]);
+
+  const revenue30d = (paidTotals ?? []).reduce((sum, row) => sum + Number(row.total_ghs ?? 0), 0);
+  const paidCount = paid30d ?? 0;
+  const orderCount = orders30d ?? 0;
+
+  return {
+    revenue30d,
+    orders30d: orderCount,
+    aov30d: paidCount > 0 ? revenue30d / paidCount : 0,
+    paidRatePct: orderCount > 0 ? (paidCount / orderCount) * 100 : 0,
+  };
+}
+
+export async function listAdminBlogPosts(): Promise<AdminBlogPost[]> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
+    .from("blog_posts")
+    .select("id, slug, title, published, published_at, created_at")
+    .order("created_at", { ascending: false })
+    .limit(40);
+
+  return (data ?? []) as AdminBlogPost[];
+}
+
+export async function getAdminContentSnapshot(): Promise<AdminContentSnapshot> {
+  const supabase = createServiceRoleClient();
+  const [{ count: blogCount }, { count: publishedBlogCount }, { count: policyCount }, { data: homeRow }] =
+    await Promise.all([
+      supabase.from("blog_posts").select("id", { count: "exact", head: true }),
+      supabase.from("blog_posts").select("id", { count: "exact", head: true }).eq("published", true),
+      supabase.from("policy_pages").select("id", { count: "exact", head: true }),
+      supabase.from("home_content").select("id").eq("id", 1).maybeSingle(),
+    ]);
+
+  return {
+    blogCount: blogCount ?? 0,
+    publishedBlogCount: publishedBlogCount ?? 0,
+    policyCount: policyCount ?? 0,
+    hasHomepageConfig: Boolean(homeRow),
+  };
+}
+
+export async function getHomepageSectionsJson(): Promise<string> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase.from("home_content").select("sections").eq("id", 1).maybeSingle();
+  return JSON.stringify(data?.sections ?? {}, null, 2);
+}
+
+export async function getFeatureFlagsSnapshot(): Promise<AdminFeatureFlagsSnapshot> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
+    .from("site_settings")
+    .select("feature_flags, maintenance_mode")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const flags =
+    data?.feature_flags && typeof data.feature_flags === "object" && !Array.isArray(data.feature_flags)
+      ? (data.feature_flags as Record<string, unknown>)
+      : {};
+
+  return {
+    featureFlags: flags,
+    maintenanceMode: Boolean(data?.maintenance_mode),
+  };
+}
+
+export async function listAdminTeamMembers(): Promise<AdminTeamMember[]> {
+  const supabase = createServiceRoleClient();
+  const [{ data: admins }, { data: supers }] = await Promise.all([
+    supabase.from("admins").select("user_id, email, role").order("created_at", { ascending: true }),
+    supabase.from("superadmins").select("user_id, email").order("created_at", { ascending: true }),
+  ]);
+
+  const members: AdminTeamMember[] = [];
+  const seen = new Set<string>();
+
+  for (const s of supers ?? []) {
+    const key = s.user_id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    members.push({ user_id: s.user_id, email: s.email ?? "", role: "superadmin" });
+  }
+  for (const a of admins ?? []) {
+    const key = a.user_id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const role = (a.role === "admin" || a.role === "staff" || a.role === "superadmin" ? a.role : "staff") as
+      | "superadmin"
+      | "admin"
+      | "staff";
+    members.push({ user_id: a.user_id, email: a.email, role });
+  }
+
+  return members;
 }
 
