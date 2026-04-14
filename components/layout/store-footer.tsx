@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AtSign, MessageCircle } from "lucide-react";
 import { Container } from "@/components/store/container";
 import { HomeNewsletter } from "@/components/home/newsletter-block";
 
@@ -37,16 +36,53 @@ const cols = [
   },
 ];
 
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="0.75" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4.5 19.5L5.6 15.7A8 8 0 1 1 8.3 18.4z" />
+      <path d="M9.6 8.8c.2-.4.5-.4.8-.4h.5c.2 0 .5 0 .7.5.2.5.8 1.9.9 2 .1.2.1.4 0 .6-.1.2-.2.3-.4.5l-.4.4c-.2.2-.3.3-.1.7.2.4.8 1.3 1.7 2.1 1.2 1 2.2 1.3 2.6 1.5.4.1.6.1.8-.1l.7-.8c.2-.2.4-.3.7-.2.3.1 1.8.9 2.1 1 .3.1.5.2.6.3.1.1.1.8-.1 1.5-.2.7-1.2 1.3-1.7 1.4-.5.1-1.1.2-1.8 0-.4-.1-.9-.3-1.6-.6-2.9-1.2-4.8-4.2-5-4.5-.2-.3-1.2-1.6-1.2-3 0-1.4.7-2.1 1-2.4z" />
+    </svg>
+  );
+}
+
 const socialLinks = [
   {
     href: "https://www.instagram.com/outfitsideas_gh?igsh=MTdqcTljZm00ZGQwbw%3D%3D&utm_source=qr",
     label: "Instagram",
-    icon: AtSign,
+    Icon: InstagramIcon,
   },
   {
     href: "https://api.whatsapp.com/send?phone=233503163721&text=Hello%20O%20%26%20I%20Label%2C%20I%20need%20help%20with%20an%20order.",
     label: "WhatsApp",
-    icon: MessageCircle,
+    Icon: WhatsAppIcon,
   },
 ];
 
@@ -101,17 +137,18 @@ export function StoreFooter() {
           <p className="text-[11px] tracking-[0.06em] text-white/50">© {year} O & I Label</p>
           <div className="flex flex-wrap items-center gap-2">
             {socialLinks.map((item) => {
-              const Icon = item.icon;
+              const Icon = item.Icon;
               return (
                 <a
                   key={item.label}
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1.5 text-xs text-white/85 transition-colors hover:border-white hover:bg-white hover:text-black"
+                  aria-label={item.label}
+                  title={item.label}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/[0.04] text-white/85 transition-colors duration-200 hover:border-white/45 hover:bg-white/10 hover:text-white"
                 >
-                  <Icon className="h-3.5 w-3.5" />
-                  {item.label}
+                  <Icon className="h-5 w-5" />
                 </a>
               );
             })}
