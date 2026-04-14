@@ -132,9 +132,11 @@ html {
 
 /* —— Admin panel: enforce O & I Label black / white chrome (survives CSS order + stale bundles) —— */
 [data-admin-layout] aside.admin-sidebar {
+  color-scheme: dark;
   background-color: #000000 !important;
   color: #ffffff !important;
-  border-right-color: #262626 !important;
+  border-right-color: #1a1a1a !important;
+  box-shadow: none !important;
 }
 
 [data-admin-layout] aside.admin-sidebar .admin-sidebar-brand-sub {

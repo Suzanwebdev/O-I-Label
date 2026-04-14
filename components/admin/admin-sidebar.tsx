@@ -82,13 +82,19 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="admin-sidebar w-64 shrink-0 border-r border-neutral-800 bg-black text-white">
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden">
-        <div className="border-b border-white/10 px-5 py-4">
+    <aside
+      className="admin-sidebar w-64 shrink-0 border-r border-[#1a1a1a] bg-[#000000] text-white"
+      style={{ backgroundColor: "#000000" }}
+    >
+      <div
+        className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden bg-[#000000]"
+        style={{ backgroundColor: "#000000" }}
+      >
+        <div className="border-b border-white/10 bg-[#000000] px-5 py-4" style={{ backgroundColor: "#000000" }}>
           <p className="font-serif-display text-lg font-semibold tracking-tight text-white">O & I Label</p>
           <p className="admin-sidebar-brand-sub mt-1 text-xs text-neutral-400">Admin</p>
         </div>
-        <div className="flex-1 overflow-y-auto px-3 py-4">
+        <div className="flex-1 overflow-y-auto bg-[#000000] px-3 py-4" style={{ backgroundColor: "#000000" }}>
           {groups.map((group) => (
             <div key={group.title} className="mb-6">
               <p className="admin-sidebar-group-label px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
