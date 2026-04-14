@@ -1,17 +1,10 @@
 import Link from "next/link";
-import { listProducts } from "@/lib/data/catalog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { AdminProductsTable } from "@/components/admin/admin-products-table";
+import { listAdminProducts } from "@/lib/data/admin";
 
 export default async function AdminProductsPage() {
-  const products = await listProducts();
+  const products = await listAdminProducts();
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -20,31 +13,7 @@ export default async function AdminProductsPage() {
           <Link href="/admin/products/new">New product</Link>
         </Button>
       </div>
-      <div className="rounded-[var(--radius-lg)] border border-border bg-background">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Slug</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="text-right">From (GHS)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((p) => {
-              const min = Math.min(...p.variants.map((v) => v.price_ghs));
-              return (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.slug}</TableCell>
-                  <TableCell>{p.category_name}</TableCell>
-                  <TableCell className="text-right tabular-nums">{min}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+      <AdminProductsTable products={products} />
     </div>
   );
 }

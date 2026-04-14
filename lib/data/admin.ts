@@ -81,6 +81,24 @@ export type AdminFeatureFlagsSnapshot = {
   maintenanceMode: boolean;
 };
 
+export type AdminProductRow = {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  badges: string[];
+  category_name: string;
+  created_at: string;
+  variants: {
+    id: string;
+    sku: string;
+    stock: number;
+    price_ghs: number;
+    size: string | null;
+    color: string | null;
+  }[];
+};
+
 const DEFAULT_COLLECTIONS = [
   { title: "New Arrivals", slug: "new-arrivals", is_smart: true },
   { title: "Best Sellers", slug: "best-sellers", is_smart: true },
@@ -316,5 +334,43 @@ export async function listAdminTeamMembers(): Promise<AdminTeamMember[]> {
   }
 
   return members;
+}
+
+export async function listAdminProducts(): Promise<AdminProductRow[]> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
+    .from("products")
+    .select(
+      `
+      id, name, slug, is_active, badges, created_at,
+      categories ( name ),
+      variants ( id, sku, stock, price_ghs, size, color )
+    `
+    )
+    .order("created_at", { ascending: false })
+    .limit(400);
+
+  return (data ?? []).map((row) => {
+    const category = Array.isArray(row.categories) ? row.categories[0] : row.categories;
+    const variants = (row.variants ?? []).map((variant) => ({
+      id: variant.id,
+      sku: variant.sku ?? "",
+      stock: Number(variant.stock ?? 0),
+      price_ghs: Number(variant.price_ghs ?? 0),
+      size: variant.size ?? null,
+      color: variant.color ?? null,
+    }));
+
+    return {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      is_active: Boolean(row.is_active),
+      badges: Array.isArray(row.badges) ? row.badges.filter((b) => typeof b === "string") : [],
+      category_name: category?.name ?? "Uncategorized",
+      created_at: row.created_at ?? new Date(0).toISOString(),
+      variants,
+    };
+  });
 }
 
