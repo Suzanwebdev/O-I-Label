@@ -1,15 +1,37 @@
-import { AdminModulePage } from "@/components/admin/admin-module-page";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getAnalyticsSnapshot } from "@/lib/data/admin";
 
-export default function AdminAnalyticsPage() {
+export default async function AdminAnalyticsPage() {
+  const stats = await getAnalyticsSnapshot();
   return (
-    <AdminModulePage
-      title="Analytics"
-      description="Track performance across traffic, conversion, and sales by channel."
-      bullets={[
-        "Revenue trend and order velocity by day/week/month.",
-        "Top products and category contribution.",
-        "Conversion and abandonment checkpoints.",
-      ]}
-    />
+    <div className="space-y-6">
+      <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Total orders</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold tabular-nums">{stats.totalOrders}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Paid orders</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold tabular-nums">{stats.paidOrders}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Gross revenue</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold tabular-nums">GHc {stats.grossRevenue.toFixed(2)}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Active products</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold tabular-nums">{stats.activeProducts}</CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
