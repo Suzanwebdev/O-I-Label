@@ -51,19 +51,17 @@ export function HomeHero({
                 sizes="100vw"
                 priority={i === 0}
               />
+              <div
+                className={`pointer-events-none absolute inset-0 z-[1] md:hidden ${slide.mobileOverlayClassName ?? "bg-gradient-to-t from-black/78 via-black/45 to-black/15"}`}
+                aria-hidden
+              />
+              <div
+                className={`pointer-events-none absolute inset-0 z-[1] hidden md:block ${slide.desktopOverlayClassName ?? "bg-gradient-to-r from-black/70 via-black/55 to-black/35"}`}
+                aria-hidden
+              />
             </motion.div>
           ))}
       </div>
-
-      {/* 2 — gradients (above images, below UI) */}
-      <div
-        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/78 via-black/45 to-black/15 md:hidden"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-0 z-[1] hidden bg-gradient-to-r from-black/70 via-black/55 to-black/35 md:block"
-        aria-hidden
-      />
 
       {/* 3 — copy + CTAs */}
       <div className="relative z-[3]">{children}</div>
