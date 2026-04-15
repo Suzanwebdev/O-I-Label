@@ -101,13 +101,13 @@ export default async function HomePage() {
                 <div className="flex flex-col gap-2.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-2">
                   <Link
                     href="/shop"
-                    className="inline-flex h-11 min-h-11 w-full items-center justify-center rounded-full bg-white px-5 text-xs font-medium text-black sm:h-10 sm:min-h-10 sm:w-auto sm:px-4 sm:text-[11px]"
+                    className="group inline-flex h-11 min-h-11 w-full items-center justify-center rounded-full bg-white px-6 text-[13px] font-semibold tracking-[0.01em] text-black shadow-[0_10px_28px_-14px_rgba(0,0,0,0.6)] ring-1 ring-white/85 transition-all duration-300 hover:-translate-y-[1px] hover:shadow-[0_16px_34px_-16px_rgba(0,0,0,0.68)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 sm:h-10 sm:min-h-10 sm:w-auto sm:px-5 sm:text-[11px]"
                   >
                     Shop now
                   </Link>
                   <Link
                     href="/shop?tag=best_seller"
-                    className="inline-flex h-11 min-h-11 w-full items-center justify-center rounded-full border border-white/50 bg-white/15 px-5 text-xs font-medium text-white backdrop-blur-[2px] sm:h-10 sm:min-h-10 sm:w-auto sm:px-4 sm:text-[11px]"
+                    className="inline-flex h-11 min-h-11 w-full items-center justify-center rounded-full border border-white/55 bg-black/20 px-6 text-[13px] font-semibold tracking-[0.01em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_12px_32px_-18px_rgba(0,0,0,0.72)] backdrop-blur-md transition-all duration-300 hover:-translate-y-[1px] hover:border-white/75 hover:bg-black/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 sm:h-10 sm:min-h-10 sm:w-auto sm:px-5 sm:text-[11px]"
                   >
                     View lookbook
                   </Link>
