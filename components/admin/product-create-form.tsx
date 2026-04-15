@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { ProductImageUploadSection } from "@/components/admin/product-image-upload";
+import { ProductMediaSection } from "@/components/admin/product-media-section";
 import type { ProductBadge } from "@/lib/types";
 
 type CategoryOption = { id: string; name: string; slug: string };
@@ -52,6 +51,7 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
   const [isActive, setIsActive] = React.useState(true);
   const [badges, setBadges] = React.useState<ProductBadge[]>([]);
   const [imageUrls, setImageUrls] = React.useState<string[]>([]);
+  const [videoUrls, setVideoUrls] = React.useState<string[]>([]);
   const [variants, setVariants] = React.useState<VariantDraft[]>([emptyVariant()]);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -125,6 +125,7 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
           badges,
           categoryId,
           imagePaths: imageUrls,
+          videoUrls,
           variants: resolvedVariants,
         }),
       });
@@ -143,36 +144,73 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5">
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="name">Product name</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={busy} />
+    <form onSubmit={onSubmit} className="space-y-8">
+      <section
+        aria-labelledby="product-basics-heading"
+        className="space-y-4 rounded-[var(--radius-lg)] border-2 border-black/10 bg-white p-4 shadow-sm md:p-6"
+      >
+        <div className="border-l-4 border-black pl-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Step 1</p>
+          <h2 id="product-basics-heading" className="font-serif-display text-xl font-semibold tracking-tight text-black">
+            Basics
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">Name, URL slug, category, and the story shoppers read on the product page.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="name">Product name</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={busy} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="slug">Slug (optional)</Label>
+            <Input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={busy} placeholder="auto-from-name" />
+          </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="slug">Slug (optional)</Label>
-          <Input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={busy} placeholder="auto-from-name" />
+          <Label>Category</Label>
+          <Select value={categoryId} onValueChange={setCategoryId} disabled={busy || categories.length === 0}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </div>
+        <div className="space-y-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={busy}
+            placeholder="Fabric, fit, care, styling notes — everything a customer should know."
+            className="min-h-[120px]"
+          />
+        </div>
+      </section>
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          disabled={busy}
-          placeholder="Short product description"
-          className="min-h-[100px]"
-        />
-      </div>
+      <ProductMediaSection
+        imageUrls={imageUrls}
+        onImageUrlsChange={setImageUrls}
+        videoUrls={videoUrls}
+        onVideoUrlsChange={setVideoUrls}
+        disabled={busy}
+      />
 
-      <ProductImageUploadSection urls={imageUrls} onUrlsChange={setImageUrls} disabled={busy} />
-
-      <div id="variants" className="space-y-4 rounded-[var(--radius-lg)] border-2 border-border bg-muted/20 p-4 md:p-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="font-serif-display text-lg font-semibold tracking-tight">Sizes, colours & variants</h2>
+      <div
+        id="variants"
+        className="space-y-4 rounded-[var(--radius-lg)] border-2 border-black/10 bg-neutral-50/80 p-4 md:p-6"
+      >
+        <div className="border-l-4 border-black pl-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Step 3</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-serif-display text-xl font-semibold tracking-tight text-black">Sizes, colours & variants</h2>
             <p className="text-sm text-muted-foreground">
               Each row is one sellable SKU (e.g. <span className="font-medium text-foreground">Black / M</span>). Add a row per
               size and colour combination. Stock is tracked per variant.
@@ -181,6 +219,7 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
           <Button type="button" size="sm" variant="default" onClick={addVariant} disabled={busy} className="shrink-0">
             + Add another variant
           </Button>
+        </div>
         </div>
 
         <div className="hidden overflow-x-auto md:block">
@@ -460,108 +499,124 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
         </div>
       </div>
 
-      <Separator />
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="space-y-2">
-          <Label>Category</Label>
-          <Select value={categoryId} onValueChange={setCategoryId} disabled={busy || categories.length === 0}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <section
+        aria-labelledby="product-visibility-heading"
+        className="space-y-4 rounded-[var(--radius-lg)] border-2 border-black/10 bg-white p-4 shadow-sm md:p-6"
+      >
+        <div className="border-l-4 border-black pl-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Step 4</p>
+          <h2 id="product-visibility-heading" className="font-serif-display text-xl font-semibold tracking-tight text-black">
+            Visibility & merchandising
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Draft products stay hidden from the shop. Badges highlight promos; SEO fields help search results.
+          </p>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="seoTitle">SEO title (optional)</Label>
-          <Input
-            id="seoTitle"
-            value={seoTitle}
-            onChange={(e) => setSeoTitle(e.target.value)}
-            disabled={busy}
-            placeholder="Search engine title"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label className="block">Status</Label>
-          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-border px-3 py-2">
-            <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} disabled={busy} />
-            <Label htmlFor="isActive" className="text-sm">
-              {isActive ? "Active" : "Draft"}
-            </Label>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="block">Status</Label>
+            <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-border bg-neutral-50/50 px-3 py-2">
+              <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} disabled={busy} />
+              <Label htmlFor="isActive" className="text-sm">
+                {isActive ? "Active (visible when category allows)" : "Draft (not sold)"}
+              </Label>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="seoTitle">SEO title (optional)</Label>
+            <Input
+              id="seoTitle"
+              value={seoTitle}
+              onChange={(e) => setSeoTitle(e.target.value)}
+              disabled={busy}
+              placeholder="Search engine title"
+            />
           </div>
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="seoDescription">SEO description (optional)</Label>
-        <Textarea
-          id="seoDescription"
-          value={seoDescription}
-          onChange={(e) => setSeoDescription(e.target.value)}
-          disabled={busy}
-          className="min-h-[70px]"
-          placeholder="Search engine description"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Badges</Label>
-        <div className="flex flex-wrap gap-2">
-          {BADGE_OPTIONS.map((badge) => (
-            <button
-              key={badge}
-              type="button"
-              onClick={() => toggleBadge(badge)}
-              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                badges.includes(badge)
-                  ? "border-black bg-neutral-100 text-black"
-                  : "border-border text-muted-foreground hover:border-black/30"
-              }`}
-              disabled={busy}
-            >
-              {badge}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
-          <Label>Total variants</Label>
-          <Input value={String(variants.length)} disabled />
-        </div>
-        <div className="space-y-2">
-          <Label>Total stock</Label>
-          <Input
-            value={String(
-              variants.reduce((sum, v) => sum + (Number.isFinite(Number(v.stock)) ? Number(v.stock) : 0), 0)
-            )}
-            disabled
+          <Label htmlFor="seoDescription">SEO description (optional)</Label>
+          <Textarea
+            id="seoDescription"
+            value={seoDescription}
+            onChange={(e) => setSeoDescription(e.target.value)}
+            disabled={busy}
+            className="min-h-[88px]"
+            placeholder="Search engine description"
           />
         </div>
         <div className="space-y-2">
-          <Label>Base currency</Label>
-          <Input value="GHc" disabled />
+          <Label>Badges</Label>
+          <div className="flex flex-wrap gap-2">
+            {BADGE_OPTIONS.map((badge) => (
+              <button
+                key={badge}
+                type="button"
+                onClick={() => toggleBadge(badge)}
+                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                  badges.includes(badge)
+                    ? "border-black bg-neutral-100 text-black"
+                    : "border-border text-muted-foreground hover:border-black/30"
+                }`}
+                disabled={busy}
+              >
+                {badge}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-      <div className="flex items-center gap-2">
-        <Button type="submit" disabled={busy || categories.length === 0}>
-          {busy ? "Creating..." : "Create product"}
-        </Button>
-        {categories.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Create a category first before adding products.</p>
-        ) : null}
-      </div>
+      <section
+        aria-labelledby="product-review-heading"
+        className="space-y-4 rounded-[var(--radius-lg)] border-2 border-black bg-black p-4 text-white md:p-6"
+      >
+        <div className="border-l-4 border-white pl-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80">Step 5</p>
+          <h2 id="product-review-heading" className="font-serif-display text-xl font-semibold tracking-tight">
+            Review & publish
+          </h2>
+          <p className="mt-1 text-sm text-white/90">Confirm totals before creating — you can edit the product later.</p>
+        </div>
+        <div className="grid gap-4 rounded-[var(--radius-md)] border border-white/25 bg-black/20 p-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label className="text-white/70">Total variants</Label>
+            <Input
+              className="border-white/30 bg-white/10 text-white"
+              value={String(variants.length)}
+              disabled
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-white/70">Total stock</Label>
+            <Input
+              className="border-white/30 bg-white/10 text-white"
+              value={String(
+                variants.reduce((sum, v) => sum + (Number.isFinite(Number(v.stock)) ? Number(v.stock) : 0), 0)
+              )}
+              disabled
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-white/70">Base currency</Label>
+            <Input className="border-white/30 bg-white/10 text-white" value="GHc" disabled />
+          </div>
+        </div>
+        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit" disabled={busy || categories.length === 0} className="bg-white text-black hover:bg-neutral-200">
+              {busy ? "Creating..." : "Create product"}
+            </Button>
+            {categories.length === 0 ? (
+              <p className="text-xs text-white/80">Create a category first before adding products.</p>
+            ) : null}
+          </div>
+          <p className="text-xs text-white/70">
+            {imageUrls.length} image{imageUrls.length === 1 ? "" : "s"} · {videoUrls.length} video link
+            {videoUrls.length === 1 ? "" : "s"}
+          </p>
+        </div>
+      </section>
     </form>
   );
 }

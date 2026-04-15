@@ -82,6 +82,21 @@ export async function POST(request: Request) {
     .map((p) => p.trim())
     .filter(Boolean)
     .slice(0, 20);
+  const videoUrlsRaw = Array.isArray((body as { videoUrls?: unknown })?.videoUrls)
+    ? ((body as { videoUrls: unknown[] }).videoUrls as unknown[])
+    : [];
+  const videoUrls = videoUrlsRaw
+    .filter((u): u is string => typeof u === "string")
+    .map((u) => u.trim())
+    .filter((u) => {
+      if (!u.startsWith("https://")) return false;
+      try {
+        return Boolean(new URL(u).hostname);
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 8);
   const variantsRaw = Array.isArray((body as { variants?: unknown })?.variants)
     ? ((body as { variants: unknown[] }).variants as unknown[])
     : [];
@@ -148,6 +163,7 @@ export async function POST(request: Request) {
       badges,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
+      video_urls: videoUrls,
     })
     .select("id")
     .single();

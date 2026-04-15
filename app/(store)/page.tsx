@@ -118,9 +118,9 @@ export default async function HomePage() {
         </HomeHero>
       </Section>
 
-      <Section className="py-2 md:py-3">
+      <Section className="pt-5 pb-7 md:py-3">
         <Container>
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between md:mb-3">
             <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               Shop by category
             </p>
@@ -128,7 +128,7 @@ export default async function HomePage() {
               Shop all
             </Link>
           </div>
-          <div className="grid grid-cols-4 gap-x-4 gap-y-5 pb-1">
+          <div className="grid grid-cols-4 gap-x-4 gap-y-6 pb-3 md:gap-y-5 md:pb-1">
             {mockCategories.map((c) => (
               <Link
                 key={c.slug}
@@ -162,6 +162,7 @@ export default async function HomePage() {
         ctaHref="/shop"
         ctaLabel="View lookbook"
         items={occasionItems}
+        className="pt-7 pb-10 md:pt-6 md:pb-14"
       />
 
       <Section className="pt-4 pb-10 md:pt-6 md:pb-12">

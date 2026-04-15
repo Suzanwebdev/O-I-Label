@@ -3,6 +3,8 @@ import { ProductCreateForm } from "@/components/admin/product-create-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listAdminCategories } from "@/lib/data/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminNewProductPage() {
   const categories = await listAdminCategories();
   return (
