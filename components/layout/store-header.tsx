@@ -40,7 +40,7 @@ const megaLinks = [
 
 export function StoreHeader() {
   const router = useRouter();
-  const { lines, openCart, toggleCart } = useCart();
+  const { lines, toggleCart } = useCart();
   const [q, setQ] = React.useState("");
   const [isScrolled, setIsScrolled] = React.useState(false);
   const count = lines.reduce((n, l) => n + l.quantity, 0);
@@ -79,7 +79,7 @@ export function StoreHeader() {
     >
       <Container
         className={cn(
-          "flex items-center gap-4 transition-[height,padding] duration-300",
+          "relative grid grid-cols-[auto_1fr_auto] items-center gap-2 transition-[height,padding] duration-300 lg:flex lg:gap-4",
           isScrolled ? "h-14 md:h-16" : "h-16 md:h-[4.5rem]"
         )}
       >
@@ -135,7 +135,7 @@ export function StoreHeader() {
 
         <Link
           href="/"
-          className="font-serif-display text-xl tracking-tight md:text-2xl"
+          className="pointer-events-auto absolute left-1/2 z-[1] -translate-x-1/2 font-serif-display text-[1.9rem] leading-none tracking-tight text-foreground lg:static lg:translate-x-0 lg:text-2xl"
         >
           O & I Label
         </Link>
@@ -234,58 +234,76 @@ export function StoreHeader() {
           </div>
         </form>
 
-        <div className="flex items-center gap-1 md:gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            type="button"
-            aria-label="Search"
-            onClick={() => router.push("/shop")}
-          >
-            <Search className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" asChild aria-label="Wishlist">
-            <Link href="/account/wishlist">
-              <Heart className="h-5 w-5" />
-            </Link>
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Account">
-                <User className="h-5 w-5" />
+        <div className="relative z-[2] justify-self-end">
+          <div className="flex items-center rounded-full border border-black/10 bg-white/85 p-0.5 shadow-[0_8px_22px_-16px_rgba(0,0,0,0.45)] backdrop-blur-sm lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full text-foreground/80 hover:bg-black/5 md:hidden"
+                type="button"
+                aria-label="Search"
+                onClick={() => router.push("/shop")}
+              >
+                <Search className="h-4.5 w-4.5" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link href="/account">Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/account/orders">Orders</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/track-order">Track order</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/login?next=/account">Sign in</Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative"
-            type="button"
-            onClick={toggleCart}
-            aria-label="Open cart"
-          >
-            <ShoppingBag className="h-5 w-5" />
-            {count > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-navy px-1 text-[10px] font-semibold text-white">
-                {count > 9 ? "9+" : count}
-              </span>
-            ) : null}
-          </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                aria-label="Wishlist"
+                className="h-9 w-9 rounded-full text-foreground/80 hover:bg-black/5"
+              >
+                <Link href="/account/wishlist">
+                  <Heart className="h-4.5 w-4.5" />
+                </Link>
+              </Button>
+            </div>
+            <span className="mx-0.5 h-5 w-px bg-black/10 lg:hidden" />
+            <div className="flex items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Account"
+                    className="h-9 w-9 rounded-full text-foreground/80 hover:bg-black/5"
+                  >
+                    <User className="h-4.5 w-4.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/account">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/orders">Orders</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/track-order">Track order</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/login?next=/account">Sign in</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9 rounded-full text-foreground/80 hover:bg-black/5"
+                type="button"
+                onClick={toggleCart}
+                aria-label="Open cart"
+              >
+                <ShoppingBag className="h-4.5 w-4.5" />
+                {count > 0 ? (
+                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-black px-1 text-[10px] font-semibold text-white">
+                    {count > 9 ? "9+" : count}
+                  </span>
+                ) : null}
+              </Button>
+            </div>
+          </div>
         </div>
       </Container>
     </header>

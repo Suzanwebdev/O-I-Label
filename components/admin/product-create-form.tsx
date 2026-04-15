@@ -40,6 +40,32 @@ function toSlug(value: string) {
     .replace(/-+/g, "-");
 }
 
+function parseTokenList(value: string) {
+  return Array.from(
+    new Set(
+      value
+        .split(/[\n,]/)
+        .map((token) => token.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function variantIdentity(color: string, size: string) {
+  return `${color.trim().toLowerCase()}::${size.trim().toLowerCase()}`;
+}
+
+function isBlankVariant(v: VariantDraft) {
+  return (
+    v.size.trim() === "" &&
+    v.color.trim() === "" &&
+    v.sku.trim() === "" &&
+    v.price.trim() === "" &&
+    v.compareAt.trim() === "" &&
+    (v.stock.trim() === "" || v.stock.trim() === "0")
+  );
+}
+
 export function ProductCreateForm({ categories }: { categories: CategoryOption[] }) {
   const router = useRouter();
   const [name, setName] = React.useState("");
@@ -53,6 +79,13 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
   const [imageUrls, setImageUrls] = React.useState<string[]>([]);
   const [videoUrls, setVideoUrls] = React.useState<string[]>([]);
   const [variants, setVariants] = React.useState<VariantDraft[]>([emptyVariant()]);
+  const [bulkColorsInput, setBulkColorsInput] = React.useState("");
+  const [bulkSizesInput, setBulkSizesInput] = React.useState("XS, S, M, L, XL");
+  const [bulkBasePrice, setBulkBasePrice] = React.useState("");
+  const [bulkBaseStock, setBulkBaseStock] = React.useState("0");
+  const [bulkCompareAt, setBulkCompareAt] = React.useState("");
+  const [bulkSkuPrefix, setBulkSkuPrefix] = React.useState("");
+  const [bulkMessage, setBulkMessage] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -70,6 +103,57 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
 
   function toggleBadge(badge: ProductBadge) {
     setBadges((prev) => (prev.includes(badge) ? prev.filter((b) => b !== badge) : [...prev, badge]));
+  }
+
+  function generateBulkVariants() {
+    setBulkMessage(null);
+    const colors = parseTokenList(bulkColorsInput);
+    const sizes = parseTokenList(bulkSizesInput);
+    if (colors.length === 0 || sizes.length === 0) {
+      setBulkMessage("Add at least one colour and one size to generate variants.");
+      return;
+    }
+
+    const skuBase = toSlug(bulkSkuPrefix || slug || name || "product");
+    let skipped = 0;
+    const nextRows: VariantDraft[] = [];
+    const existingKeys = new Set(variants.map((v) => variantIdentity(v.color, v.size)));
+
+    for (const color of colors) {
+      for (const size of sizes) {
+        const key = variantIdentity(color, size);
+        if (existingKeys.has(key)) {
+          skipped += 1;
+          continue;
+        }
+        existingKeys.add(key);
+        const colorCode = toSlug(color).replace(/-/g, "").slice(0, 8) || "base";
+        const sizeCode = toSlug(size).replace(/-/g, "").slice(0, 8) || "one";
+        nextRows.push({
+          color,
+          size,
+          sku: `${skuBase}-${colorCode}-${sizeCode}`,
+          price: bulkBasePrice.trim(),
+          compareAt: bulkCompareAt.trim(),
+          stock: bulkBaseStock.trim() || "0",
+        });
+      }
+    }
+
+    if (nextRows.length === 0) {
+      setBulkMessage(skipped > 0 ? "No new rows added — all generated combinations already exist." : "No variants generated.");
+      return;
+    }
+
+    setVariants((prev) => {
+      if (prev.length === 1 && isBlankVariant(prev[0])) return nextRows;
+      return [...prev, ...nextRows];
+    });
+    setBulkMessage(
+      skipped > 0
+        ? `Added ${nextRows.length} variants, skipped ${skipped} duplicate combination${skipped === 1 ? "" : "s"}.`
+        : `Added ${nextRows.length} variants.`
+    );
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -220,6 +304,115 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
             + Add another variant
           </Button>
         </div>
+        </div>
+
+        <div className="space-y-3 rounded-[var(--radius-md)] border border-border bg-white p-3 md:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-black">Bulk variant generator (optional)</h3>
+              <p className="text-xs text-muted-foreground">
+                Create many size/colour rows at once. Your existing manual rows stay unchanged.
+              </p>
+            </div>
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={generateBulkVariants}>
+              Generate variants
+            </Button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="bulkColors">Colours (comma or new line)</Label>
+              <Textarea
+                id="bulkColors"
+                value={bulkColorsInput}
+                onChange={(e) => setBulkColorsInput(e.target.value)}
+                disabled={busy}
+                className="min-h-[88px]"
+                placeholder="Black, White, Olive, Burgundy"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[11px]"
+                disabled={busy}
+                onClick={() => setBulkColorsInput(COMMON_COLORS.join(", "))}
+              >
+                Use common colour list
+              </Button>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="bulkSizes">Sizes (comma or new line)</Label>
+              <Textarea
+                id="bulkSizes"
+                value={bulkSizesInput}
+                onChange={(e) => setBulkSizesInput(e.target.value)}
+                disabled={busy}
+                className="min-h-[88px]"
+                placeholder="XS, S, M, L, XL"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[11px]"
+                disabled={busy}
+                onClick={() => setBulkSizesInput(COMMON_SIZES.join(", "))}
+              >
+                Use full size preset
+              </Button>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="bulkBasePrice">Default price (GHc)</Label>
+              <Input
+                id="bulkBasePrice"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Optional"
+                value={bulkBasePrice}
+                onChange={(e) => setBulkBasePrice(e.target.value)}
+                disabled={busy}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="bulkBaseStock">Default stock</Label>
+              <Input
+                id="bulkBaseStock"
+                type="number"
+                min="0"
+                step="1"
+                value={bulkBaseStock}
+                onChange={(e) => setBulkBaseStock(e.target.value)}
+                disabled={busy}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="bulkCompareAt">Default compare-at</Label>
+              <Input
+                id="bulkCompareAt"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Optional"
+                value={bulkCompareAt}
+                onChange={(e) => setBulkCompareAt(e.target.value)}
+                disabled={busy}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="bulkSkuPrefix">SKU prefix (optional)</Label>
+              <Input
+                id="bulkSkuPrefix"
+                value={bulkSkuPrefix}
+                onChange={(e) => setBulkSkuPrefix(e.target.value)}
+                disabled={busy}
+                placeholder="e.g. basic-top"
+              />
+            </div>
+          </div>
+          {bulkMessage ? <p className="text-xs text-muted-foreground">{bulkMessage}</p> : null}
         </div>
 
         <div className="hidden overflow-x-auto md:block">
