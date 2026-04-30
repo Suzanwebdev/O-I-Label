@@ -4,8 +4,17 @@ import { createServiceRoleClient } from "@/lib/supabase/server";
 
 export async function PATCH(request: Request) {
   const authz = await getRequestAuthz();
-  if (!authz.isAdmin || !authz.user) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!authz.user) {
+    return NextResponse.json({ error: "Sign in required. Open /admin again while logged in." }, { status: 401 });
+  }
+  if (!authz.isAdmin) {
+    return NextResponse.json(
+      {
+        error:
+          "This account is not in the admins list. Ask a superadmin to add your email under Team & Roles (staff need catalog access via the admins table).",
+      },
+      { status: 403 }
+    );
   }
 
   let body: unknown;

@@ -46,6 +46,7 @@ export function ShopCatalog({
 
   const q = sp.get("q") ?? "";
   const tag = sp.get("tag") ?? "";
+  const occasion = sp.get("occasion") ?? "";
   const sort = sp.get("sort") ?? "best_sellers";
   const minP = sp.get("min") ? Number(sp.get("min")) : undefined;
   const maxP = sp.get("max") ? Number(sp.get("max")) : undefined;
@@ -58,6 +59,7 @@ export function ShopCatalog({
       q,
       category: categorySlug,
       tag: tag || undefined,
+      occasion: occasion || undefined,
       minPrice: minP,
       maxPrice: maxP,
       sizes: sizeFilters.length ? sizeFilters : undefined,
@@ -71,6 +73,7 @@ export function ShopCatalog({
     q,
     categorySlug,
     tag,
+    occasion,
     minP,
     maxP,
     sort,

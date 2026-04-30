@@ -5,6 +5,7 @@ export function filterProducts(
   opts: {
     q?: string;
     category?: string;
+    occasion?: string;
     tag?: string;
     minPrice?: number;
     maxPrice?: number;
@@ -24,6 +25,9 @@ export function filterProducts(
   }
   if (opts.category) {
     list = list.filter((p) => p.category_slug === opts.category);
+  }
+  if (opts.occasion) {
+    list = list.filter((p) => (p.occasions ?? []).includes(opts.occasion as "birthday" | "vacation" | "wedding" | "corporate"));
   }
   if (opts.tag) {
     const t = opts.tag as ProductBadge;

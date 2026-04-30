@@ -54,13 +54,13 @@ export function OccasionSection({
             "flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-px-3 pb-1",
             "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             "md:grid md:snap-none md:grid-cols-2 md:gap-2.5 md:overflow-visible md:scroll-p-0 md:pb-0",
-            "lg:grid-cols-4 lg:gap-3",
+            "lg:grid-cols-[repeat(auto-fill,minmax(min(100%,220px),1fr))] lg:gap-3",
             "-mx-4 px-4 md:mx-0 md:px-0"
           )}
         >
-          {items.map((item) => (
+          {items.map((item, index) => (
             <OccasionCard
-              key={`${item.href}-${item.title}`}
+              key={`${item.href}-${item.title}-${index}`}
               image={item.image}
               title={item.title}
               href={item.href}

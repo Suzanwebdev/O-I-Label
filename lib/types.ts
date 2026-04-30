@@ -6,6 +6,8 @@ export type ProductBadge =
   | "selling_fast"
   | "trending";
 
+export type OccasionTag = "birthday" | "vacation" | "wedding" | "corporate";
+
 export interface ProductVariant {
   id: string;
   size?: string;
@@ -26,6 +28,7 @@ export interface Product {
   category_name: string;
   images: string[];
   badges: ProductBadge[];
+  occasions?: OccasionTag[];
   rating?: number;
   review_count?: number;
   variants: ProductVariant[];

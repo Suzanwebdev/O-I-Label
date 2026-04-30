@@ -25,6 +25,7 @@ const allowedBadges = new Set<ProductBadge>([
   "selling_fast",
   "trending",
 ]);
+const allowedOccasions = new Set(["birthday", "vacation", "wedding", "corporate"]);
 
 type VariantInput = {
   size: string | null;
@@ -82,6 +83,12 @@ export async function POST(request: Request) {
     .map((p) => p.trim())
     .filter(Boolean)
     .slice(0, 20);
+  const occasionsRaw = Array.isArray((body as { occasions?: unknown })?.occasions)
+    ? ((body as { occasions: unknown[] }).occasions as unknown[])
+    : [];
+  const occasions = occasionsRaw
+    .filter((o): o is string => typeof o === "string" && allowedOccasions.has(o))
+    .slice(0, 8);
   const videoUrlsRaw = Array.isArray((body as { videoUrls?: unknown })?.videoUrls)
     ? ((body as { videoUrls: unknown[] }).videoUrls as unknown[])
     : [];
@@ -161,6 +168,7 @@ export async function POST(request: Request) {
       category_id: categoryId,
       is_active: isActive,
       badges,
+      occasions,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
       video_urls: videoUrls,
@@ -217,5 +225,46 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ ok: true, productId: product.id }, { status: 201 });
+}
+
+export async function PATCH(request: Request) {
+  const authz = await getRequestAuthz();
+  if (!authz.isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const productId =
+    typeof (body as { productId?: unknown })?.productId === "string"
+      ? (body as { productId: string }).productId.trim()
+      : "";
+  const occasionsRaw = Array.isArray((body as { occasions?: unknown })?.occasions)
+    ? ((body as { occasions: unknown[] }).occasions as unknown[])
+    : [];
+  const occasions = occasionsRaw.filter(
+    (o): o is "birthday" | "vacation" | "wedding" | "corporate" =>
+      typeof o === "string" && (o === "birthday" || o === "vacation" || o === "wedding" || o === "corporate")
+  );
+
+  if (!productId) {
+    return NextResponse.json({ error: "productId is required" }, { status: 400 });
+  }
+
+  const service = createServiceRoleClient();
+  const { error } = await service
+    .from("products")
+    .update({ occasions })
+    .eq("id", productId);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
 

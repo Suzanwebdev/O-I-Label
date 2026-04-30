@@ -6,14 +6,13 @@ import { Section } from "@/components/store/section";
 import { mockCategories } from "@/lib/mock-data";
 import { listProducts } from "@/lib/data/catalog";
 import { listCategoriesFromDb } from "@/lib/data/catalog";
+import { getHomeContentSections } from "@/lib/data/home-content";
+import { mergeShopOccasionItemsFromSections } from "@/lib/home/shop-by-occasion";
 import { filterProducts, sortProducts } from "@/lib/shop-utils";
 import { BestSellersRow } from "@/components/home/best-sellers-row";
 import { HomeHero } from "@/components/home/home-hero";
 import { HOME_HERO_SLIDES } from "@/lib/home-hero-slides";
-import {
-  OccasionSection,
-  type OccasionItem,
-} from "@/components/home/occasion-section";
+import { OccasionSection } from "@/components/home/occasion-section";
 
 /** Local assets in /public/home ' boutique hero + category thumbnails (order matches mockCategories). */
 const categoryImageBySlug: Record<string, string> = {
@@ -30,39 +29,13 @@ const categoryImageBySlug: Record<string, string> = {
   "new-arrivals": "/home/category-new-arrivals.png",
 };
 
-const occasionItems: OccasionItem[] = [
-  {
-    title: "Birthday",
-    href: "/shop?occasion=birthday",
-    image:
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=1260&h=1680&fit=crop&q=85",
-    alt: "Birthday occasion - elevated dress moment",
-  },
-  {
-    title: "Vacation",
-    href: "/shop/dresses",
-    image:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1260&h=1680&fit=crop&q=85",
-    alt: "Vacation edit - resort-ready pieces",
-  },
-  {
-    title: "Wedding",
-    href: "/shop?tag=trending",
-    image: "/home/occasion-wedding.png",
-    alt: "Wedding occasion dressing",
-    imageClassName: "object-cover object-[center_66%] scale-[1.08] group-hover:scale-[1.11]",
-  },
-  {
-    title: "Corporate",
-    href: "/shop?tag=best_seller",
-    image:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1260&h=1680&fit=crop&q=85",
-    alt: "Corporate and workwear occasion dressing",
-  },
-];
-
 export default async function HomePage() {
-  const [catalog, categories] = await Promise.all([listProducts(), listCategoriesFromDb()]);
+  const [catalog, categories, homeSections] = await Promise.all([
+    listProducts(),
+    listCategoriesFromDb(),
+    getHomeContentSections(),
+  ]);
+  const occasionItems = mergeShopOccasionItemsFromSections(homeSections);
   const categoriesToRender = categories.length ? categories : mockCategories;
   let bestSellers = filterProducts(catalog, { tag: "best_seller" }).filter(
     (p) => p.variants.length > 0

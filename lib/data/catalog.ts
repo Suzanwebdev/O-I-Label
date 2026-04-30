@@ -21,6 +21,7 @@ type DbProduct = {
   description: string | null;
   is_active: boolean;
   badges: string[] | null;
+  occasions: string[] | null;
   rating: number | null;
   review_count: number | null;
   categories: { slug: string; name: string } | null;
@@ -56,6 +57,9 @@ function mapRow(row: DbProduct): Product {
     category_name: row.categories?.name ?? "New Arrivals",
     images: imgs.length ? imgs : ["/file.svg"],
     badges: (row.badges ?? []) as ProductBadge[],
+    occasions: (row.occasions ?? []).filter((o): o is "birthday" | "vacation" | "wedding" | "corporate" =>
+      o === "birthday" || o === "vacation" || o === "wedding" || o === "corporate"
+    ),
     rating: row.rating ?? undefined,
     review_count: row.review_count ?? undefined,
     variants: variants.length ? variants : [],
@@ -70,7 +74,7 @@ export async function listProducts(): Promise<Product[]> {
       .from("products")
       .select(
         `
-        id, slug, name, description, is_active, badges, rating, review_count,
+        id, slug, name, description, is_active, badges, occasions, rating, review_count,
         categories ( slug, name ),
         variants ( id, sku, price_ghs, compare_at_ghs, stock, size, color ),
         product_images ( storage_path, sort_order )
@@ -89,8 +93,34 @@ export async function listProducts(): Promise<Product[]> {
 export async function getProductBySlugFromDb(
   slug: string
 ): Promise<Product | null> {
-  const all = await listProducts();
-  return all.find((p) => p.slug === slug) ?? null;
+  const normalized = slug.trim();
+  if (!normalized) return null;
+
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from("products")
+      .select(
+        `
+        id, slug, name, description, is_active, badges, occasions, rating, review_count,
+        categories ( slug, name ),
+        variants ( id, sku, price_ghs, compare_at_ghs, stock, size, color ),
+        product_images ( storage_path, sort_order )
+      `
+      )
+      .eq("slug", normalized)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!error && data) {
+      return mapRow(data as unknown as DbProduct);
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  const { getProductBySlug } = await import("@/lib/mock-data");
+  return getProductBySlug(normalized) ?? null;
 }
 
 export async function listCategoriesFromDb(): Promise<

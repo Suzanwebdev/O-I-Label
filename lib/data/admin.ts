@@ -25,6 +25,8 @@ export type AdminInventoryRow = {
   price_ghs: number;
   product_name: string;
   product_slug: string;
+  category_slug: string | null;
+  category_name: string | null;
 };
 
 export type AdminSupportSnapshot = {
@@ -88,6 +90,7 @@ export type AdminProductRow = {
   slug: string;
   is_active: boolean;
   badges: string[];
+  occasions: ("birthday" | "vacation" | "wedding" | "corporate")[];
   category_name: string;
   created_at: string;
   variants: {
@@ -200,12 +203,19 @@ export async function listAdminInventory(): Promise<AdminInventoryRow[]> {
   const supabase = createServiceRoleClient();
   const { data } = await supabase
     .from("variants")
-    .select("id, sku, stock, price_ghs, products!inner(name, slug)")
+    .select(
+      "id, sku, stock, price_ghs, products!inner(name, slug, categories ( slug, name ))"
+    )
     .order("stock", { ascending: true })
     .limit(200);
 
   return (data ?? []).map((row) => {
     const product = Array.isArray(row.products) ? row.products[0] : row.products;
+    const cat = product?.categories
+      ? Array.isArray(product.categories)
+        ? product.categories[0]
+        : product.categories
+      : null;
     return {
       variant_id: row.id,
       sku: row.sku,
@@ -213,6 +223,8 @@ export async function listAdminInventory(): Promise<AdminInventoryRow[]> {
       price_ghs: Number(row.price_ghs),
       product_name: product?.name ?? "Unknown product",
       product_slug: product?.slug ?? "",
+      category_slug: typeof cat?.slug === "string" ? cat.slug : null,
+      category_name: typeof cat?.name === "string" ? cat.name : null,
     };
   });
 }
@@ -332,6 +344,16 @@ export async function getHomepageSectionsJson(): Promise<string> {
   return JSON.stringify(data?.sections ?? {}, null, 2);
 }
 
+export async function getHomeContentSectionsAdmin(): Promise<Record<string, unknown>> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase.from("home_content").select("sections").eq("id", 1).maybeSingle();
+  const s = data?.sections;
+  if (s && typeof s === "object" && !Array.isArray(s)) {
+    return s as Record<string, unknown>;
+  }
+  return {};
+}
+
 export async function getFeatureFlagsSnapshot(): Promise<AdminFeatureFlagsSnapshot> {
   const supabase = createServiceRoleClient();
   const { data } = await supabase
@@ -387,7 +409,7 @@ export async function listAdminProducts(): Promise<AdminProductRow[]> {
     .from("products")
     .select(
       `
-      id, name, slug, is_active, badges, created_at,
+      id, name, slug, is_active, badges, occasions, created_at,
       categories ( name ),
       variants ( id, sku, stock, price_ghs, size, color )
     `
@@ -412,6 +434,12 @@ export async function listAdminProducts(): Promise<AdminProductRow[]> {
       slug: row.slug,
       is_active: Boolean(row.is_active),
       badges: Array.isArray(row.badges) ? row.badges.filter((b) => typeof b === "string") : [],
+      occasions: Array.isArray(row.occasions)
+        ? row.occasions.filter(
+            (o): o is "birthday" | "vacation" | "wedding" | "corporate" =>
+              o === "birthday" || o === "vacation" || o === "wedding" || o === "corporate"
+          )
+        : [],
       category_name: category?.name ?? "Uncategorized",
       created_at: row.created_at ?? new Date(0).toISOString(),
       variants,

@@ -1,5 +1,5 @@
-import { InventoryStockCell } from "@/components/admin/inventory-stock-cell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InventoryStockTable } from "@/components/admin/inventory-stock-table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listAdminInventory } from "@/lib/data/admin";
 
 export default async function AdminInventoryPage() {
@@ -10,29 +10,14 @@ export default async function AdminInventoryPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Variant stock</CardTitle>
+          <CardDescription>
+            Adjust quantity per SKU, then choose <strong>Save</strong>. You must be signed in as an admin or staff row
+            in Supabase <span className="font-mono">admins</span>; otherwise saves return an access error.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
           {rows.length ? (
-            rows.map((r) => (
-              <div
-                key={r.variant_id}
-                className="grid gap-3 rounded-lg border border-border bg-background px-4 py-3 text-sm md:grid-cols-[1.2fr_1fr_150px_140px]"
-              >
-                <div>
-                  <p className="font-medium">{r.product_name}</p>
-                  <p className="text-xs text-muted-foreground">{r.product_slug}</p>
-                </div>
-                <div>
-                  <p className="font-medium">{r.sku}</p>
-                  <p className="text-xs text-muted-foreground">SKU</p>
-                </div>
-                <div>
-                  <p className="font-medium">GHc {r.price_ghs.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">Price</p>
-                </div>
-                <InventoryStockCell variantId={r.variant_id} stock={r.stock} />
-              </div>
-            ))
+            <InventoryStockTable rows={rows} />
           ) : (
             <p className="text-sm text-muted-foreground">No variants found.</p>
           )}

@@ -14,6 +14,8 @@ const PAGE_SIZE = 12;
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
 type StatusFilter = "all" | "active" | "draft";
+type OccasionTag = "birthday" | "vacation" | "wedding" | "corporate";
+const OCCASION_OPTIONS: OccasionTag[] = ["birthday", "vacation", "wedding", "corporate"];
 
 function stockState(total: number): { label: string; className: string } {
   if (total <= 0) return { label: "Out of stock", className: "border-neutral-400 bg-neutral-200 text-black" };
@@ -29,6 +31,48 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
   const [sizeFilter, setSizeFilter] = React.useState("all");
   const [page, setPage] = React.useState(1);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  const [occasionDrafts, setOccasionDrafts] = React.useState<Record<string, OccasionTag[]>>({});
+  const [savingId, setSavingId] = React.useState<string | null>(null);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+
+  const getOccasionDraft = React.useCallback(
+    (product: AdminProductRow): OccasionTag[] =>
+      occasionDrafts[product.id] ?? (product.occasions as OccasionTag[]),
+    [occasionDrafts]
+  );
+
+  function toggleOccasion(product: AdminProductRow, occasion: OccasionTag) {
+    const current = getOccasionDraft(product);
+    const next = current.includes(occasion) ? current.filter((o) => o !== occasion) : [...current, occasion];
+    setOccasionDrafts((prev) => ({ ...prev, [product.id]: next }));
+  }
+
+  async function saveOccasions(product: AdminProductRow) {
+    setSaveError(null);
+    const occasions = getOccasionDraft(product);
+    setSavingId(product.id);
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, occasions }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setSaveError(json.error ?? "Could not save occasions");
+        return;
+      }
+      setOccasionDrafts((prev) => {
+        const copy = { ...prev };
+        delete copy[product.id];
+        return copy;
+      });
+    } catch {
+      setSaveError("Network error while saving occasions");
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   const colorOptions = React.useMemo(() => {
     return Array.from(
@@ -86,8 +130,10 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
         <Link href="/admin/products/new" className="font-medium text-foreground underline underline-offset-2">
           New product
         </Link>
-        . On this page you can search and filter by variant data once it exists.
+        . <span className="font-medium text-foreground">Stock (total)</span> is the sum of every variant SKU; expand a row for
+        per-size and per-colour breakdown.
       </p>
+      {saveError ? <p className="text-sm text-red-600">{saveError}</p> : null}
       <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background p-4 md:grid-cols-5">
         <div className="space-y-1 md:col-span-2">
           <Label htmlFor="search">Search product / slug / SKU</Label>
@@ -192,7 +238,7 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
               <TableHead className="w-10" />
               <TableHead>Product</TableHead>
               <TableHead>Variants</TableHead>
-              <TableHead>Stock</TableHead>
+              <TableHead>Stock (all SKUs)</TableHead>
               <TableHead>Price range (GHS)</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -239,10 +285,11 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
                     <p className="text-xs text-muted-foreground">Sizes: {sizes.join(", ") || "N/A"}</p>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={state.className}>
+                    <p className="text-lg font-semibold tabular-nums leading-none">{totalStock}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">units · {product.variants.length} SKU{product.variants.length === 1 ? "" : "s"}</p>
+                    <Badge variant="outline" className={`mt-1.5 ${state.className}`}>
                       {state.label}
                     </Badge>
-                    <p className="mt-1 text-xs text-muted-foreground">{totalStock} units total</p>
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {minPrice === maxPrice ? minPrice.toFixed(2) : `${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}`}
@@ -255,6 +302,11 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
                       {product.badges.slice(0, 2).map((badge) => (
                         <Badge key={badge} variant="outline">
                           {badge}
+                        </Badge>
+                      ))}
+                      {(getOccasionDraft(product).length > 0 ? getOccasionDraft(product) : product.occasions).map((occasion) => (
+                        <Badge key={`${product.id}-${occasion}`} variant="outline" className="capitalize">
+                          {occasion}
                         </Badge>
                       ))}
                     </div>
@@ -280,6 +332,40 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
                           Variant breakdown
                         </p>
                         <div className="overflow-x-auto rounded-md border border-border bg-background">
+                          <div className="space-y-2 border-b border-border p-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Occasion tags</p>
+                            <div className="flex flex-wrap gap-2">
+                              {OCCASION_OPTIONS.map((occasion) => {
+                                const selected = getOccasionDraft(product).includes(occasion);
+                                return (
+                                  <button
+                                    key={`${product.id}-occasion-${occasion}`}
+                                    type="button"
+                                    onClick={() => toggleOccasion(product, occasion)}
+                                    className={`rounded-full border px-3 py-1 text-xs capitalize transition-colors ${
+                                      selected
+                                        ? "border-black bg-neutral-100 text-black"
+                                        : "border-border text-muted-foreground hover:border-black/30"
+                                    }`}
+                                    disabled={savingId === product.id}
+                                  >
+                                    {occasion}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => saveOccasions(product)}
+                                disabled={savingId === product.id}
+                              >
+                                {savingId === product.id ? "Saving..." : "Save occasion tags"}
+                              </Button>
+                            </div>
+                          </div>
                           <table className="w-full min-w-[520px] text-sm">
                             <thead>
                               <tr className="border-b border-border text-left text-xs text-muted-foreground">

@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductMediaSection } from "@/components/admin/product-media-section";
-import type { ProductBadge } from "@/lib/types";
+import type { OccasionTag, ProductBadge } from "@/lib/types";
 
 type CategoryOption = { id: string; name: string; slug: string };
 
@@ -23,6 +23,7 @@ type VariantDraft = {
 };
 
 const BADGE_OPTIONS: ProductBadge[] = ["new", "best_seller", "limited", "sale", "selling_fast", "trending"];
+const OCCASION_OPTIONS: OccasionTag[] = ["birthday", "vacation", "wedding", "corporate"];
 
 const COMMON_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "One size"] as const;
 const COMMON_COLORS = ["Black", "White", "Ivory", "Cream", "Navy", "Nude", "Espresso", "Burgundy", "Olive", "Blush"] as const;
@@ -76,6 +77,7 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
   const [seoDescription, setSeoDescription] = React.useState("");
   const [isActive, setIsActive] = React.useState(true);
   const [badges, setBadges] = React.useState<ProductBadge[]>([]);
+  const [occasions, setOccasions] = React.useState<OccasionTag[]>([]);
   const [imageUrls, setImageUrls] = React.useState<string[]>([]);
   const [videoUrls, setVideoUrls] = React.useState<string[]>([]);
   const [variants, setVariants] = React.useState<VariantDraft[]>([emptyVariant()]);
@@ -103,6 +105,10 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
 
   function toggleBadge(badge: ProductBadge) {
     setBadges((prev) => (prev.includes(badge) ? prev.filter((b) => b !== badge) : [...prev, badge]));
+  }
+
+  function toggleOccasion(occasion: OccasionTag) {
+    setOccasions((prev) => (prev.includes(occasion) ? prev.filter((o) => o !== occasion) : [...prev, occasion]));
   }
 
   function generateBulkVariants() {
@@ -207,6 +213,7 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
           seoDescription,
           isActive,
           badges,
+          occasions,
           categoryId,
           imagePaths: imageUrls,
           videoUrls,
@@ -753,6 +760,29 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
                 disabled={busy}
               >
                 {badge}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Shop by occasion tags</Label>
+          <p className="text-xs text-muted-foreground">
+            These power the homepage &quot;Shop by occasion&quot; cards and `/shop?occasion=...` filtering.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {OCCASION_OPTIONS.map((occasion) => (
+              <button
+                key={occasion}
+                type="button"
+                onClick={() => toggleOccasion(occasion)}
+                className={`rounded-full border px-3 py-1 text-xs capitalize transition-colors ${
+                  occasions.includes(occasion)
+                    ? "border-black bg-neutral-100 text-black"
+                    : "border-border text-muted-foreground hover:border-black/30"
+                }`}
+                disabled={busy}
+              >
+                {occasion}
               </button>
             ))}
           </div>

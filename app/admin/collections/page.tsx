@@ -1,9 +1,10 @@
+import { ShopByOccasionEditor } from "@/components/admin/shop-by-occasion-editor";
 import { CollectionCreateForm } from "@/components/admin/collection-create-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { listAdminCollections } from "@/lib/data/admin";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getHomeContentSectionsAdmin, listAdminCollections } from "@/lib/data/admin";
 
 export default async function AdminCollectionsPage() {
-  const collections = await listAdminCollections();
+  const [collections, homeSections] = await Promise.all([listAdminCollections(), getHomeContentSectionsAdmin()]);
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Collections</h1>
@@ -12,6 +13,19 @@ export default async function AdminCollectionsPage() {
           <CardTitle className="text-base">Create collection</CardTitle>
           <CollectionCreateForm />
         </CardHeader>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Homepage collection carousel</CardTitle>
+          <CardDescription>
+            Large tiles under &quot;Shop by occasion&quot; on the homepage. Add cards, reorder, upload art, or use the four
+            preset templates. This is saved as <span className="font-mono">home_content.sections.shop_by_occasion</span>{" "}
+            (not the product collections list below).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ShopByOccasionEditor initialSections={homeSections} />
+        </CardContent>
       </Card>
       <Card>
         <CardHeader>
