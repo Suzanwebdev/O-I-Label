@@ -99,6 +99,30 @@ export type AdminProductRow = {
   }[];
 };
 
+export type AdminOrderRow = {
+  id: string;
+  order_number: string;
+  email: string;
+  status: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
+  total_ghs: number;
+  notify_customer: boolean;
+  created_at: string;
+  tracking_number: string | null;
+  carrier: string | null;
+  shipment_status: string | null;
+};
+
+export type AdminOrdersKpi = {
+  pending: number;
+  paid: number;
+  processing: number;
+  shipped: number;
+  delivered: number;
+  cancelled: number;
+  refunded: number;
+  revenuePaid: number;
+};
+
 const DEFAULT_COLLECTIONS = [
   { title: "New Arrivals", slug: "new-arrivals", is_smart: true },
   { title: "Best Sellers", slug: "best-sellers", is_smart: true },
@@ -372,5 +396,63 @@ export async function listAdminProducts(): Promise<AdminProductRow[]> {
       variants,
     };
   });
+}
+
+export async function listAdminOrders(): Promise<AdminOrderRow[]> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
+    .from("orders")
+    .select(
+      `
+      id, order_number, email, status, total_ghs, notify_customer, created_at,
+      shipments ( tracking_number, carrier, status, created_at )
+    `
+    )
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  return (data ?? []).map((row) => {
+    const shipment = Array.isArray(row.shipments) ? row.shipments[0] : row.shipments;
+    return {
+      id: row.id,
+      order_number: row.order_number,
+      email: row.email,
+      status: row.status as AdminOrderRow["status"],
+      total_ghs: Number(row.total_ghs ?? 0),
+      notify_customer: Boolean(row.notify_customer),
+      created_at: row.created_at,
+      tracking_number: shipment?.tracking_number ?? null,
+      carrier: shipment?.carrier ?? null,
+      shipment_status: shipment?.status ?? null,
+    };
+  });
+}
+
+export async function getAdminOrdersKpi(): Promise<AdminOrdersKpi> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase.from("orders").select("status, total_ghs");
+
+  const kpi: AdminOrdersKpi = {
+    pending: 0,
+    paid: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0,
+    refunded: 0,
+    revenuePaid: 0,
+  };
+
+  for (const row of data ?? []) {
+    const status = row.status as keyof Omit<AdminOrdersKpi, "revenuePaid">;
+    if (status in kpi && status !== "revenuePaid") {
+      (kpi[status] as number) += 1;
+    }
+    if (row.status === "paid" || row.status === "processing" || row.status === "shipped" || row.status === "delivered") {
+      kpi.revenuePaid += Number(row.total_ghs ?? 0);
+    }
+  }
+
+  return kpi;
 }
 
