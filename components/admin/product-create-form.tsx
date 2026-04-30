@@ -9,11 +9,13 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductMediaSection } from "@/components/admin/product-media-section";
+import type { AdminProductDetail } from "@/lib/data/admin";
 import type { OccasionTag, ProductBadge } from "@/lib/types";
 
 type CategoryOption = { id: string; name: string; slug: string };
 
 type VariantDraft = {
+  id?: string;
   size: string;
   color: string;
   sku: string;
@@ -58,6 +60,7 @@ function variantIdentity(color: string, size: string) {
 
 function isBlankVariant(v: VariantDraft) {
   return (
+    !v.id &&
     v.size.trim() === "" &&
     v.color.trim() === "" &&
     v.sku.trim() === "" &&
@@ -67,20 +70,57 @@ function isBlankVariant(v: VariantDraft) {
   );
 }
 
-export function ProductCreateForm({ categories }: { categories: CategoryOption[] }) {
+function initialVariantsFromDetail(editProduct: AdminProductDetail | undefined): VariantDraft[] | null {
+  if (!editProduct) return null;
+  if (!editProduct.variants.length) return [emptyVariant()];
+  return editProduct.variants.map((v) => ({
+    id: v.id,
+    size: v.size ?? "",
+    color: v.color ?? "",
+    sku: v.sku,
+    price: v.price_ghs > 0 ? String(v.price_ghs) : "",
+    compareAt: v.compare_at_ghs != null && v.compare_at_ghs > 0 ? String(v.compare_at_ghs) : "",
+    stock: String(v.stock ?? 0),
+  }));
+}
+
+function initialBadgeList(editProduct: AdminProductDetail | undefined): ProductBadge[] {
+  if (!editProduct) return [];
+  return editProduct.badges.filter((b): b is ProductBadge => BADGE_OPTIONS.includes(b as ProductBadge));
+}
+
+export function ProductCreateForm({
+  categories,
+  editProduct,
+}: {
+  categories: CategoryOption[];
+  editProduct?: AdminProductDetail;
+}) {
   const router = useRouter();
-  const [name, setName] = React.useState("");
-  const [slug, setSlug] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [categoryId, setCategoryId] = React.useState(categories[0]?.id ?? "");
-  const [seoTitle, setSeoTitle] = React.useState("");
-  const [seoDescription, setSeoDescription] = React.useState("");
-  const [isActive, setIsActive] = React.useState(true);
-  const [badges, setBadges] = React.useState<ProductBadge[]>([]);
-  const [occasions, setOccasions] = React.useState<OccasionTag[]>([]);
-  const [imageUrls, setImageUrls] = React.useState<string[]>([]);
-  const [videoUrls, setVideoUrls] = React.useState<string[]>([]);
-  const [variants, setVariants] = React.useState<VariantDraft[]>([emptyVariant()]);
+  const prefillVariants = initialVariantsFromDetail(editProduct);
+
+  const [name, setName] = React.useState(editProduct?.name ?? "");
+  const [slug, setSlug] = React.useState(editProduct?.slug ?? "");
+  const [description, setDescription] = React.useState(editProduct?.description ?? "");
+  const [categoryId, setCategoryId] = React.useState(
+    editProduct?.category_id ?? categories[0]?.id ?? ""
+  );
+  const [seoTitle, setSeoTitle] = React.useState(editProduct?.seo_title ?? "");
+  const [seoDescription, setSeoDescription] = React.useState(editProduct?.seo_description ?? "");
+  const [isActive, setIsActive] = React.useState(editProduct ? editProduct.is_active : true);
+  const [badges, setBadges] = React.useState<ProductBadge[]>(() => initialBadgeList(editProduct));
+  const [occasions, setOccasions] = React.useState<OccasionTag[]>(() =>
+    editProduct?.occasions?.length ? [...editProduct.occasions] : []
+  );
+  const [imageUrls, setImageUrls] = React.useState<string[]>(() =>
+    editProduct?.image_paths?.length ? [...editProduct.image_paths] : []
+  );
+  const [videoUrls, setVideoUrls] = React.useState<string[]>(() =>
+    editProduct?.video_urls?.length ? [...editProduct.video_urls] : []
+  );
+  const [variants, setVariants] = React.useState<VariantDraft[]>(
+    () => prefillVariants ?? [emptyVariant()]
+  );
   const [bulkColorsInput, setBulkColorsInput] = React.useState("");
   const [bulkSizesInput, setBulkSizesInput] = React.useState("XS, S, M, L, XL");
   const [bulkBasePrice, setBulkBasePrice] = React.useState("");
@@ -167,6 +207,7 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
     setError(null);
 
     const normalizedVariants = variants.map((v) => ({
+      id: typeof v.id === "string" && v.id.trim() ? v.id.trim() : undefined,
       size: v.size.trim() || null,
       color: v.color.trim() || null,
       sku: v.sku.trim(),
@@ -200,29 +241,57 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
       return;
     }
 
+    const variantPayload = resolvedVariants.map((v) => ({
+      ...(v.id ? { id: v.id } : {}),
+      size: v.size,
+      color: v.color,
+      sku: v.sku,
+      price: v.price,
+      compareAt: v.compareAt,
+      stock: v.stock,
+    }));
+
     setBusy(true);
     try {
       const res = await fetch("/api/admin/products", {
-        method: "POST",
+        method: editProduct ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          slug,
-          description,
-          seoTitle,
-          seoDescription,
-          isActive,
-          badges,
-          occasions,
-          categoryId,
-          imagePaths: imageUrls,
-          videoUrls,
-          variants: resolvedVariants,
-        }),
+        body: JSON.stringify(
+          editProduct
+            ? {
+                productId: editProduct.id,
+                name,
+                slug,
+                description,
+                seoTitle,
+                seoDescription,
+                isActive,
+                badges,
+                occasions,
+                categoryId,
+                imagePaths: imageUrls,
+                videoUrls,
+                variants: variantPayload,
+              }
+            : {
+                name,
+                slug,
+                description,
+                seoTitle,
+                seoDescription,
+                isActive,
+                badges,
+                occasions,
+                categoryId,
+                imagePaths: imageUrls,
+                videoUrls,
+                variants: variantPayload,
+              }
+        ),
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(json.error ?? "Could not create product");
+        setError(json.error ?? (editProduct ? "Could not save product" : "Could not create product"));
         return;
       }
       router.push("/admin/products");
@@ -798,7 +867,11 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
           <h2 id="product-review-heading" className="font-serif-display text-xl font-semibold tracking-tight">
             Review & publish
           </h2>
-          <p className="mt-1 text-sm text-white/90">Confirm totals before creating — you can edit the product later.</p>
+          <p className="mt-1 text-sm text-white/90">
+            {editProduct
+              ? "Save when you’re ready — the storefront and PDP update right away."
+              : "Confirm totals before creating — you can edit products from the Products list anytime."}
+          </p>
         </div>
         <div className="grid gap-4 rounded-[var(--radius-md)] border border-white/25 bg-black/20 p-4 md:grid-cols-3">
           <div className="space-y-2">
@@ -828,7 +901,7 @@ export function ProductCreateForm({ categories }: { categories: CategoryOption[]
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" disabled={busy || categories.length === 0} className="bg-white text-black hover:bg-neutral-200">
-              {busy ? "Creating..." : "Create product"}
+              {busy ? (editProduct ? "Saving..." : "Creating...") : editProduct ? "Save changes" : "Create product"}
             </Button>
             {categories.length === 0 ? (
               <p className="text-xs text-white/80">Create a category first before adding products.</p>

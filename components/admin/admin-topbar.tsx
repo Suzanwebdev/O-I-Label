@@ -34,6 +34,10 @@ const routeMeta: Record<string, RouteMeta> = {
 function resolveMeta(pathname: string): RouteMeta {
   if (routeMeta[pathname]) return routeMeta[pathname];
   if (pathname.startsWith("/admin/products/new")) return { title: "New Product" };
+  const editProductMatch = /^\/admin\/products\/([^/]+)$/.exec(pathname);
+  if (editProductMatch && editProductMatch[1] !== "new") {
+    return { title: "Edit Product" };
+  }
   return { title: "Admin" };
 }
 

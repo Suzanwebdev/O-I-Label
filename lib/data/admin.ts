@@ -103,6 +103,95 @@ export type AdminProductRow = {
   }[];
 };
 
+/** Full row for admin product edit screen (nested images + variants). */
+export type AdminProductDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  category_id: string | null;
+  is_active: boolean;
+  badges: string[];
+  occasions: ("birthday" | "vacation" | "wedding" | "corporate")[];
+  seo_title: string | null;
+  seo_description: string | null;
+  video_urls: string[];
+  image_paths: string[];
+  variants: {
+    id: string;
+    sku: string;
+    stock: number;
+    price_ghs: number;
+    compare_at_ghs: number | null;
+    size: string | null;
+    color: string | null;
+  }[];
+};
+
+export async function getAdminProductById(productId: string): Promise<AdminProductDetail | null> {
+  const supabase = createServiceRoleClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select(
+      `
+      id, name, slug, description, category_id, is_active, badges, occasions, seo_title, seo_description, video_urls,
+      variants ( id, sku, stock, price_ghs, compare_at_ghs, size, color ),
+      product_images ( storage_path, sort_order )
+    `
+    )
+    .eq("id", productId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const rawImages = (data.product_images ?? []) as { storage_path: string | null; sort_order: number | null }[];
+  const images = [...rawImages]
+    .filter((img) => typeof img.storage_path === "string" && img.storage_path.length > 0)
+    .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0));
+
+  const rawVariants = (data.variants ?? []) as {
+    id: string;
+    sku: string | null;
+    stock: number | null;
+    price_ghs: number | null;
+    compare_at_ghs: number | null;
+    size: string | null;
+    color: string | null;
+  }[];
+
+  const variants = rawVariants.map((row) => ({
+    id: row.id,
+    sku: row.sku ?? "",
+    stock: Number(row.stock ?? 0),
+    price_ghs: Number(row.price_ghs ?? 0),
+    compare_at_ghs: row.compare_at_ghs != null ? Number(row.compare_at_ghs) : null,
+    size: row.size ?? null,
+    color: row.color ?? null,
+  }));
+  variants.sort((a, b) => (a.sku || "").localeCompare(b.sku || ""));
+
+  return {
+    id: data.id,
+    name: data.name ?? "",
+    slug: data.slug ?? "",
+    description: typeof data.description === "string" ? data.description : null,
+    category_id: typeof data.category_id === "string" ? data.category_id : null,
+    is_active: Boolean(data.is_active),
+    badges: Array.isArray(data.badges) ? data.badges.filter((b): b is string => typeof b === "string") : [],
+    occasions: Array.isArray(data.occasions)
+      ? data.occasions.filter(
+          (o): o is AdminProductDetail["occasions"][number] =>
+            o === "birthday" || o === "vacation" || o === "wedding" || o === "corporate"
+        )
+      : [],
+    seo_title: typeof data.seo_title === "string" ? data.seo_title : null,
+    seo_description: typeof data.seo_description === "string" ? data.seo_description : null,
+    video_urls: Array.isArray(data.video_urls) ? data.video_urls.filter((v): v is string => typeof v === "string") : [],
+    image_paths: images.map((img) => img.storage_path ?? ""),
+    variants,
+  };
+}
+
 export type AdminOrderRow = {
   id: string;
   order_number: string;

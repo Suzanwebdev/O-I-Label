@@ -126,12 +126,13 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
   return (
     <div className="space-y-5">
       <p className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">Colours, sizes & photos</span> are set when you create a product: open{" "}
+        <span className="font-medium text-foreground">Edit</span> opens the full editor for any product (
+        name, slug, photos, variants, badges). <span className="font-medium text-foreground">New product</span> is here:{" "}
         <Link href="/admin/products/new" className="font-medium text-foreground underline underline-offset-2">
-          New product
+          create
         </Link>
-        . <span className="font-medium text-foreground">Stock (total)</span> is the sum of every variant SKU; expand a row for
-        per-size and per-colour breakdown.
+        . <span className="font-medium text-foreground">Stock (total)</span> sums every SKU; expand a row for breakdown and quick
+        occasion tags.
       </p>
       {saveError ? <p className="text-sm text-red-600">{saveError}</p> : null}
       <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background p-4 md:grid-cols-5">
@@ -312,13 +313,16 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <Button asChild variant="outline" size="sm">
                         <Link href={`/product/${product.slug}`} target="_blank">
                           View
                         </Link>
                       </Button>
                       <Button asChild size="sm">
+                        <Link href={`/admin/products/${product.id}`}>Edit</Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
                         <Link href="/admin/inventory">Inventory</Link>
                       </Button>
                     </div>
