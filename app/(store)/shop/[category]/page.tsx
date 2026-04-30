@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ShopCatalog } from "@/components/shop/shop-catalog";
 import { listCategoriesFromDb, listProducts } from "@/lib/data/catalog";
@@ -19,10 +20,12 @@ export default async function CategoryShopPage({ params }: CategoryPageProps) {
   }
 
   return (
-    <ShopCatalog
-      products={products}
-      categorySlug={selected.slug}
-      title={selected.name}
-    />
+    <Suspense fallback={<div className="px-6 py-10 text-sm text-muted-foreground">Loading category...</div>}>
+      <ShopCatalog
+        products={products}
+        categorySlug={selected.slug}
+        title={selected.name}
+      />
+    </Suspense>
   );
 }
