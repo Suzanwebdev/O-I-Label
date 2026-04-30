@@ -14,7 +14,7 @@ const allowedStatuses = new Set([
 
 export async function PATCH(request: Request) {
   const authz = await getRequestAuthz();
-  if (!authz.isAdmin) {
+  if (!authz.isAdmin || !authz.user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -43,6 +43,11 @@ export async function PATCH(request: Request) {
   }
 
   const service = createServiceRoleClient();
+  const { data: before } = await service
+    .from("orders")
+    .select("status, notify_customer")
+    .eq("id", orderId)
+    .maybeSingle();
   const orderUpdate: Record<string, unknown> = {
     status,
     updated_at: new Date().toISOString(),
@@ -91,6 +96,26 @@ export async function PATCH(request: Request) {
       }
     }
   }
+
+  const notes: string[] = [];
+  if (before?.status && before.status !== status) {
+    notes.push(`Status changed from ${before.status} to ${status}`);
+  } else {
+    notes.push(`Status set to ${status}`);
+  }
+  if (notifyCustomer !== undefined && before?.notify_customer !== notifyCustomer) {
+    notes.push(`Notify customer set to ${notifyCustomer ? "on" : "off"}`);
+  }
+  if (trackingNumber) notes.push(`Tracking number updated`);
+  if (carrier) notes.push(`Carrier updated`);
+
+  await service.from("order_events").insert({
+    order_id: orderId,
+    event_type: "order_update",
+    actor_id: authz.user.id,
+    message: notes.join(" • "),
+    meta: { status, notifyCustomer, trackingNumber: Boolean(trackingNumber), carrier: Boolean(carrier) },
+  });
 
   return NextResponse.json({ ok: true });
 }
