@@ -1,33 +1,58 @@
-import Link from "next/link";
-import { SuperadminPageHeader } from "@/components/superadmin/superadmin-page-header";
+import { getSuperadminExportsSnapshot } from "@/lib/data/superadmin";
 
-const exportsList = [
-  { href: "/api/admin/export?type=orders", label: "Orders", hint: "Recent orders and totals" },
-  { href: "/api/admin/export?type=customers", label: "Customers", hint: "Signed-in shoppers" },
-  { href: "/api/admin/export?type=products", label: "Products", hint: "Catalog and variants" },
-] as const;
+export default async function SuperadminExportsPage() {
+  const snapshot = await getSuperadminExportsSnapshot();
+  const jobs = [
+    {
+      name: `Orders (${snapshot.orders30d} rows, last 30 days)`,
+      format: "CSV",
+      cadence: "On demand",
+      status: "Ready",
+    },
+    {
+      name: `Payments (${snapshot.payments30d} rows, last 30 days)`,
+      format: "CSV",
+      cadence: "On demand",
+      status: "Ready",
+    },
+    {
+      name: `Customer base (${snapshot.usersTotal} profiles)`,
+      format: "JSON",
+      cadence: "Weekly",
+      status: snapshot.failedWebhooks7d > 0 ? "Review" : "Ready",
+    },
+  ];
 
-export default function SuperAdminExportsPage() {
   return (
-    <div>
-      <SuperadminPageHeader
-        title="Data export"
-        description="Download CSV snapshots for operations and accounting. Exports require superadmin access."
-      />
-      <ul className="grid gap-3 sm:grid-cols-1 md:max-w-xl">
-        {exportsList.map((item) => (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              className="flex flex-col rounded-xl border border-white/10 bg-white/[0.04] px-5 py-4 transition-colors hover:border-white/25 hover:bg-white/[0.07]"
+    <div className="space-y-8">
+      <div>
+        <h1 className="font-serif-display text-2xl text-white md:text-3xl">Exports</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">
+          Prepare reporting extracts for finance, operations, and compliance teams.
+        </p>
+      </div>
+
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+        <h2 className="text-base font-semibold text-white">Scheduled export jobs</h2>
+        <ul className="mt-4 space-y-3">
+          {jobs.map((job) => (
+            <li
+              key={job.name}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm"
             >
-              <span className="font-medium text-white">{item.label}</span>
-              <span className="mt-1 text-xs text-white/55">{item.hint}</span>
-              <span className="mt-2 text-sm text-white/70">Download CSV →</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+              <div>
+                <p className="font-medium text-white">{job.name}</p>
+                <p className="text-white/55">
+                  {job.format} • {job.cadence}
+                </p>
+              </div>
+              <span className="rounded-full border border-white/20 px-2.5 py-1 text-xs text-white/70">
+                {job.status}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }
