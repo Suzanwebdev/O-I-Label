@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const BUCKET = "product-images";
 
@@ -185,9 +193,32 @@ export function CategoryRowActions({
         </Button>
       </div>
       {previewUrl || imageUrl ? (
-        <div className="h-14 w-14 overflow-hidden rounded-full border">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl ?? imageUrl} alt="" className="h-full w-full object-cover" />
+        <div className="flex items-center gap-2">
+          <div className="h-14 w-14 overflow-hidden rounded-full border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewUrl ?? imageUrl} alt="" className="h-full w-full object-cover" />
+          </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" type="button" variant="outline">
+                Preview large
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Category image preview</DialogTitle>
+                <DialogDescription>Preview the image before saving to category cards.</DialogDescription>
+              </DialogHeader>
+              <div className="overflow-hidden rounded-lg border bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewUrl ?? imageUrl}
+                  alt="Category preview"
+                  className="max-h-[70vh] w-full object-contain"
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       ) : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
