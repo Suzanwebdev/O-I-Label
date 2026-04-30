@@ -445,9 +445,7 @@ export async function getAdminOrdersKpi(): Promise<AdminOrdersKpi> {
 
   for (const row of data ?? []) {
     const status = row.status as keyof Omit<AdminOrdersKpi, "revenuePaid">;
-    if (status in kpi && status !== "revenuePaid") {
-      (kpi[status] as number) += 1;
-    }
+    (kpi[status] as number) += 1;
     if (row.status === "paid" || row.status === "processing" || row.status === "shipped" || row.status === "delivered") {
       kpi.revenuePaid += Number(row.total_ghs ?? 0);
     }
