@@ -1,5 +1,5 @@
 import { CategoryCreateForm } from "@/components/admin/category-create-form";
-import { CategoryRowActions } from "@/components/admin/category-row-actions";
+import { CategoriesManager } from "@/components/admin/categories-manager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listAdminCategories } from "@/lib/data/admin";
 
@@ -20,27 +20,8 @@ export default async function AdminCategoriesPage() {
         <CardHeader>
           <CardTitle className="text-base">Current categories</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {categories.length ? (
-            categories.map((c) => (
-              <div key={c.id} className="rounded-lg border border-border bg-background px-4 py-3 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">/{c.slug}</p>
-                </div>
-                {c.description ? <p className="mt-1 text-xs text-muted-foreground">{c.description}</p> : null}
-                <div className="mt-3">
-                  <CategoryRowActions
-                    categoryId={c.id}
-                    initialName={c.name}
-                    initialImageUrl={c.image_url ?? null}
-                  />
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">No categories yet.</p>
-          )}
+        <CardContent>
+          <CategoriesManager categories={categories} />
         </CardContent>
       </Card>
     </div>
