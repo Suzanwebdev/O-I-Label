@@ -69,7 +69,7 @@ export async function getSuperadminUsersSnapshot(): Promise<SuperadminUsersSnaps
   }
 
   for (const row of admins ?? []) {
-    const role =
+    const role: "superadmin" | "admin" | "staff" =
       row.role === "superadmin" || row.role === "admin" || row.role === "staff" ? row.role : "staff";
     if (!byUserId.has(row.user_id)) {
       roleCounts[role] += 1;
