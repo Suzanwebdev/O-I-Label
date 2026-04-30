@@ -127,7 +127,14 @@ export function CategoryRowActions({
         <Button size="sm" type="button" disabled={busy} onClick={() => void save()}>
           Save
         </Button>
-        <Button size="sm" type="button" variant="destructive" disabled={busy} onClick={() => void remove()}>
+        <Button
+          size="sm"
+          type="button"
+          variant="outline"
+          className="border-red-300 text-red-700 hover:bg-red-50"
+          disabled={busy}
+          onClick={() => void remove()}
+        >
           Delete
         </Button>
       </div>
