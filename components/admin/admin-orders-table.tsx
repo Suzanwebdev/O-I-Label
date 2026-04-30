@@ -34,6 +34,7 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
   const router = useRouter();
   const [q, setQ] = React.useState("");
   const [activeStatus, setActiveStatus] = React.useState<"all" | AdminOrderRow["status"]>("all");
+  const [needsAttentionOnly, setNeedsAttentionOnly] = React.useState(false);
   const [fromDate, setFromDate] = React.useState("");
   const [toDate, setToDate] = React.useState("");
   const [selected, setSelected] = React.useState<Record<string, boolean>>({});
@@ -78,12 +79,18 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
     events: Array<{ id: string; event_type: string; message: string; created_at: string }>;
   } | null>(null);
   const [detailBusy, setDetailBusy] = React.useState(false);
+  const [notifyBusy, setNotifyBusy] = React.useState(false);
 
   const filtered = React.useMemo(() => {
     const key = q.trim().toLowerCase();
     const fromTime = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
     const toTime = toDate ? new Date(`${toDate}T23:59:59`).getTime() : null;
     return orders.filter((o) => {
+      const ageMs = Date.now() - new Date(o.created_at).getTime();
+      const needsAttention =
+        ((o.status === "pending" || o.status === "processing") && ageMs > 24 * 60 * 60 * 1000) ||
+        (o.status === "shipped" && !(o.tracking_number ?? "").trim());
+      if (needsAttentionOnly && !needsAttention) return false;
       if (activeStatus !== "all" && o.status !== activeStatus) return false;
       if (fromTime != null || toTime != null) {
         const ts = new Date(o.created_at).getTime();
@@ -98,7 +105,7 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
         (o.tracking_number ?? "").toLowerCase().includes(key)
       );
     });
-  }, [orders, q, activeStatus, fromDate, toDate]);
+  }, [orders, q, activeStatus, fromDate, toDate, needsAttentionOnly]);
 
   const selectedIds = React.useMemo(
     () => filtered.filter((o) => selected[o.id]).map((o) => o.id),
@@ -190,6 +197,29 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
     }
   }
 
+  async function sendUpdate() {
+    if (!openOrderId) return;
+    setNotifyBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${openOrderId}/notify`, { method: "POST" });
+      const json = (await res.json()) as { error?: string; skipped?: boolean };
+      if (!res.ok) {
+        setError(json.error ?? "Could not send update");
+        return;
+      }
+      if (json.skipped) {
+        setError("Email provider key missing, so update email was skipped.");
+      }
+      await openDetail(openOrderId);
+      router.refresh();
+    } catch {
+      setError("Network error while sending update");
+    } finally {
+      setNotifyBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -210,6 +240,13 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
             {s} ({statusCounts[s]})
           </Button>
         ))}
+        <Button
+          size="sm"
+          variant={needsAttentionOnly ? "default" : "outline"}
+          onClick={() => setNeedsAttentionOnly((v) => !v)}
+        >
+          Needs attention
+        </Button>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
@@ -369,6 +406,18 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
             <p className="mt-6 text-sm text-muted-foreground">Loading order...</p>
           ) : detail ? (
             <div className="mt-6 space-y-6 text-sm">
+              <section className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.open(`/api/admin/orders/${detail.order.id}/invoice`, "_blank")}
+                >
+                  Print invoice
+                </Button>
+                <Button size="sm" onClick={() => void sendUpdate()} disabled={notifyBusy}>
+                  {notifyBusy ? "Sending..." : "Send customer update"}
+                </Button>
+              </section>
               <section>
                 <h3 className="font-medium">Summary</h3>
                 <div className="mt-2 space-y-1 text-muted-foreground">

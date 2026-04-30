@@ -40,3 +40,27 @@ export async function sendPasswordResetEmail(opts: { to: string; link: string })
   });
   return { sent: true as const };
 }
+
+export async function sendOrderStatusEmail(opts: {
+  to: string;
+  orderNumber: string;
+  status: string;
+  trackingNumber?: string | null;
+}) {
+  const resend = client();
+  if (!resend) {
+    console.warn("RESEND_API_KEY missing; skip status email");
+    return { skipped: true as const };
+  }
+  const from = process.env.RESEND_FROM ?? "O & I Label <onboarding@resend.dev>";
+  const trackingLine = opts.trackingNumber
+    ? `<p>Tracking: <strong>${opts.trackingNumber}</strong></p>`
+    : "";
+  await resend.emails.send({
+    from,
+    to: opts.to,
+    subject: `Order update — ${opts.orderNumber}`,
+    html: `<p>Your order <strong>${opts.orderNumber}</strong> is now <strong>${opts.status}</strong>.</p>${trackingLine}`,
+  });
+  return { sent: true as const };
+}
