@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Container } from "@/components/store/container";
 
+export const dynamic = "force-dynamic";
+
 export default function LoginPage() {
   const searchParams = useSearchParams();
   const [email, setEmail] = React.useState("");
