@@ -94,13 +94,13 @@ export async function getProductBySlugFromDb(
 }
 
 export async function listCategoriesFromDb(): Promise<
-  { slug: string; name: string; description?: string | null }[]
+  { slug: string; name: string; description?: string | null; image_url?: string | null }[]
 > {
   try {
     const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
       .from("categories")
-      .select("slug, name, description")
+      .select("slug, name, description, image_url")
       .order("sort_order", { ascending: true });
     if (error || !data?.length) {
       const { mockCategories } = await import("@/lib/mock-data");

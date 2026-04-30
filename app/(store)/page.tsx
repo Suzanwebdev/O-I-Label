@@ -5,6 +5,7 @@ import { Container } from "@/components/store/container";
 import { Section } from "@/components/store/section";
 import { mockCategories } from "@/lib/mock-data";
 import { listProducts } from "@/lib/data/catalog";
+import { listCategoriesFromDb } from "@/lib/data/catalog";
 import { filterProducts, sortProducts } from "@/lib/shop-utils";
 import { BestSellersRow } from "@/components/home/best-sellers-row";
 import { HomeHero } from "@/components/home/home-hero";
@@ -61,7 +62,8 @@ const occasionItems: OccasionItem[] = [
 ];
 
 export default async function HomePage() {
-  const catalog = await listProducts();
+  const [catalog, categories] = await Promise.all([listProducts(), listCategoriesFromDb()]);
+  const categoriesToRender = categories.length ? categories : mockCategories;
   let bestSellers = filterProducts(catalog, { tag: "best_seller" }).filter(
     (p) => p.variants.length > 0
   );
@@ -130,7 +132,7 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-4 gap-x-4 gap-y-6 pb-3 md:gap-y-5 md:pb-1">
-            {mockCategories.map((c) => (
+            {categoriesToRender.map((c) => (
               <Link
                 key={c.slug}
                 href={`/shop/${c.slug}`}
@@ -139,6 +141,7 @@ export default async function HomePage() {
                 <div className="relative h-[76px] w-[76px] overflow-hidden rounded-full border border-border bg-muted md:h-[96px] md:w-[96px]">
                   <Image
                     src={
+                      ("image_url" in c ? c.image_url : null) ??
                       categoryImageBySlug[c.slug] ??
                       `/home/category-tops.png`
                     }

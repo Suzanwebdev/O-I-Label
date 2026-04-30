@@ -1,4 +1,5 @@
 import { CategoryCreateForm } from "@/components/admin/category-create-form";
+import { CategoryRowActions } from "@/components/admin/category-row-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listAdminCategories } from "@/lib/data/admin";
 
@@ -28,6 +29,13 @@ export default async function AdminCategoriesPage() {
                   <p className="text-xs text-muted-foreground">/{c.slug}</p>
                 </div>
                 {c.description ? <p className="mt-1 text-xs text-muted-foreground">{c.description}</p> : null}
+                <div className="mt-3">
+                  <CategoryRowActions
+                    categoryId={c.id}
+                    initialName={c.name}
+                    initialImageUrl={c.image_url ?? null}
+                  />
+                </div>
               </div>
             ))
           ) : (

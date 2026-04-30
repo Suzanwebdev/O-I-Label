@@ -6,6 +6,7 @@ export type AdminCategory = {
   name: string;
   slug: string;
   description: string | null;
+  image_url: string | null;
   sort_order: number;
 };
 
@@ -180,7 +181,7 @@ export async function listAdminCategories(): Promise<AdminCategory[]> {
   const supabase = createServiceRoleClient();
   const { data } = await supabase
     .from("categories")
-    .select("id, name, slug, description, sort_order")
+    .select("id, name, slug, description, image_url, sort_order")
     .order("sort_order", { ascending: true });
   return (data ?? []) as AdminCategory[];
 }
