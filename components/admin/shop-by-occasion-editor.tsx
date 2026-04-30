@@ -31,11 +31,12 @@ function previewForRow(row: OccasionSectionCardStored) {
   const altRaw = (row.alt ?? "").trim();
 
   if (base) {
+    const title = titleRaw || base.title;
     return {
-      title: titleRaw || base.title,
+      title,
       href: hrefRaw || base.href,
       image: imageRaw || base.image,
-      alt: altRaw || base.alt,
+      alt: altRaw || base.alt || title,
     };
   }
   return {
