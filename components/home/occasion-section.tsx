@@ -51,10 +51,11 @@ export function OccasionSection({
 
         <div
           className={cn(
-            "flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-px-3 pb-1",
+            "flex w-full max-w-none snap-x snap-mandatory gap-2 overflow-x-auto scroll-px-3 pb-1",
             "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-            "md:grid md:snap-none md:grid-cols-2 md:gap-2.5 md:overflow-visible md:scroll-p-0 md:pb-0",
-            "lg:grid-cols-[repeat(auto-fill,minmax(min(100%,220px),1fr))] lg:gap-3",
+            "md:grid md:w-full md:max-w-none md:snap-none md:grid-cols-2 md:gap-3 md:overflow-visible md:scroll-p-0 md:pb-0",
+            // auto-fit collapses unused tracks so a short row (e.g. 4 cards) still spans full width; auto-fill kept empty lanes.
+            "lg:grid lg:grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] lg:gap-4",
             "-mx-4 px-4 md:mx-0 md:px-0"
           )}
         >
