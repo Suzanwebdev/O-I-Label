@@ -234,7 +234,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
           openCart();
         }}
         >
-          Buy it now
+          Buy now
         </Button>
       </div>
 
