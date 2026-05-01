@@ -70,19 +70,26 @@ export function StoreHeader() {
   }
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
-        "transition-[background-color,box-shadow] duration-300",
-        isScrolled && "bg-background/90 shadow-[0_10px_30px_rgb(15_23_42_/_0.08)]"
-      )}
-    >
-      <Container
+    <header className="sticky top-0 z-40">
+      <div className="hidden border-b border-white/10 bg-black text-white md:block">
+        <Container className="flex h-8 items-center justify-between text-[11px] tracking-[0.08em] text-white/85">
+          <p>Free shipping on orders over GH₵500</p>
+          <p>Made for comfort. Designed to last.</p>
+        </Container>
+      </div>
+      <div
         className={cn(
-          "flex items-center gap-4 transition-[height,padding] duration-300",
-          isScrolled ? "h-14 md:h-16" : "h-16 md:h-[4.5rem]"
+          "border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85",
+          "transition-[background-color,box-shadow] duration-300",
+          isScrolled && "bg-background/90 shadow-[0_10px_30px_rgb(15_23_42_/_0.08)]"
         )}
       >
+        <Container
+          className={cn(
+            "flex items-center gap-4 transition-[height,padding] duration-300",
+            isScrolled ? "h-14 md:h-[4.25rem]" : "h-16 md:h-[4.75rem]"
+          )}
+        >
         <Sheet>
           <SheetTrigger asChild className="lg:hidden">
             <Button variant="ghost" size="icon" aria-label="Open menu">
@@ -218,21 +225,21 @@ export function StoreHeader() {
           </NavigationMenuList>
         </NavigationMenu>
 
-        <form
-          onSubmit={onSearch}
-          className="ml-auto hidden min-w-[200px] max-w-sm flex-1 items-center gap-2 md:flex lg:max-w-xs"
-        >
-          <div className="relative flex-1">
+          <form
+            onSubmit={onSearch}
+            className="ml-auto hidden min-w-[220px] max-w-sm flex-1 items-center gap-2 md:flex lg:max-w-xs"
+          >
+            <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search pieces..."
-              className="h-10 pl-9"
+              className="h-10 rounded-full border-border/70 bg-muted/20 pl-9"
               aria-label="Search products"
             />
           </div>
-        </form>
+          </form>
 
         <div className="flex items-center gap-1 md:gap-2">
           <Button
@@ -287,7 +294,8 @@ export function StoreHeader() {
             ) : null}
           </Button>
         </div>
-      </Container>
+        </Container>
+      </div>
     </header>
   );
 }

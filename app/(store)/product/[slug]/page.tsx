@@ -29,9 +29,9 @@ export default async function ProductPage({ params }: Props) {
   }
 
   return (
-    <div className="border-border/60 border-b bg-background py-10 md:py-14">
+    <div className="border-border/60 border-b bg-background py-8 pb-24 md:py-12 md:pb-12">
       <Container className="px-4 sm:px-6 lg:px-8">
-        <nav className="mb-8 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+        <nav className="mb-6 flex flex-wrap items-center gap-1 text-xs text-muted-foreground md:mb-8">
           <Link href="/shop" className="hover:text-foreground">
             Shop
           </Link>
@@ -43,10 +43,10 @@ export default async function ProductPage({ params }: Props) {
           <span className="text-foreground">{product.name}</span>
         </nav>
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-14 lg:items-start">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:gap-12 lg:items-start">
           <ProductGallery images={product.images} name={product.name} />
-          <div className="space-y-5">
-            <div>
+          <aside className="space-y-6 lg:sticky lg:top-24">
+            <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5 shadow-[var(--shadow-soft)] md:p-6">
               <Link
                 href={`/shop/${product.category_slug}`}
                 className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground hover:text-navy"
@@ -62,15 +62,14 @@ export default async function ProductPage({ params }: Props) {
                   {product.review_count != null ? ` · ${product.review_count} reviews` : null}
                 </p>
               ) : null}
-            </div>
-            <BadgeSet badges={product.badges} />
-            {product.description ? (
-              <div className="prose prose-sm max-w-none text-muted-foreground">
-                <p className="whitespace-pre-line leading-relaxed">{product.description}</p>
+              <div className="mt-4">
+                <BadgeSet badges={product.badges} />
               </div>
-            ) : null}
-            <ProductVariantForm product={product} />
-          </div>
+              <div className="mt-5 border-t border-border pt-5">
+                <ProductVariantForm product={product} />
+              </div>
+            </div>
+          </aside>
         </div>
       </Container>
     </div>
