@@ -23,7 +23,7 @@ const routeMeta: Record<string, RouteMeta> = {
   "/admin/inventory": { title: "Inventory" },
   "/admin/blog": { title: "Blog" },
   "/admin/homepage": { title: "Homepage" },
-  "/admin/discounts": { title: "Discounts" },
+  "/admin/discounts": { title: "Discounts", ctaHref: "/admin/discounts#create-discount", ctaLabel: "New code" },
   "/admin/marketing": { title: "Marketing" },
   "/admin/support-crm": { title: "Support CRM" },
   "/admin/team-roles": { title: "Team & Roles" },

@@ -288,6 +288,48 @@ export async function listAdminCollections(): Promise<AdminCollection[]> {
   return (data ?? []) as AdminCollection[];
 }
 
+export type AdminDiscountRow = {
+  id: string;
+  code: string;
+  kind: "percent" | "fixed" | "free_shipping";
+  value: number | null;
+  min_spend_ghs: number | null;
+  usage_limit: number | null;
+  used_count: number;
+  starts_at: string | null;
+  ends_at: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export async function listAdminDiscounts(): Promise<AdminDiscountRow[]> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
+    .from("discounts")
+    .select(
+      "id, code, kind, value, min_spend_ghs, usage_limit, used_count, starts_at, ends_at, is_active, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    code: typeof row.code === "string" ? row.code : "",
+    kind:
+      row.kind === "percent" || row.kind === "fixed" || row.kind === "free_shipping"
+        ? row.kind
+        : "percent",
+    value: row.value != null ? Number(row.value) : null,
+    min_spend_ghs: row.min_spend_ghs != null ? Number(row.min_spend_ghs) : null,
+    usage_limit: row.usage_limit != null ? Number(row.usage_limit) : null,
+    used_count: Number(row.used_count ?? 0),
+    starts_at: row.starts_at == null ? null : String(row.starts_at),
+    ends_at: row.ends_at == null ? null : String(row.ends_at),
+    is_active: Boolean(row.is_active),
+    created_at: typeof row.created_at === "string" ? row.created_at : new Date(0).toISOString(),
+  }));
+}
+
 export async function listAdminInventory(): Promise<AdminInventoryRow[]> {
   const supabase = createServiceRoleClient();
   const { data } = await supabase
