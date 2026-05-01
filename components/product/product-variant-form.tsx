@@ -5,13 +5,6 @@ import Link from "next/link";
 import type { Product } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCart } from "@/components/providers/cart-provider";
 import { Price } from "@/components/store/price";
 import { Minus, Plus, ShieldCheck, Truck, Undo2 } from "lucide-react";
@@ -127,19 +120,29 @@ export function ProductVariantForm({ product }: { product: Product }) {
               Size Guide
             </Link>
           </div>
-          <Select value={size} onValueChange={setSize}>
-            <SelectTrigger className="h-11 rounded-[var(--radius-lg)] border-border/80 bg-background">
-              <SelectValue placeholder="Select size" />
-            </SelectTrigger>
-            <SelectContent>
-              {sizes.map((s) => (
-                <SelectItem key={s} value={s}>
+          <div className="flex flex-wrap items-center gap-2">
+            {sizes.map((s) => {
+              const selected = s === size;
+              const enabled = availableSizes.includes(s);
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => enabled && setSize(s)}
+                  className={cn(
+                    "inline-flex min-w-11 items-center justify-center rounded-full border px-3 py-2 text-sm transition-colors",
+                    selected
+                      ? "border-black bg-black text-white"
+                      : "border-border bg-background text-foreground hover:border-black/30",
+                    !enabled && "cursor-not-allowed opacity-35"
+                  )}
+                  aria-label={`Select size ${s}`}
+                >
                   {s}
-                  {!availableSizes.includes(s) ? " (Unavailable)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : null}
       {colors.length > 0 ? (
