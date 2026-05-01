@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,21 @@ export default function LoginClient() {
         </form>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        <div className="space-y-1 text-sm text-muted-foreground">
+          <p>
+            Don&apos;t have an account?{" "}
+            <Link href={`/signup?next=${encodeURIComponent(next)}`} className="text-navy underline-offset-4 hover:underline">
+              Create one
+            </Link>
+          </p>
+          <p>
+            Prefer not to sign in?{" "}
+            <Link href="/shop" className="text-navy underline-offset-4 hover:underline">
+              Continue as guest
+            </Link>
+            .
+          </p>
+        </div>
       </div>
     </Container>
   );
