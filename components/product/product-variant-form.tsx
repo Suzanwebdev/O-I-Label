@@ -179,9 +179,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
           amountGhs={variant.price_ghs}
           compareAtGhs={variant.compare_at_ghs}
         />
-        <span className="text-sm text-muted-foreground">
-          {oos ? "Out of stock" : `${variant.stock} in stock`}
-        </span>
+        {oos ? <span className="text-sm text-muted-foreground">Out of stock</span> : null}
       </div>
 
       <div className="space-y-3">
