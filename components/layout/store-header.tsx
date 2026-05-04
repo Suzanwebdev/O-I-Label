@@ -71,12 +71,6 @@ export function StoreHeader() {
 
   return (
     <header className="sticky top-0 z-40">
-      <div className="hidden border-b border-white/10 bg-black text-white md:block">
-        <Container className="flex h-8 items-center justify-between text-[11px] tracking-[0.08em] text-white/85">
-          <p>Free shipping on orders over GH₵500</p>
-          <p>Made for comfort. Designed to last.</p>
-        </Container>
-      </div>
       <div
         className={cn(
           "border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85",

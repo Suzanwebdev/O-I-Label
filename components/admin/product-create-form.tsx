@@ -58,6 +58,57 @@ function variantIdentity(color: string, size: string) {
   return `${color.trim().toLowerCase()}::${size.trim().toLowerCase()}`;
 }
 
+type BulkGeneratorArgs = {
+  bulkColorsInput: string;
+  bulkSizesInput: string;
+  bulkBasePrice: string;
+  bulkBaseStock: string;
+  bulkCompareAt: string;
+  bulkSkuPrefix: string;
+  slug: string;
+  name: string;
+};
+
+/** Build new variant rows from bulk fields; skips combinations that already exist on `existingVariants`. */
+function buildBulkVariantRows(
+  existingVariants: VariantDraft[],
+  args: BulkGeneratorArgs
+): { rows: VariantDraft[]; skipped: number } {
+  const colors = parseTokenList(args.bulkColorsInput);
+  const sizes = parseTokenList(args.bulkSizesInput);
+  if (colors.length === 0 || sizes.length === 0) {
+    return { rows: [], skipped: 0 };
+  }
+
+  const skuBase = toSlug(args.bulkSkuPrefix || args.slug || args.name || "product");
+  let skipped = 0;
+  const nextRows: VariantDraft[] = [];
+  const existingKeys = new Set(existingVariants.map((v) => variantIdentity(v.color, v.size)));
+
+  for (const color of colors) {
+    for (const size of sizes) {
+      const key = variantIdentity(color, size);
+      if (existingKeys.has(key)) {
+        skipped += 1;
+        continue;
+      }
+      existingKeys.add(key);
+      const colorCode = toSlug(color).replace(/-/g, "").slice(0, 8) || "base";
+      const sizeCode = toSlug(size).replace(/-/g, "").slice(0, 8) || "one";
+      nextRows.push({
+        color,
+        size,
+        sku: `${skuBase}-${colorCode}-${sizeCode}`,
+        price: args.bulkBasePrice.trim(),
+        compareAt: args.bulkCompareAt.trim(),
+        stock: args.bulkBaseStock.trim() || "0",
+      });
+    }
+  }
+
+  return { rows: nextRows, skipped };
+}
+
 function isBlankVariant(v: VariantDraft) {
   return (
     !v.id &&
@@ -151,6 +202,46 @@ export function ProductCreateForm({
     setOccasions((prev) => (prev.includes(occasion) ? prev.filter((o) => o !== occasion) : [...prev, occasion]));
   }
 
+  const bulkGeneratorArgs = React.useMemo<BulkGeneratorArgs>(
+    () => ({
+      bulkColorsInput,
+      bulkSizesInput,
+      bulkBasePrice,
+      bulkBaseStock,
+      bulkCompareAt,
+      bulkSkuPrefix,
+      slug,
+      name,
+    }),
+    [
+      bulkColorsInput,
+      bulkSizesInput,
+      bulkBasePrice,
+      bulkBaseStock,
+      bulkCompareAt,
+      bulkSkuPrefix,
+      slug,
+      name,
+    ]
+  );
+
+  const pendingBulkPreview = React.useMemo(() => {
+    const onlyBlankRow = variants.length === 1 && isBlankVariant(variants[0]);
+    if (!onlyBlankRow) return null;
+    const colors = parseTokenList(bulkColorsInput);
+    const sizes = parseTokenList(bulkSizesInput);
+    if (colors.length === 0 || sizes.length === 0) return null;
+    const n = colors.length * sizes.length;
+    const stockEach = Number.isFinite(Number(bulkBaseStock)) ? Number(bulkBaseStock) : 0;
+    const priceNum = Number(bulkBasePrice);
+    const hasValidPrice = Number.isFinite(priceNum) && priceNum > 0;
+    return {
+      variantCount: n,
+      totalStock: n * stockEach,
+      hasValidPrice,
+    };
+  }, [variants, bulkColorsInput, bulkSizesInput, bulkBaseStock, bulkBasePrice]);
+
   function generateBulkVariants() {
     setBulkMessage(null);
     const colors = parseTokenList(bulkColorsInput);
@@ -160,31 +251,7 @@ export function ProductCreateForm({
       return;
     }
 
-    const skuBase = toSlug(bulkSkuPrefix || slug || name || "product");
-    let skipped = 0;
-    const nextRows: VariantDraft[] = [];
-    const existingKeys = new Set(variants.map((v) => variantIdentity(v.color, v.size)));
-
-    for (const color of colors) {
-      for (const size of sizes) {
-        const key = variantIdentity(color, size);
-        if (existingKeys.has(key)) {
-          skipped += 1;
-          continue;
-        }
-        existingKeys.add(key);
-        const colorCode = toSlug(color).replace(/-/g, "").slice(0, 8) || "base";
-        const sizeCode = toSlug(size).replace(/-/g, "").slice(0, 8) || "one";
-        nextRows.push({
-          color,
-          size,
-          sku: `${skuBase}-${colorCode}-${sizeCode}`,
-          price: bulkBasePrice.trim(),
-          compareAt: bulkCompareAt.trim(),
-          stock: bulkBaseStock.trim() || "0",
-        });
-      }
-    }
+    const { rows: nextRows, skipped } = buildBulkVariantRows(variants, bulkGeneratorArgs);
 
     if (nextRows.length === 0) {
       setBulkMessage(skipped > 0 ? "No new rows added — all generated combinations already exist." : "No variants generated.");
@@ -206,7 +273,25 @@ export function ProductCreateForm({
     e.preventDefault();
     setError(null);
 
-    const normalizedVariants = variants.map((v) => ({
+    let effectiveVariants = variants;
+    if (effectiveVariants.length === 1 && isBlankVariant(effectiveVariants[0])) {
+      const { rows } = buildBulkVariantRows(effectiveVariants, bulkGeneratorArgs);
+      const colors = parseTokenList(bulkColorsInput);
+      const sizes = parseTokenList(bulkSizesInput);
+      const priceNum = Number(bulkBasePrice.trim());
+      if (colors.length > 0 && sizes.length > 0 && rows.length > 0) {
+        if (!Number.isFinite(priceNum) || priceNum <= 0) {
+          setError(
+            "You filled the bulk variant generator but the default price (GHc) is missing or zero. Enter a price, then click **Generate variants** or try Create again."
+          );
+          return;
+        }
+        effectiveVariants = rows;
+        setVariants(rows);
+      }
+    }
+
+    const normalizedVariants = effectiveVariants.map((v) => ({
       id: typeof v.id === "string" && v.id.trim() ? v.id.trim() : undefined,
       size: v.size.trim() || null,
       color: v.color.trim() || null,
@@ -387,7 +472,11 @@ export function ProductCreateForm({
             <div>
               <h3 className="text-sm font-semibold text-black">Bulk variant generator (optional)</h3>
               <p className="text-xs text-muted-foreground">
-                Create many size/colour rows at once. Your existing manual rows stay unchanged.
+                Create many size/colour rows at once. Your existing manual rows stay unchanged.{" "}
+                <span className="font-medium text-foreground">
+                  Entries here are not saved into the table until you click Generate variants
+                </span>{" "}
+                (or until you create the product — we then apply them if the table is still empty).
               </p>
             </div>
             <Button type="button" size="sm" variant="outline" disabled={busy} onClick={generateBulkVariants}>
@@ -874,20 +963,48 @@ export function ProductCreateForm({
           </p>
         </div>
         <div className="grid gap-4 rounded-[var(--radius-md)] border border-white/25 bg-black/20 p-4 md:grid-cols-3">
+          {pendingBulkPreview ? (
+            <p className="md:col-span-3 text-xs leading-relaxed text-amber-200/95">
+              Step 3 still has one empty variant row, while the bulk generator describes{" "}
+              <span className="font-semibold text-white">{pendingBulkPreview.variantCount}</span> combinations.
+              {!pendingBulkPreview.hasValidPrice ? (
+                <>
+                  {" "}
+                  Add a <span className="font-medium">Default price (GHc)</span>, then click{" "}
+                  <span className="font-medium">Generate variants</span> (or create — we will apply bulk rows once
+                  price is set).
+                </>
+              ) : (
+                <>
+                  {" "}
+                  Click <span className="font-medium">Generate variants</span> to fill the table now, or press{" "}
+                  <span className="font-medium">Create product</span> and we will apply them for you.
+                </>
+              )}
+            </p>
+          ) : null}
           <div className="space-y-2">
-            <Label className="text-white/70">Total variants</Label>
+            <Label className="text-white/70">
+              Total variants
+              {pendingBulkPreview ? " (includes bulk preview)" : ""}
+            </Label>
             <Input
               className="border-white/30 bg-white/10 text-white"
-              value={String(variants.length)}
+              value={String(pendingBulkPreview?.variantCount ?? variants.length)}
               disabled
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-white/70">Total stock</Label>
+            <Label className="text-white/70">
+              Total stock
+              {pendingBulkPreview ? " (includes bulk preview)" : ""}
+            </Label>
             <Input
               className="border-white/30 bg-white/10 text-white"
               value={String(
-                variants.reduce((sum, v) => sum + (Number.isFinite(Number(v.stock)) ? Number(v.stock) : 0), 0)
+                pendingBulkPreview
+                  ? pendingBulkPreview.totalStock
+                  : variants.reduce((sum, v) => sum + (Number.isFinite(Number(v.stock)) ? Number(v.stock) : 0), 0)
               )}
               disabled
             />

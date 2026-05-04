@@ -44,7 +44,15 @@ export default async function ProductPage({ params }: Props) {
         </nav>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:gap-12 lg:items-start">
-          <ProductGallery images={product.images} name={product.name} />
+          <div className="space-y-6">
+            <ProductGallery images={product.images} name={product.name} />
+            {product.description?.trim() ? (
+              <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5 shadow-[var(--shadow-soft)] md:p-6">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Details</h2>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{product.description.trim()}</p>
+              </div>
+            ) : null}
+          </div>
           <aside className="space-y-6 lg:sticky lg:top-24">
             <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5 shadow-[var(--shadow-soft)] md:p-6">
               <Link

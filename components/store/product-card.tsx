@@ -59,6 +59,9 @@ export function ProductCard({
             {product.name}
           </h3>
         </Link>
+        {product.description?.trim() ? (
+          <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{product.description.trim()}</p>
+        ) : null}
         <Price amountGhs={v.price_ghs} compareAtGhs={compare} />
         <Button
           type="button"

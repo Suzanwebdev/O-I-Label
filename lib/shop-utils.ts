@@ -1,4 +1,17 @@
-import type { Product, ProductBadge } from "@/lib/types";
+import type { OccasionTag, Product, ProductBadge } from "@/lib/types";
+
+const OCCASION_TAGS: OccasionTag[] = [
+  "birthday",
+  "vacation",
+  "wedding",
+  "corporate",
+];
+
+/** Lowercase slug from `?occasion=`; rejects unknown values so callers can show an empty grid. */
+export function occasionFromQueryParam(raw: string): OccasionTag | undefined {
+  const k = raw.trim().toLowerCase() as OccasionTag;
+  return OCCASION_TAGS.includes(k) ? k : undefined;
+}
 
 export function filterProducts(
   products: Product[],
@@ -26,8 +39,14 @@ export function filterProducts(
   if (opts.category) {
     list = list.filter((p) => p.category_slug === opts.category);
   }
-  if (opts.occasion) {
-    list = list.filter((p) => (p.occasions ?? []).includes(opts.occasion as "birthday" | "vacation" | "wedding" | "corporate"));
+  const occasionRaw = opts.occasion?.trim();
+  if (occasionRaw) {
+    const occasionKey = occasionFromQueryParam(occasionRaw);
+    if (occasionKey) {
+      list = list.filter((p) => (p.occasions ?? []).includes(occasionKey));
+    } else {
+      list = [];
+    }
   }
   if (opts.tag) {
     const t = opts.tag as ProductBadge;

@@ -49,6 +49,9 @@ export function TrendingStrip({ products }: { products: Product[] }) {
                     <p className="font-serif-display text-base leading-snug">
                       {p.name}
                     </p>
+                    {p.description?.trim() ? (
+                      <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{p.description.trim()}</p>
+                    ) : null}
                     <Price amountGhs={v.price_ghs} compareAtGhs={v.compare_at_ghs} />
                   </div>
                 </Link>

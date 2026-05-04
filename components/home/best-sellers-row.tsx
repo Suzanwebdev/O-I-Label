@@ -117,6 +117,11 @@ export function BestSellersRow({ products }: { products: Product[] }) {
                     {product.name}
                   </h3>
                 </Link>
+                {product.description?.trim() ? (
+                  <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground md:text-xs">
+                    {product.description.trim()}
+                  </p>
+                ) : null}
                 <Price
                   amountGhs={v.price_ghs}
                   compareAtGhs={compare}

@@ -1,4 +1,4 @@
-import type { Category, Product, ProductBadge } from "@/lib/types";
+import type { Category, OccasionTag, Product, ProductBadge } from "@/lib/types";
 
 const img = (id: string, w = 800, h = 1000) =>
   `https://images.unsplash.com/photo-${id}?w=${w}&h=${h}&fit=crop&q=80`;
@@ -49,6 +49,7 @@ const raw: Array<{
   stock?: number;
   sizes?: string[];
   colors?: string[];
+  occasions?: OccasionTag[];
 }> = [
   {
     slug: "essential-ribbed-top-black",
@@ -64,6 +65,7 @@ const raw: Array<{
     stock: 8,
     sizes: ["XS", "S", "M", "L"],
     colors: ["Black", "Ivory", "Nude"],
+    occasions: ["corporate", "vacation"],
   },
   {
     slug: "sculpted-mini-dress-ivory",
@@ -77,6 +79,7 @@ const raw: Array<{
     price: 420,
     sizes: ["XS", "S", "M", "L", "XL"],
     colors: ["Ivory", "Black"],
+    occasions: ["birthday", "wedding"],
   },
   {
     slug: "contour-fit-set-nude",
@@ -92,6 +95,7 @@ const raw: Array<{
     stock: 5,
     sizes: ["S", "M", "L"],
     colors: ["Nude", "Espresso"],
+    occasions: ["vacation", "birthday"],
   },
   {
     slug: "high-rise-tailored-trouser-navy",
@@ -105,6 +109,7 @@ const raw: Array<{
     price: 310,
     sizes: ["XS", "S", "M", "L", "XL"],
     colors: ["Navy", "Black"],
+    occasions: ["corporate"],
   },
   {
     slug: "power-shoulder-blazer-suit",
@@ -120,6 +125,7 @@ const raw: Array<{
     stock: 6,
     sizes: ["S", "M", "L"],
     colors: ["Black", "Charcoal"],
+    occasions: ["corporate", "wedding"],
   },
   {
     slug: "curve-hug-denim-midwash",
@@ -133,6 +139,7 @@ const raw: Array<{
     price: 265,
     sizes: ["24", "26", "28", "30", "32"],
     colors: ["Mid Wash", "Indigo"],
+    occasions: ["vacation"],
   },
   {
     slug: "second-skin-bodysuit-espresso",
@@ -160,6 +167,7 @@ const raw: Array<{
     price: 445,
     sizes: ["XS", "S", "M", "L"],
     colors: ["Black", "Olive"],
+    occasions: ["wedding", "birthday"],
   },
   {
     slug: "cashmere-touch-cardigan-oat",
@@ -173,6 +181,7 @@ const raw: Array<{
     price: 298,
     sizes: ["S", "M", "L", "XL"],
     colors: ["Oat", "Navy"],
+    occasions: ["corporate"],
   },
   {
     slug: "pointelle-knit-midi-dress-blush",
@@ -188,6 +197,7 @@ const raw: Array<{
     stock: 9,
     sizes: ["S", "M", "L"],
     colors: ["Blush", "Cream"],
+    occasions: ["birthday"],
   },
   {
     slug: "satin-bias-slip-dress-champagne",
@@ -201,6 +211,7 @@ const raw: Array<{
     price: 510,
     sizes: ["XS", "S", "M", "L"],
     colors: ["Champagne", "Black"],
+    occasions: ["wedding", "birthday"],
   },
   {
     slug: "cropped-tweed-jacket-ivory",
@@ -227,6 +238,7 @@ const raw: Array<{
     price: 198,
     sizes: ["XS", "S", "M", "L"],
     colors: ["Espresso", "Stone"],
+    occasions: ["vacation"],
   },
   {
     slug: "lace-inset-blouse-white",
@@ -240,6 +252,7 @@ const raw: Array<{
     price: 245,
     sizes: ["XS", "S", "M", "L", "XL"],
     colors: ["White", "Black"],
+    occasions: ["corporate", "wedding"],
   },
   {
     slug: "column-maxi-dress-olive",
@@ -254,6 +267,7 @@ const raw: Array<{
     stock: 7,
     sizes: ["XS", "S", "M", "L"],
     colors: ["Olive", "Black"],
+    occasions: ["vacation", "birthday"],
   },
   {
     slug: "knit-skirt-set-midnight",
@@ -267,6 +281,7 @@ const raw: Array<{
     price: 418,
     sizes: ["S", "M", "L"],
     colors: ["Midnight", "Camel"],
+    occasions: ["vacation"],
   },
   {
     slug: "straight-leg-denim-ink",
@@ -360,6 +375,7 @@ const raw: Array<{
     price: 340,
     sizes: ["XS", "S", "M", "L", "XL"],
     colors: ["Navy", "Black"],
+    occasions: ["corporate", "wedding"],
   },
   {
     slug: "tailored-short-suit-sand",
@@ -401,6 +417,7 @@ const raw: Array<{
     stock: 6,
     sizes: ["XS", "S", "M", "L"],
     colors: ["Black"],
+    occasions: ["birthday", "wedding"],
   },
   {
     slug: "belted-jumpsuit-ivory",
@@ -414,6 +431,7 @@ const raw: Array<{
     price: 495,
     sizes: ["XS", "S", "M", "L"],
     colors: ["Ivory"],
+    occasions: ["wedding"],
   },
   {
     slug: "longline-cardigan-charcoal",
@@ -427,6 +445,7 @@ const raw: Array<{
     price: 335,
     sizes: ["S", "M", "L", "XL"],
     colors: ["Charcoal", "Camel"],
+    occasions: ["corporate"],
   },
   {
     slug: "rib-knit-dress-mocha",
@@ -504,6 +523,7 @@ export const mockProducts: Product[] = raw.map((p, i) => {
     category_name: catNames[p.cat] ?? p.cat,
     images: [mainImage, img(model.b), img(model.c)],
     badges: p.badges,
+    ...(p.occasions?.length ? { occasions: p.occasions } : {}),
     rating: p.rating,
     review_count: p.reviews,
     variants,
