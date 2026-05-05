@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "@/components/providers/cart-provider";
+import { WishlistProvider } from "@/components/providers/wishlist-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -39,7 +40,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        <CartProvider>{children}</CartProvider>
+        <WishlistProvider>
+          <CartProvider>{children}</CartProvider>
+        </WishlistProvider>
       </body>
     </html>
   );

@@ -63,7 +63,7 @@ export function BestSellersRow({ products }: { products: Product[] }) {
         onClick={() => scrollByDir(-1)}
         disabled={edges.left}
         className={cn(
-          "absolute left-0 top-[42%] z-10 flex h-11 min-h-[44px] w-11 min-w-[44px] -translate-x-0.5 items-center justify-center rounded-full border border-border bg-background/95 text-foreground shadow-[var(--shadow-soft)] backdrop-blur-sm transition active:scale-95 hover:border-navy/30 disabled:pointer-events-none disabled:opacity-25 md:h-11 md:w-11 md:-translate-x-2"
+          "hidden"
         )}
       >
         <ChevronLeft className="h-5 w-5" />
@@ -74,7 +74,7 @@ export function BestSellersRow({ products }: { products: Product[] }) {
         onClick={() => scrollByDir(1)}
         disabled={edges.right}
         className={cn(
-          "absolute right-0 top-[42%] z-10 flex h-11 min-h-[44px] w-11 min-w-[44px] translate-x-0.5 items-center justify-center rounded-full border border-border bg-background/95 text-foreground shadow-[var(--shadow-soft)] backdrop-blur-sm transition active:scale-95 hover:border-navy/30 disabled:pointer-events-none disabled:opacity-25 md:h-11 md:w-11 md:translate-x-2"
+          "hidden"
         )}
       >
         <ChevronRight className="h-5 w-5" />
@@ -83,8 +83,7 @@ export function BestSellersRow({ products }: { products: Product[] }) {
       <div
         ref={scrollerRef}
         className={cn(
-          "flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-px-3 pb-1 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] md:gap-5 md:scroll-px-4",
-          "[&::-webkit-scrollbar]:hidden"
+          "grid grid-cols-2 gap-4 pb-1 pt-0.5 md:grid-cols-3 md:gap-5 lg:grid-cols-4 lg:pb-0"
         )}
       >
         {items.map((product) => {
@@ -95,7 +94,7 @@ export function BestSellersRow({ products }: { products: Product[] }) {
           return (
             <article
               key={product.id}
-              className="w-[min(74vw,268px)] shrink-0 snap-start sm:w-[240px] md:w-[252px]"
+              className="w-auto min-w-0"
             >
               <Link
                 href={`/product/${product.slug}`}

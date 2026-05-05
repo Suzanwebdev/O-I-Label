@@ -60,7 +60,12 @@ export default async function ProductPage({ params }: Props) {
         </nav>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:gap-12 lg:items-start">
-          <ProductGallery images={product.images} name={product.name} />
+          <ProductGallery
+            productKey={product.id}
+            productSlug={product.slug}
+            images={product.images}
+            name={product.name}
+          />
           <aside className="space-y-6 lg:sticky lg:top-24">
             <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5 shadow-[var(--shadow-soft)] md:p-6">
               <Link

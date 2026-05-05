@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { mockCategories } from "@/lib/mock-data";
 import { useCart } from "@/components/providers/cart-provider";
+import { useWishlist } from "@/components/providers/wishlist-provider";
 import { Heart, Menu, Search, ShoppingBag, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -41,6 +42,7 @@ const megaLinks = [
 export function StoreHeader() {
   const router = useRouter();
   const { lines, toggleCart } = useCart();
+  const { count: wishlistCount } = useWishlist();
   const [q, setQ] = React.useState("");
   const [isScrolled, setIsScrolled] = React.useState(false);
   const count = lines.reduce((n, l) => n + l.quantity, 0);
@@ -246,9 +248,14 @@ export function StoreHeader() {
           >
             <Search className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" asChild aria-label="Wishlist">
+          <Button variant="ghost" size="icon" asChild aria-label="Wishlist" className="relative">
             <Link href="/account/wishlist">
-              <Heart className="h-5 w-5" />
+              <Heart className={cn("h-5 w-5", wishlistCount > 0 && "fill-current text-rose-600")} />
+              {wishlistCount > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold text-white">
+                  {wishlistCount > 9 ? "9+" : wishlistCount}
+                </span>
+              ) : null}
             </Link>
           </Button>
           <DropdownMenu>

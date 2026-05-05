@@ -5,15 +5,23 @@ import Image from "next/image";
 import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useWishlist } from "@/components/providers/wishlist-provider";
 
 export function ProductGallery({
+  productKey,
+  productSlug,
   images,
   name,
 }: {
+  productKey: string;
+  productSlug: string;
   images: string[];
   name: string;
 }) {
   const [active, setActive] = React.useState(0);
+  const [announce, setAnnounce] = React.useState("");
+  const { hasItem, toggleItem } = useWishlist();
+  const isSaved = hasItem(productKey);
 
   return (
     <div className="space-y-4">
@@ -41,11 +49,29 @@ export function ProductGallery({
         >
           <button
             type="button"
-            className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/40 bg-black/25 text-white backdrop-blur transition-colors hover:bg-black/40"
-            aria-label="Add to wishlist"
+            onClick={() => {
+              const added = toggleItem({
+                key: productKey,
+                slug: productSlug,
+                name,
+                image: images[0] ?? "/file.svg",
+              });
+              setAnnounce(added ? "Added to wishlist" : "Removed from wishlist");
+            }}
+            className={cn(
+              "absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur transition-colors",
+              isSaved
+                ? "border-rose-300/80 bg-rose-500/90 text-white hover:bg-rose-500"
+                : "border-white/40 bg-black/25 text-white hover:bg-black/40"
+            )}
+            aria-label={isSaved ? "Remove from wishlist" : "Add to wishlist"}
+            aria-pressed={isSaved}
           >
-            <Heart className="h-4 w-4" />
+            <Heart className={cn("h-4 w-4", isSaved && "fill-current")} />
           </button>
+          <span className="sr-only" aria-live="polite">
+            {announce}
+          </span>
           <Image
             src={images[active]}
             alt={name}
