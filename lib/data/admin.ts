@@ -88,6 +88,7 @@ export type AdminProductRow = {
   id: string;
   name: string;
   slug: string;
+  image_path: string | null;
   is_active: boolean;
   badges: string[];
   occasions: ("birthday" | "vacation" | "wedding" | "corporate")[];
@@ -547,6 +548,7 @@ export async function listAdminProducts(): Promise<AdminProductRow[]> {
       `
       id, name, slug, is_active, badges, occasions, created_at,
       categories ( name ),
+      product_images ( storage_path, sort_order ),
       variants ( id, sku, stock, price_ghs, size, color )
     `
     )
@@ -555,6 +557,11 @@ export async function listAdminProducts(): Promise<AdminProductRow[]> {
 
   return (data ?? []).map((row) => {
     const category = Array.isArray(row.categories) ? row.categories[0] : row.categories;
+    const rawImages = (row.product_images ?? []) as { storage_path: string | null; sort_order: number | null }[];
+    const firstImage =
+      [...rawImages]
+        .filter((img) => typeof img.storage_path === "string" && img.storage_path.length > 0)
+        .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))[0]?.storage_path ?? null;
     const variants = (row.variants ?? []).map((variant) => ({
       id: variant.id,
       sku: variant.sku ?? "",
@@ -568,6 +575,7 @@ export async function listAdminProducts(): Promise<AdminProductRow[]> {
       id: row.id,
       name: row.name,
       slug: row.slug,
+      image_path: firstImage,
       is_active: Boolean(row.is_active),
       badges: Array.isArray(row.badges) ? row.badges.filter((b) => typeof b === "string") : [],
       occasions: Array.isArray(row.occasions)

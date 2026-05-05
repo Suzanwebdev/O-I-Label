@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -277,9 +278,22 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
                     </Button>
                   </TableCell>
                   <TableCell className="min-w-[220px]">
-                    <p className="font-medium">{product.name}</p>
-                    <p className="text-xs text-muted-foreground">{product.slug}</p>
-                    <p className="text-xs text-muted-foreground">{product.category_name}</p>
+                    <div className="flex items-start gap-3">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+                        <Image
+                          src={product.image_path || "/file.svg"}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          sizes="48px"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium">{product.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{product.slug}</p>
+                        <p className="text-xs text-muted-foreground">{product.category_name}</p>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <p className="text-sm">{product.variants.length} variants</p>

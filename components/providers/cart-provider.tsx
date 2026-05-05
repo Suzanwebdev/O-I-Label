@@ -3,11 +3,6 @@
 import * as React from "react";
 import type { CartLine } from "@/lib/types";
 
-type CartState = {
-  lines: CartLine[];
-  isOpen: boolean;
-};
-
 const CartContext = React.createContext<{
   lines: CartLine[];
   isOpen: boolean;

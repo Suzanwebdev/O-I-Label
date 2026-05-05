@@ -75,7 +75,7 @@ export function DiscountUpsertForm({
     setEndsLocal(toDatetimeLocal(existing.ends_at));
     setIsActive(existing.is_active);
     setError(null);
-  }, [existing?.id]);
+  }, [existing]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();

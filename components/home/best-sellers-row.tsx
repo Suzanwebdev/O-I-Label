@@ -3,16 +3,13 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/store/price";
 import { useCart } from "@/components/providers/cart-provider";
-import { cn } from "@/lib/utils";
 
 export function BestSellersRow({ products }: { products: Product[] }) {
-  const scrollerRef = React.useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = React.useState({ left: true, right: false });
   const { addItem, openCart } = useCart();
 
   const items = React.useMemo(
@@ -20,82 +17,18 @@ export function BestSellersRow({ products }: { products: Product[] }) {
     [products]
   );
 
-  const updateEdges = React.useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    const max = scrollWidth - clientWidth;
-    setEdges({
-      left: scrollLeft <= 2,
-      right: scrollLeft >= max - 2 || max <= 0,
-    });
-  }, []);
-
-  React.useEffect(() => {
-    updateEdges();
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", updateEdges, { passive: true });
-    const ro = new ResizeObserver(updateEdges);
-    ro.observe(el);
-    return () => {
-      el.removeEventListener("scroll", updateEdges);
-      ro.disconnect();
-    };
-  }, [items.length, updateEdges]);
-
-  const scrollByDir = React.useCallback((dir: -1 | 1) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollBy({
-      left: dir * Math.max(280, el.clientWidth * 0.72),
-      behavior: "smooth",
-    });
-  }, []);
-
   if (items.length === 0) return null;
 
   return (
     <div className="relative">
-      <button
-        type="button"
-        aria-label="See previous products"
-        onClick={() => scrollByDir(-1)}
-        disabled={edges.left}
-        className={cn(
-          "hidden"
-        )}
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <button
-        type="button"
-        aria-label="See more products"
-        onClick={() => scrollByDir(1)}
-        disabled={edges.right}
-        className={cn(
-          "hidden"
-        )}
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
-
-      <div
-        ref={scrollerRef}
-        className={cn(
-          "grid grid-cols-2 gap-4 pb-1 pt-0.5 md:grid-cols-3 md:gap-5 lg:grid-cols-4 lg:pb-0"
-        )}
-      >
+      <div className="grid grid-cols-2 gap-4 pb-1 pt-0.5 md:grid-cols-3 md:gap-5 lg:grid-cols-4 lg:pb-0">
         {items.map((product) => {
           const image = product.images[0];
           const v = product.variants[0]!;
           const compare = v.compare_at_ghs;
 
           return (
-            <article
-              key={product.id}
-              className="w-auto min-w-0"
-            >
+            <article key={product.id} className="w-auto min-w-0">
               <Link
                 href={`/product/${product.slug}`}
                 className="group relative block overflow-hidden rounded-[var(--radius-md)] border border-border bg-muted/40"
@@ -106,7 +39,7 @@ export function BestSellersRow({ products }: { products: Product[] }) {
                     alt={product.name}
                     fill
                     className="object-cover transition duration-500 group-hover:scale-[1.02]"
-                    sizes="(max-width: 640px) 74vw, 252px"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   />
                 </div>
               </Link>

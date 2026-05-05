@@ -44,7 +44,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
     if (colors.length && variant.color && variant.color !== color) {
       setColor(variant.color);
     }
-  }, [variant.id]);
+  }, [variant.id, variant.size, variant.color, sizes.length, colors.length, size, color]);
 
   const availableColors = React.useMemo(() => {
     if (!sizes.length || !size) return colors;
