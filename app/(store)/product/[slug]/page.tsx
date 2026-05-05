@@ -14,9 +14,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlugFromDb(decodeURIComponent(slug));
   if (!product) return { title: "Product" };
+  const title = (product.seo_title?.trim() || product.name).slice(0, 200);
+  const descSource = product.seo_description?.trim() || product.description.trim() || `${product.name} · O & I Label`;
+  const description = descSource.slice(0, 320);
+  const ogImage = product.images[0];
   return {
-    title: product.name,
-    description: product.description.slice(0, 160) || `${product.name} · O & I Label`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(ogImage && (ogImage.startsWith("http") || ogImage.startsWith("/"))
+        ? { images: [{ url: ogImage, alt: product.name }] }
+        : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -44,15 +60,7 @@ export default async function ProductPage({ params }: Props) {
         </nav>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:gap-12 lg:items-start">
-          <div className="space-y-6">
-            <ProductGallery images={product.images} name={product.name} />
-            {product.description?.trim() ? (
-              <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5 shadow-[var(--shadow-soft)] md:p-6">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Details</h2>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{product.description.trim()}</p>
-              </div>
-            ) : null}
-          </div>
+          <ProductGallery images={product.images} name={product.name} />
           <aside className="space-y-6 lg:sticky lg:top-24">
             <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5 shadow-[var(--shadow-soft)] md:p-6">
               <Link

@@ -7,26 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/components/providers/cart-provider";
 import { Price } from "@/components/store/price";
-import { Minus, Plus, ShieldCheck, Truck, Undo2 } from "lucide-react";
+import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const COLOR_SWATCH: Record<string, string> = {
-  black: "#171717",
-  white: "#f8f8f7",
-  ivory: "#efe7d8",
-  cream: "#f3ead8",
-  charcoal: "#4b4f54",
-  gray: "#6b7280",
-  grey: "#6b7280",
-  navy: "#212a3f",
-  nude: "#d4b59e",
-  espresso: "#4a3429",
-  burgundy: "#5f2337",
-  olive: "#5b5f3f",
-  blush: "#ddb5ad",
-  brown: "#6b4f3b",
-  beige: "#d9c7a8",
-};
+import { resolveSwatchColor } from "@/lib/color-swatch";
 
 export function ProductVariantForm({ product }: { product: Product }) {
   const { addItem, openCart } = useCart();
@@ -95,7 +78,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
     if (safeQty !== qty) setQty(safeQty);
   }, [safeQty, qty]);
 
-  function addToBag(nextQty: number) {
+  function addVariantToCart(nextQty: number) {
     if (oos) return;
     addItem({
       variantId: variant.id,
@@ -153,7 +136,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
               {colors.map((c) => {
                 const active = c === color;
                 const enabled = availableColors.includes(c);
-                const swatch = COLOR_SWATCH[c.toLowerCase()] ?? "#b7b7b0";
+                const swatch = resolveSwatchColor(c);
                 return (
                   <button
                     key={c}
@@ -214,65 +197,80 @@ export function ProductVariantForm({ product }: { product: Product }) {
         <Button
           type="button"
           size="lg"
-          className="w-full rounded-[var(--radius-lg)] bg-black text-white shadow-[0_14px_32px_-20px_rgba(0,0,0,0.72)] transition-transform hover:-translate-y-[1px] hover:bg-black/90"
+          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] bg-black font-semibold text-white shadow-[0_14px_32px_-20px_rgba(0,0,0,0.72)] transition-transform hover:-translate-y-[1px] hover:bg-black/90"
           disabled={oos}
           onClick={() => {
-            addToBag(safeQty);
+            addVariantToCart(safeQty);
             openCart();
           }}
         >
-          Add to bag
+          <ShoppingBag className="h-4 w-4 shrink-0" />
+          Add to cart
         </Button>
         <Button
           type="button"
           variant="outline"
           size="lg"
-          className="w-full rounded-[var(--radius-lg)] border-black/25 bg-white transition-colors hover:bg-black hover:text-white"
+          className="w-full rounded-[var(--radius-lg)] border-black/25 bg-white font-medium transition-colors hover:bg-muted"
           disabled={oos}
           onClick={() => {
-            addToBag(safeQty);
-          openCart();
-        }}
+            addVariantToCart(safeQty);
+          }}
         >
           Buy now
         </Button>
       </div>
 
-      <div className="rounded-[var(--radius-lg)] border border-border bg-muted/30 p-4">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Why you'll love it</p>
-        <ul className="mt-3 space-y-2.5 text-sm text-foreground/85">
-          <li className="flex items-center gap-2">
-            <Truck className="h-4 w-4 text-emerald-700" />
-            Free delivery on orders over GH₵500
-          </li>
-          <li className="flex items-center gap-2">
-            <Undo2 className="h-4 w-4 text-emerald-700" />
-            Easy 14-day returns
-          </li>
-          <li className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-700" />
-            Secure checkout
-          </li>
-        </ul>
-      </div>
+      {(product.love_it_points ?? []).filter(Boolean).length > 0 ? (
+        <div className="rounded-[var(--radius-lg)] border border-border bg-muted/30 p-4">
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">{"Why you'll love it"}</p>
+          <ul className="mt-3 space-y-2.5 text-sm text-foreground/85">
+            {(product.love_it_points ?? [])
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .map((line, idx) => (
+                <li key={`${idx}-${line.slice(0, 24)}`} className="flex items-start gap-2.5">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
+                  <span>{line}</span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 backdrop-blur md:hidden">
-        <div className="mx-auto flex w-full max-w-[640px] items-center gap-3">
+        <div className="mx-auto flex w-full max-w-[640px] items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Total</p>
             <p className="text-sm font-medium">GH₵{(variant.price_ghs * safeQty).toFixed(2)}</p>
           </div>
-          <Button
-            type="button"
-            className="ml-auto rounded-[var(--radius-lg)] bg-black text-white hover:bg-black/90"
-            disabled={oos}
-            onClick={() => {
-              addToBag(safeQty);
-              openCart();
-            }}
-          >
-            Add to bag
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5 rounded-[var(--radius-lg)] bg-black px-3 font-semibold text-white shadow-[0_6px_18px_-8px_rgba(0,0,0,0.55)] hover:bg-black/90"
+              disabled={oos}
+              onClick={() => {
+                addVariantToCart(safeQty);
+                openCart();
+              }}
+            >
+              <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
+              Add to cart
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-[var(--radius-lg)] border-black/20 px-3 font-medium"
+              disabled={oos}
+              onClick={() => {
+                addVariantToCart(safeQty);
+              }}
+            >
+              Buy now
+            </Button>
+          </div>
         </div>
       </div>
     </div>

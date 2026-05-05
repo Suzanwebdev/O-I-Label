@@ -63,29 +63,38 @@ export function ProductCard({
           <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{product.description.trim()}</p>
         ) : null}
         <Price amountGhs={v.price_ghs} compareAtGhs={compare} />
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="mt-auto w-full gap-2"
-          onClick={() => {
-            addItem({
-              variantId: v.id,
-              productId: product.id,
-              productSlug: product.slug,
-              name: product.name,
-              image,
-              size: v.size,
-              color: v.color,
-              quantity: 1,
-              unitPriceGhs: v.price_ghs,
-            });
-            openCart();
-          }}
-        >
-          <ShoppingBag className="h-4 w-4" />
-          Quick add
-        </Button>
+        <div className="mt-auto flex flex-col gap-2 pt-1">
+          <Button
+            type="button"
+            size="sm"
+            className="w-full gap-2 bg-black text-[11px] font-semibold text-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.55)] hover:bg-black/90 sm:text-sm"
+            onClick={() => {
+              addItem({
+                variantId: v.id,
+                productId: product.id,
+                productSlug: product.slug,
+                name: product.name,
+                image,
+                size: v.size,
+                color: v.color,
+                quantity: 1,
+                unitPriceGhs: v.price_ghs,
+              });
+              openCart();
+            }}
+          >
+            <ShoppingBag className="h-4 w-4 shrink-0" />
+            Add to cart
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="w-full border-black/20 text-[11px] font-medium sm:text-sm"
+          >
+            <Link href={`/product/${product.slug}`}>Buy now</Link>
+          </Button>
+        </div>
       </div>
     </motion.article>
   );

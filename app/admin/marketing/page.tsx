@@ -1,15 +1,7 @@
-import { AdminModulePage } from "@/components/admin/admin-module-page";
+import { MarketingCampaignsPanel } from "@/components/admin/marketing-campaigns-panel";
+import { listMarketingCampaigns } from "@/lib/data/marketing";
 
-export default function AdminMarketingPage() {
-  return (
-    <AdminModulePage
-      title="Marketing"
-      description="Plan campaigns and coordinate promotional channels from one workspace."
-      bullets={[
-        "Campaign calendar and channel notes.",
-        "Launch checklists for paid/organic drops.",
-        "Attribution tags for conversion review.",
-      ]}
-    />
-  );
+export default async function AdminMarketingPage() {
+  const campaigns = await listMarketingCampaigns();
+  return <MarketingCampaignsPanel initialCampaigns={campaigns} />;
 }

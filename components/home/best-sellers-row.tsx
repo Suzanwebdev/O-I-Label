@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/store/price";
@@ -129,17 +129,9 @@ export function BestSellersRow({ products }: { products: Product[] }) {
                 />
                 <div className="flex flex-col gap-2 pt-0.5 sm:flex-row">
                   <Button
-                    asChild
-                    size="sm"
-                    className="h-10 min-h-10 flex-1 text-[11px] font-medium sm:h-9 sm:min-h-9"
-                  >
-                    <Link href={`/product/${product.slug}`}>Buy now</Link>
-                  </Button>
-                  <Button
                     type="button"
-                    variant="outline"
                     size="sm"
-                    className="h-10 min-h-10 flex-1 text-[11px] font-medium sm:h-9 sm:min-h-9"
+                    className="h-10 min-h-10 flex-1 gap-2 bg-black text-[11px] font-semibold text-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.55)] hover:bg-black/90 sm:h-9 sm:min-h-9"
                     onClick={() => {
                       addItem({
                         variantId: v.id,
@@ -155,7 +147,16 @@ export function BestSellersRow({ products }: { products: Product[] }) {
                       openCart();
                     }}
                   >
+                    <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
                     Add to cart
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="h-10 min-h-10 flex-1 border-black/20 text-[11px] font-medium sm:h-9 sm:min-h-9"
+                  >
+                    <Link href={`/product/${product.slug}`}>Buy now</Link>
                   </Button>
                 </div>
               </div>

@@ -19,9 +19,12 @@ type DbProduct = {
   slug: string;
   name: string;
   description: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
   is_active: boolean;
   badges: string[] | null;
   occasions: string[] | null;
+  love_it_points?: string[] | null;
   rating: number | null;
   review_count: number | null;
   categories: { slug: string; name: string } | null;
@@ -48,15 +51,22 @@ function mapRow(row: DbProduct): Product {
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map((i) => i.storage_path);
   const variants = (row.variants ?? []).map(mapVariant);
+  const loveLines = Array.isArray(row.love_it_points)
+    ? row.love_it_points.filter((s): s is string => typeof s === "string").map((s) => s.trim()).filter(Boolean)
+    : [];
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
     description: row.description ?? "",
+    seo_title: typeof row.seo_title === "string" && row.seo_title.trim() ? row.seo_title.trim() : null,
+    seo_description:
+      typeof row.seo_description === "string" && row.seo_description.trim() ? row.seo_description.trim() : null,
     category_slug: row.categories?.slug ?? "new-arrivals",
     category_name: row.categories?.name ?? "New Arrivals",
     images: imgs.length ? imgs : ["/file.svg"],
     badges: (row.badges ?? []) as ProductBadge[],
+    ...(loveLines.length ? { love_it_points: loveLines } : {}),
     occasions: (row.occasions ?? []).filter((o): o is "birthday" | "vacation" | "wedding" | "corporate" =>
       o === "birthday" || o === "vacation" || o === "wedding" || o === "corporate"
     ),
@@ -74,7 +84,7 @@ export async function listProducts(): Promise<Product[]> {
       .from("products")
       .select(
         `
-        id, slug, name, description, is_active, badges, occasions, rating, review_count,
+        id, slug, name, description, is_active, badges, occasions, love_it_points, rating, review_count,
         categories ( slug, name ),
         variants ( id, sku, price_ghs, compare_at_ghs, stock, size, color ),
         product_images ( storage_path, sort_order )
@@ -102,7 +112,7 @@ export async function getProductBySlugFromDb(
       .from("products")
       .select(
         `
-        id, slug, name, description, is_active, badges, occasions, rating, review_count,
+        id, slug, name, description, seo_title, seo_description, is_active, badges, occasions, love_it_points, rating, review_count,
         categories ( slug, name ),
         variants ( id, sku, price_ghs, compare_at_ghs, stock, size, color ),
         product_images ( storage_path, sort_order )

@@ -13,6 +13,7 @@ import { Price } from "@/components/store/price";
 import { BadgeSet } from "@/components/store/badge-set";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/providers/cart-provider";
+import { ShoppingBag } from "lucide-react";
 
 export function QuickViewModal({
   product,
@@ -54,6 +55,7 @@ export function QuickViewModal({
             <div className="mt-auto flex flex-col gap-2 pt-4">
               <Button
                 type="button"
+                className="w-full gap-2 bg-black font-semibold text-white shadow-[0_10px_28px_-14px_rgba(0,0,0,0.6)] hover:bg-black/90"
                 onClick={() => {
                   addItem({
                     variantId: v.id,
@@ -70,10 +72,13 @@ export function QuickViewModal({
                   onOpenChange(false);
                 }}
               >
-                Add to bag
+                <ShoppingBag className="h-4 w-4 shrink-0" />
+                Add to cart
               </Button>
-              <Button variant="outline" asChild>
-                <Link href={`/product/${product.slug}`}>Full details</Link>
+              <Button asChild variant="outline" className="w-full border-black/20 font-medium">
+                <Link href={`/product/${product.slug}`} onClick={() => onOpenChange(false)}>
+                  Buy now
+                </Link>
               </Button>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AdminProductRow } from "@/lib/data/admin";
+import { resolveSwatchColor } from "@/lib/color-swatch";
 
 const PAGE_SIZE = 12;
 
@@ -383,7 +384,20 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
                             <tbody>
                               {product.variants.map((v) => (
                                 <tr key={v.id} className="border-b border-border/70 last:border-0">
-                                  <td className="p-2">{v.color ?? "—"}</td>
+                                  <td className="p-2">
+                                    {v.color ? (
+                                      <span className="inline-flex items-center gap-2">
+                                        <span
+                                          className="h-4 w-4 rounded-full border border-black/20"
+                                          style={{ backgroundColor: resolveSwatchColor(v.color) }}
+                                          aria-hidden
+                                        />
+                                        {v.color}
+                                      </span>
+                                    ) : (
+                                      "—"
+                                    )}
+                                  </td>
                                   <td className="p-2">{v.size ?? "—"}</td>
                                   <td className="p-2 font-mono text-xs">{v.sku}</td>
                                   <td className="p-2 text-right tabular-nums">{v.stock}</td>

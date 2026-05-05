@@ -115,6 +115,8 @@ export type AdminProductDetail = {
   occasions: ("birthday" | "vacation" | "wedding" | "corporate")[];
   seo_title: string | null;
   seo_description: string | null;
+  /** Lines shown on PDP under "Why you'll love it" (same order as saved). */
+  love_it_points: string[];
   video_urls: string[];
   image_paths: string[];
   variants: {
@@ -134,7 +136,7 @@ export async function getAdminProductById(productId: string): Promise<AdminProdu
     .from("products")
     .select(
       `
-      id, name, slug, description, category_id, is_active, badges, occasions, seo_title, seo_description, video_urls,
+      id, name, slug, description, category_id, is_active, badges, occasions, seo_title, seo_description, love_it_points, video_urls,
       variants ( id, sku, stock, price_ghs, compare_at_ghs, size, color ),
       product_images ( storage_path, sort_order )
     `
@@ -186,6 +188,9 @@ export async function getAdminProductById(productId: string): Promise<AdminProdu
       : [],
     seo_title: typeof data.seo_title === "string" ? data.seo_title : null,
     seo_description: typeof data.seo_description === "string" ? data.seo_description : null,
+    love_it_points: Array.isArray(data.love_it_points)
+      ? data.love_it_points.filter((s): s is string => typeof s === "string").map((s) => s.trim()).filter(Boolean)
+      : [],
     video_urls: Array.isArray(data.video_urls) ? data.video_urls.filter((v): v is string => typeof v === "string") : [],
     image_paths: images.map((img) => img.storage_path ?? ""),
     variants,

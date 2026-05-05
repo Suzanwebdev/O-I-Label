@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ProductMediaSection } from "@/components/admin/product-media-section";
 import type { AdminProductDetail } from "@/lib/data/admin";
 import type { OccasionTag, ProductBadge } from "@/lib/types";
+import { resolveSwatchColor } from "@/lib/color-swatch";
 
 type CategoryOption = { id: string; name: string; slug: string };
 
@@ -52,6 +53,16 @@ function parseTokenList(value: string) {
         .filter(Boolean)
     )
   );
+}
+
+/** One PDP bullet per non-empty line; max 8 lines, 280 chars each. */
+function loveItPointsFromTextarea(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => s.slice(0, 280))
+    .slice(0, 8);
 }
 
 function variantIdentity(color: string, size: string) {
@@ -168,6 +179,9 @@ export function ProductCreateForm({
   );
   const [videoUrls, setVideoUrls] = React.useState<string[]>(() =>
     editProduct?.video_urls?.length ? [...editProduct.video_urls] : []
+  );
+  const [loveItPointsText, setLoveItPointsText] = React.useState(
+    () => (editProduct?.love_it_points?.length ? editProduct.love_it_points.join("\n") : "")
   );
   const [variants, setVariants] = React.useState<VariantDraft[]>(
     () => prefillVariants ?? [emptyVariant()]
@@ -335,6 +349,7 @@ export function ProductCreateForm({
       compareAt: v.compareAt,
       stock: v.stock,
     }));
+    const loveItPoints = loveItPointsFromTextarea(loveItPointsText);
 
     setBusy(true);
     try {
@@ -356,6 +371,7 @@ export function ProductCreateForm({
                 categoryId,
                 imagePaths: imageUrls,
                 videoUrls,
+                loveItPoints,
                 variants: variantPayload,
               }
             : {
@@ -370,6 +386,7 @@ export function ProductCreateForm({
                 categoryId,
                 imagePaths: imageUrls,
                 videoUrls,
+                loveItPoints,
                 variants: variantPayload,
               }
         ),
@@ -659,6 +676,16 @@ export function ProductCreateForm({
                           disabled={busy}
                           className="h-9"
                         />
+                        {variant.color.trim() ? (
+                          <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                            <span
+                              className="h-4 w-4 rounded-full border border-black/20"
+                              style={{ backgroundColor: resolveSwatchColor(variant.color) }}
+                              aria-hidden
+                            />
+                            Preview
+                          </div>
+                        ) : null}
                       </div>
                     </td>
                     <td className="py-2 pr-2">
@@ -801,6 +828,16 @@ export function ProductCreateForm({
                     onChange={(e) => updateVariant(idx, { color: e.target.value })}
                     disabled={busy}
                   />
+                  {variant.color.trim() ? (
+                    <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                      <span
+                        className="h-4 w-4 rounded-full border border-black/20"
+                        style={{ backgroundColor: resolveSwatchColor(variant.color) }}
+                        aria-hidden
+                      />
+                      Preview
+                    </div>
+                  ) : null}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1.5">
@@ -900,6 +937,21 @@ export function ProductCreateForm({
             disabled={busy}
             className="min-h-[88px]"
             placeholder="Search engine description"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="loveItPoints">{"Why you'll love it (product page)"}</Label>
+          <p className="text-xs text-muted-foreground">
+            One short line per bullet (e.g. fit, fabric, care). Shown on the product page under the same heading.
+            Leave blank to hide that block. Up to 8 lines, 280 characters each.
+          </p>
+          <Textarea
+            id="loveItPoints"
+            value={loveItPointsText}
+            onChange={(e) => setLoveItPointsText(e.target.value)}
+            disabled={busy}
+            className="min-h-[120px] font-mono text-sm"
+            placeholder={"Double-lined for opacity\nTrue to size\nSnatched corset waist"}
           />
         </div>
         <div className="space-y-2">

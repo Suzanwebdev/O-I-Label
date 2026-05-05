@@ -24,10 +24,16 @@ export interface Product {
   slug: string;
   name: string;
   description: string;
+  /** When set in admin, used for `<title>` / Open Graph instead of `name` alone. */
+  seo_title?: string | null;
+  /** When set in admin, used for meta description / OG description instead of trimming `description`. */
+  seo_description?: string | null;
   category_slug: string;
   category_name: string;
   images: string[];
   badges: ProductBadge[];
+  /** Optional PDP bullets under "Why you'll love it"; empty hides the block. */
+  love_it_points?: string[];
   occasions?: OccasionTag[];
   rating?: number;
   review_count?: number;

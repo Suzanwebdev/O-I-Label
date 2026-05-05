@@ -5,6 +5,8 @@ export interface InitiatePaymentInput {
   amountGhs: number;
   email: string;
   callbackUrl: string;
+  /** Browser return URL after payment (required by Moolre; optional for others). */
+  redirectUrl?: string;
   metadata?: Record<string, string>;
 }
 

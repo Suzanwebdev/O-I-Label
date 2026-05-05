@@ -27,6 +27,16 @@ const allowedBadges = new Set<ProductBadge>([
 ]);
 const allowedOccasions = new Set(["birthday", "vacation", "wedding", "corporate"]);
 
+function parseLoveItPoints(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((x): x is string => typeof x === "string")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => s.slice(0, 280))
+    .slice(0, 8);
+}
+
 type VariantInput = {
   size: string | null;
   color: string | null;
@@ -114,6 +124,7 @@ export async function POST(request: Request) {
       }
     })
     .slice(0, 8);
+  const loveItPoints = parseLoveItPoints((body as { loveItPoints?: unknown })?.loveItPoints);
   const variantsRaw = Array.isArray((body as { variants?: unknown })?.variants)
     ? ((body as { variants: unknown[] }).variants as unknown[])
     : [];
@@ -181,6 +192,7 @@ export async function POST(request: Request) {
       occasions,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
+      love_it_points: loveItPoints,
       video_urls: videoUrls,
     })
     .select("id")
@@ -309,6 +321,7 @@ export async function PUT(request: Request) {
       }
     })
     .slice(0, 8);
+  const loveItPoints = parseLoveItPoints((body as { loveItPoints?: unknown })?.loveItPoints);
   const variantsRaw = Array.isArray((body as { variants?: unknown })?.variants)
     ? ((body as { variants: unknown[] }).variants as unknown[])
     : [];
@@ -482,6 +495,7 @@ export async function PUT(request: Request) {
       occasions,
       seo_title: seoTitle || null,
       seo_description: seoDescription || null,
+      love_it_points: loveItPoints,
       video_urls: videoUrls,
     })
     .eq("id", productId);
