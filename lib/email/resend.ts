@@ -41,6 +41,24 @@ export async function sendPasswordResetEmail(opts: { to: string; link: string })
   return { sent: true as const };
 }
 
+export async function sendNewsletterWelcomeEmail(opts: { to: string }) {
+  const resend = client();
+  if (!resend) {
+    return { skipped: true as const };
+  }
+  const from = process.env.RESEND_FROM ?? "O & I Label <onboarding@resend.dev>";
+  await resend.emails.send({
+    from,
+    to: opts.to,
+    subject: "You're on the list — O & I Label",
+    html: `<p>Thanks for subscribing.</p>
+      <p>You'll hear from us with new arrivals, offers, and style notes by <strong>email</strong>.</p>
+      <p>For <strong>SMS/WhatsApp promos</strong>, we saved the number you provided for occasional messages (you can opt out anytime when we include an opt-out in those texts).</p>
+      <p>— O &amp; I Label</p>`,
+  });
+  return { sent: true as const };
+}
+
 export async function sendOrderStatusEmail(opts: {
   to: string;
   orderNumber: string;

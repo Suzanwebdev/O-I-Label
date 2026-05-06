@@ -33,15 +33,40 @@ export function HomeNewsletter({
   const [countryIso, setCountryIso] = React.useState(NEWSLETTER_DEFAULT_COUNTRY_ISO);
   const [phoneLocal, setPhoneLocal] = React.useState("");
   const [sent, setSent] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const selectedCountry = React.useMemo(
     () => getNewsletterCountry(countryIso) ?? getNewsletterCountry(NEWSLETTER_DEFAULT_COUNTRY_ISO)!,
     [countryIso]
   );
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSent(true);
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          phoneLocal: phoneLocal.trim(),
+          countryIso,
+          source: "footer",
+        }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok) {
+        setError(typeof json.error === "string" ? json.error : "Something went wrong. Try again.");
+        return;
+      }
+      setSent(true);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const labelClass =
@@ -131,10 +156,22 @@ export function HomeNewsletter({
           />
         </div>
       </div>
+      {error ? (
+        <p
+          role="alert"
+          className={cn(
+            "text-sm",
+            dark ? "text-red-300" : "text-destructive"
+          )}
+        >
+          {error}
+        </p>
+      ) : null}
       <Button
         type="submit"
         variant={refined ? "outline" : "default"}
         size={compact ? "sm" : "lg"}
+        disabled={loading || sent}
         className={
           compact
             ? refined
@@ -145,7 +182,7 @@ export function HomeNewsletter({
             : "h-12 w-full sm:w-auto sm:self-start sm:px-8"
         }
       >
-        {sent ? "You are in" : "Subscribe"}
+        {loading ? "…" : sent ? "You're in" : "Subscribe"}
       </Button>
     </form>
   );
