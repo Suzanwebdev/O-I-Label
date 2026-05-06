@@ -50,3 +50,5 @@ The hook URL embeds authorization, so you avoid CLI token / scope problems.
 **Alternative:** secret **`VERCEL_TOKEN`** only (from [vercel.com/account/tokens](https://vercel.com/account/tokens)), plus committed **`.vercel/project.json`** in this repo (already included).
 
 **Also:** under **Vercel → Project → Settings → Git**, connect **Suzanwebdev/O-I-Label** and production branch **`main`** so Vercel can deploy from Git even when Actions is misconfigured.
+
+Last deployment smoke test trigger commit: 2026-05-06.
