@@ -52,3 +52,4 @@ The hook URL embeds authorization, so you avoid CLI token / scope problems.
 **Also:** under **Vercel → Project → Settings → Git**, connect **Suzanwebdev/O-I-Label** and production branch **`main`** so Vercel can deploy from Git even when Actions is misconfigured.
 
 Last deployment smoke test trigger commit: 2026-05-06.
+Overview thumbnail refresh trigger commit: 2026-05-06.
