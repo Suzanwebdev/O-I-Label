@@ -2,6 +2,11 @@ import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { PaymentProviderId } from "./types";
 import { parseWebhook, verifyWebhook } from "./index";
 import { sendOrderConfirmationEmail } from "@/lib/email/resend";
+import {
+  buildOrderStatusSmsBody,
+  normalizeSmsRecipient,
+  trySendOrderSms,
+} from "@/lib/sms/order-notifications";
 
 export async function handleProviderWebhook(
   provider: PaymentProviderId,
@@ -59,7 +64,7 @@ export async function handleProviderWebhook(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, email, total_ghs, notify_customer")
+    .select("id, order_number, email, phone, total_ghs, notify_customer")
     .eq("id", payment.order_id)
     .single();
 
@@ -75,6 +80,34 @@ export async function handleProviderWebhook(
         orderNumber: order.order_number,
         totalGhs: Number(order.total_ghs),
       });
+    }
+
+    if (order.notify_customer) {
+      const phone = normalizeSmsRecipient(order.phone);
+      if (phone) {
+        const msg = buildOrderStatusSmsBody({
+          orderNumber: order.order_number,
+          status: "paid",
+          trackingNumber: null,
+        });
+        const smsResult = await trySendOrderSms({
+          recipient: phone,
+          message: msg,
+          ref: `order_${order.id}_paid_webhook`,
+        });
+        const smsMessage = smsResult.ok
+          ? smsResult.sent
+            ? "Payment confirmation SMS sent"
+            : `Payment SMS skipped: ${smsResult.reason}`
+          : `Payment SMS failed: ${smsResult.error}`;
+        await supabase.from("order_events").insert({
+          order_id: order.id,
+          event_type: "notification_sent",
+          actor_id: null,
+          message: smsMessage,
+          meta: { channel: "sms", status: "paid" },
+        });
+      }
     }
   }
 

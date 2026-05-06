@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  buildOrderStatusSmsBody,
+  normalizeSmsRecipient,
+  trySendOrderSms,
+} from "@/lib/sms/order-notifications";
 
 const allowedStatuses = new Set([
   "pending",
@@ -117,5 +122,71 @@ export async function PATCH(request: Request) {
     meta: { status, notifyCustomer, trackingNumber: Boolean(trackingNumber), carrier: Boolean(carrier) },
   });
 
-  return NextResponse.json({ ok: true });
+  const smsStatuses = new Set(["paid", "processing", "shipped", "delivered"]);
+  const statusChanged = before?.status !== status;
+  let sms: { sent?: boolean; skipped?: string; error?: string } | undefined;
+
+  if (statusChanged && smsStatuses.has(status)) {
+    const { data: orderRow } = await service
+      .from("orders")
+      .select("order_number, phone, notify_customer")
+      .eq("id", orderId)
+      .maybeSingle();
+
+    const notifyOn = notifyCustomer !== undefined ? notifyCustomer : Boolean(orderRow?.notify_customer ?? true);
+    const phone = normalizeSmsRecipient(orderRow?.phone);
+
+    if (notifyOn && phone && orderRow?.order_number) {
+      let tracking: string | null = null;
+      if (status === "shipped" || status === "delivered") {
+        const { data: ship } = await service
+          .from("shipments")
+          .select("tracking_number")
+          .eq("order_id", orderId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        tracking = ship?.tracking_number ?? (trackingNumber || null);
+      }
+
+      const message = buildOrderStatusSmsBody({
+        orderNumber: orderRow.order_number,
+        status,
+        trackingNumber: tracking,
+      });
+
+      const smsResult = await trySendOrderSms({
+        recipient: phone,
+        message,
+        ref: `order_${orderId}_${status}`,
+      });
+
+      if (smsResult.ok) {
+        if (smsResult.sent) {
+          sms = { sent: true };
+          const masked = phone.length > 4 ? `${phone.slice(0, -4)}****` : "****";
+          await service.from("order_events").insert({
+            order_id: orderId,
+            event_type: "notification_sent",
+            actor_id: authz.user.id,
+            message: `Order status SMS sent to ${masked}`,
+            meta: { channel: "sms", status },
+          });
+        } else {
+          sms = { skipped: smsResult.reason };
+        }
+      } else {
+        sms = { error: smsResult.error };
+        await service.from("order_events").insert({
+          order_id: orderId,
+          event_type: "notification_sent",
+          actor_id: authz.user.id,
+          message: `Order status SMS failed: ${smsResult.error}`,
+          meta: { channel: "sms", status, failed: true },
+        });
+      }
+    }
+  }
+
+  return NextResponse.json({ ok: true, sms });
 }

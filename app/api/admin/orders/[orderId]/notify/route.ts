@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { sendOrderStatusEmail } from "@/lib/email/resend";
+import {
+  buildOrderStatusSmsBody,
+  normalizeSmsRecipient,
+  trySendOrderSms,
+} from "@/lib/sms/order-notifications";
 
 type RouteContext = {
   params: Promise<{ orderId: string }>;
@@ -17,7 +22,7 @@ export async function POST(_request: Request, context: RouteContext) {
   const service = createServiceRoleClient();
   const { data: order, error } = await service
     .from("orders")
-    .select("id, order_number, email, status, notify_customer")
+    .select("id, order_number, email, phone, status, notify_customer")
     .eq("id", orderId)
     .maybeSingle();
   if (error || !order) {
@@ -56,5 +61,38 @@ export async function POST(_request: Request, context: RouteContext) {
     },
   });
 
-  return NextResponse.json({ ok: true, ...emailResult });
+  let smsResult: { sent?: boolean; skipped?: string; error?: string } | undefined;
+  if (order.notify_customer) {
+    const phone = normalizeSmsRecipient(order.phone);
+    if (phone) {
+      const message = buildOrderStatusSmsBody({
+        orderNumber: order.order_number,
+        status: order.status,
+        trackingNumber: shipment?.tracking_number ?? null,
+      });
+      const sms = await trySendOrderSms({
+        recipient: phone,
+        message,
+        ref: `order_${order.id}_notify_manual`,
+      });
+      if (sms.ok) {
+        smsResult = sms.sent ? { sent: true } : { skipped: sms.reason };
+      } else {
+        smsResult = { error: sms.error };
+      }
+      await service.from("order_events").insert({
+        order_id: order.id,
+        event_type: "notification_sent",
+        actor_id: authz.user.id,
+        message: sms.ok
+          ? sms.sent
+            ? "Order status SMS sent"
+            : `Order status SMS skipped: ${sms.reason}`
+          : `Order status SMS failed: ${sms.error}`,
+        meta: { channel: "sms", status: order.status },
+      });
+    }
+  }
+
+  return NextResponse.json({ ok: true, ...emailResult, sms: smsResult });
 }
