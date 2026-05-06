@@ -18,7 +18,7 @@ const steps = ["Details", "Shipping", "Payment", "Review"] as const;
 
 export function CheckoutWizard() {
   const router = useRouter();
-  const { lines, subtotalGhs, clear } = useCart();
+  const { selectedLines, subtotalGhs, removePurchasedLines, lines } = useCart();
   const [step, setStep] = React.useState(0);
   const flags = mergeFeatureFlags();
 
@@ -35,6 +35,20 @@ export function CheckoutWizard() {
     );
   }
 
+  if (selectedLines.length === 0) {
+    return (
+      <Container className="py-16 text-center">
+        <p className="text-muted-foreground">
+          No items selected for checkout.{" "}
+          <Link href="/cart" className="text-navy underline">
+            Return to your bag
+          </Link>{" "}
+          and choose the products you want to buy.
+        </p>
+      </Container>
+    );
+  }
+
   function next() {
     setStep((s) => Math.min(s + 1, steps.length - 1));
   }
@@ -43,7 +57,7 @@ export function CheckoutWizard() {
   }
 
   function placeDemoOrder() {
-    clear();
+    removePurchasedLines();
     router.push("/checkout/success?demo=1");
   }
 
@@ -146,7 +160,7 @@ export function CheckoutWizard() {
                 payment APIs once configured (Phase 5).
               </p>
               <ul className="space-y-2">
-                {lines.map((l) => (
+                {selectedLines.map((l) => (
                   <li key={l.variantId} className="flex justify-between">
                     <span>
                       {l.name} × {l.quantity}

@@ -3,8 +3,16 @@
 import * as React from "react";
 import type { CartLine } from "@/lib/types";
 
+function coerceCartLine(row: CartLine): CartLine {
+  return {
+    ...row,
+    selected: row.selected !== false,
+  };
+}
+
 const CartContext = React.createContext<{
   lines: CartLine[];
+  selectedLines: CartLine[];
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
@@ -13,7 +21,13 @@ const CartContext = React.createContext<{
   updateQty: (variantId: string, quantity: number) => void;
   removeLine: (variantId: string) => void;
   clear: () => void;
+  toggleLineSelected: (variantId: string) => void;
+  selectAllLines: () => void;
+  deselectAllLines: () => void;
+  /** After checkout: remove purchased (selected) lines; keep unchecked items in the bag. */
+  removePurchasedLines: () => void;
   subtotalGhs: number;
+  bagSubtotalGhs: number;
 } | null>(null);
 
 const STORAGE_KEY = "oi-label-cart";
@@ -24,7 +38,8 @@ function loadLines(): CartLine[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as CartLine[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(Boolean).map((l) => coerceCartLine(l as CartLine));
   } catch {
     return [];
   }
@@ -45,23 +60,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
   }, [lines, hydrated]);
 
+  const selectedLines = React.useMemo(
+    () => lines.filter((l) => l.selected !== false),
+    [lines]
+  );
+
   const subtotalGhs = React.useMemo(
+    () => selectedLines.reduce((s, l) => s + l.unitPriceGhs * l.quantity, 0),
+    [selectedLines]
+  );
+
+  const bagSubtotalGhs = React.useMemo(
     () => lines.reduce((s, l) => s + l.unitPriceGhs * l.quantity, 0),
     [lines]
   );
 
   const addItem = React.useCallback((line: CartLine) => {
+    const normalized = coerceCartLine(line);
     setLines((prev) => {
-      const i = prev.findIndex((l) => l.variantId === line.variantId);
+      const i = prev.findIndex((l) => l.variantId === normalized.variantId);
       if (i >= 0) {
         const next = [...prev];
         next[i] = {
           ...next[i],
-          quantity: next[i].quantity + line.quantity,
+          quantity: next[i].quantity + normalized.quantity,
         };
         return next;
       }
-      return [...prev, line];
+      return [...prev, normalized];
     });
   }, []);
 
@@ -81,9 +107,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clear = React.useCallback(() => setLines([]), []);
 
+  const toggleLineSelected = React.useCallback((variantId: string) => {
+    setLines((prev) =>
+      prev.map((l) =>
+        l.variantId === variantId ? { ...l, selected: !(l.selected !== false) } : l
+      )
+    );
+  }, []);
+
+  const selectAllLines = React.useCallback(() => {
+    setLines((prev) => prev.map((l) => ({ ...l, selected: true })));
+  }, []);
+
+  const deselectAllLines = React.useCallback(() => {
+    setLines((prev) => prev.map((l) => ({ ...l, selected: false })));
+  }, []);
+
+  const removePurchasedLines = React.useCallback(() => {
+    setLines((prev) => prev.filter((l) => l.selected === false));
+  }, []);
+
   const value = React.useMemo(
     () => ({
       lines,
+      selectedLines,
       isOpen,
       openCart: () => setOpen(true),
       closeCart: () => setOpen(false),
@@ -92,9 +139,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       updateQty,
       removeLine,
       clear,
+      toggleLineSelected,
+      selectAllLines,
+      deselectAllLines,
+      removePurchasedLines,
       subtotalGhs,
+      bagSubtotalGhs,
     }),
-    [lines, isOpen, addItem, updateQty, removeLine, clear, subtotalGhs]
+    [
+      lines,
+      selectedLines,
+      isOpen,
+      addItem,
+      updateQty,
+      removeLine,
+      clear,
+      toggleLineSelected,
+      selectAllLines,
+      deselectAllLines,
+      removePurchasedLines,
+      subtotalGhs,
+      bagSubtotalGhs,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

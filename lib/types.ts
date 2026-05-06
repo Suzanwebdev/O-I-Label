@@ -57,6 +57,8 @@ export interface CartLine {
   color?: string;
   quantity: number;
   unitPriceGhs: number;
+  /** When false, line stays in the bag but is excluded from subtotal and checkout until re-selected. */
+  selected?: boolean;
 }
 
 export type AdminRole = "superadmin" | "admin" | "staff" | "customer";

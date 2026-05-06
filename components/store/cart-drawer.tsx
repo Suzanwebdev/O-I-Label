@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus, ShoppingBag, X } from "lucide-react";
 import { useCart } from "@/components/providers/cart-provider";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Sheet,
   SheetContent,
@@ -15,15 +16,19 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Price } from "@/components/store/price";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 export function CartDrawer() {
   const {
     lines,
+    selectedLines,
     isOpen,
     closeCart,
     updateQty,
     removeLine,
+    toggleLineSelected,
     subtotalGhs,
+    bagSubtotalGhs,
   } = useCart();
 
   return (
@@ -44,15 +49,24 @@ export function CartDrawer() {
           ) : (
             <ul className="space-y-6">
               <AnimatePresence initial={false}>
-                {lines.map((line) => (
+                {lines.map((line) => {
+                  const isSelected = line.selected !== false;
+                  return (
                   <motion.li
                     key={line.variantId}
                     layout
                     initial={{ opacity: 0, x: 12 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 12 }}
-                    className="flex gap-4"
+                    className={cn("flex gap-4", !isSelected && "opacity-60")}
                   >
+                    <div className="flex shrink-0 flex-col items-center gap-2 pt-1">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleLineSelected(line.variantId)}
+                        aria-label={isSelected ? `Deselect ${line.name}` : `Select ${line.name}`}
+                      />
+                    </div>
                     <div className="relative h-28 w-20 shrink-0 overflow-hidden rounded-[var(--radius-md)] border border-border bg-muted">
                       <Image
                         src={line.image}
@@ -110,19 +124,33 @@ export function CartDrawer() {
                       </div>
                     </div>
                   </motion.li>
-                ))}
+                  );
+                })}
               </AnimatePresence>
             </ul>
           )}
         </ScrollArea>
         <div className="border-t border-border bg-background px-6 py-4">
           <div className="mb-4 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal</span>
+            <span className="text-muted-foreground">Subtotal (selected)</span>
             <Price amountGhs={subtotalGhs} />
           </div>
+          {lines.length > 0 && selectedLines.length < lines.length ? (
+            <div className="mb-4 flex flex-wrap items-baseline gap-x-1 gap-y-1 text-xs text-muted-foreground">
+              <span>Full bag</span>
+              <Price amountGhs={bagSubtotalGhs} className="text-xs text-muted-foreground" />
+              <span>
+                · {selectedLines.length} of {lines.length} {lines.length === 1 ? "line" : "lines"} selected
+              </span>
+            </div>
+          ) : null}
           <Separator className="mb-4" />
           <div className="flex flex-col gap-2">
-            <Button asChild className="w-full" disabled={lines.length === 0}>
+            <Button
+              asChild
+              className="w-full"
+              disabled={lines.length === 0 || selectedLines.length === 0}
+            >
               <Link href="/checkout" onClick={closeCart}>
                 Checkout
               </Link>
