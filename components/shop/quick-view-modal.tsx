@@ -14,6 +14,7 @@ import { BadgeSet } from "@/components/store/badge-set";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/providers/cart-provider";
 import { ShoppingBag } from "lucide-react";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function QuickViewModal({
   product,
@@ -27,6 +28,7 @@ export function QuickViewModal({
   const { addItem, openCart } = useCart();
   if (!product) return null;
   const v = product.variants[0];
+  const preserveQuality = shouldBypassImageOptimization(product.images[0] ?? "");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -39,6 +41,8 @@ export function QuickViewModal({
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
+              quality={100}
+              unoptimized={preserveQuality}
             />
           </div>
           <div className="flex flex-col gap-4 p-6 md:p-8">

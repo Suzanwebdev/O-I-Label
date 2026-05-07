@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/components/providers/cart-provider";
 import { ShoppingBag } from "lucide-react";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function ProductCard({
   product,
@@ -22,6 +23,7 @@ export function ProductCard({
 }) {
   const { addItem, openCart } = useCart();
   const image = product.images[0];
+  const preserveQuality = shouldBypassImageOptimization(image);
   const v = product.variants[0];
   const compare = v.compare_at_ghs;
 
@@ -44,6 +46,8 @@ export function ProductCard({
             className="object-cover transition duration-500 group-hover:scale-[1.03]"
             sizes="(max-width: 768px) 50vw, 25vw"
             priority={priority}
+            quality={100}
+            unoptimized={preserveQuality}
           />
           <div className="absolute left-3 top-3">
             <BadgeSet badges={product.badges} />

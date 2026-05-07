@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Price } from "@/components/store/price";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function CartDrawer() {
   const {
@@ -51,6 +52,7 @@ export function CartDrawer() {
               <AnimatePresence initial={false}>
                 {lines.map((line) => {
                   const isSelected = line.selected !== false;
+                  const preserveQuality = shouldBypassImageOptimization(line.image);
                   return (
                   <motion.li
                     key={line.variantId}
@@ -74,6 +76,8 @@ export function CartDrawer() {
                         fill
                         className="object-cover"
                         sizes="80px"
+                        quality={100}
+                        unoptimized={preserveQuality}
                       />
                     </div>
                     <div className="min-w-0 flex-1 space-y-2">
