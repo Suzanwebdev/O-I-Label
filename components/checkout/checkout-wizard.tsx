@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCart } from "@/components/providers/cart-provider";
 import { Container } from "@/components/store/container";
 import { Heading } from "@/components/store/heading";
@@ -17,9 +16,17 @@ import { mergeFeatureFlags } from "@/lib/feature-flags";
 const steps = ["Details", "Shipping", "Payment", "Review"] as const;
 
 export function CheckoutWizard() {
-  const router = useRouter();
-  const { selectedLines, subtotalGhs, removePurchasedLines, lines } = useCart();
+  const { selectedLines, subtotalGhs, lines } = useCart();
   const [step, setStep] = React.useState(0);
+  const [firstName, setFirstName] = React.useState("");
+  const [lastName, setLastName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [phone, setPhone] = React.useState("");
+  const [address, setAddress] = React.useState("");
+  const [city, setCity] = React.useState("");
+  const [region, setRegion] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const flags = mergeFeatureFlags();
 
   if (lines.length === 0) {
@@ -50,15 +57,52 @@ export function CheckoutWizard() {
   }
 
   function next() {
+    setError(null);
     setStep((s) => Math.min(s + 1, steps.length - 1));
   }
   function back() {
+    setError(null);
     setStep((s) => Math.max(s - 1, 0));
   }
 
-  function placeDemoOrder() {
-    removePurchasedLines();
-    router.push("/checkout/success?demo=1");
+  async function placeOrder() {
+    if (submitting) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/checkout/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          phone,
+          address,
+          city,
+          region,
+          lines: selectedLines.map((line) => ({
+            variantId: line.variantId,
+            quantity: line.quantity,
+            name: line.name,
+          })),
+        }),
+      });
+      const json = (await res.json()) as { redirectUrl?: string; error?: string };
+      if (!res.ok) {
+        setError(json.error ?? "Could not initialize payment. Please try again.");
+        return;
+      }
+      if (json.redirectUrl) {
+        window.location.href = json.redirectUrl;
+        return;
+      }
+      setError("Payment link was not returned. Please try again.");
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -90,20 +134,20 @@ export function CheckoutWizard() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="first">First name</Label>
-                  <Input id="first" />
+                  <Input id="first" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="last">Last name</Label>
-                  <Input id="last" />
+                  <Input id="last" value={lastName} onChange={(e) => setLastName(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" type="tel" />
+                <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
               </div>
             </div>
           )}
@@ -114,16 +158,16 @@ export function CheckoutWizard() {
               </p>
               <div className="space-y-2">
                 <Label htmlFor="addr">Address</Label>
-                <Input id="addr" />
+                <Input id="addr" value={address} onChange={(e) => setAddress(e.target.value)} required />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
-                  <Input id="city" />
+                  <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="region">Region</Label>
-                  <Input id="region" />
+                  <Input id="region" value={region} onChange={(e) => setRegion(e.target.value)} required />
                 </div>
               </div>
             </div>
@@ -156,8 +200,7 @@ export function CheckoutWizard() {
           {step === 3 && (
             <div className="space-y-4 text-sm">
               <p>
-                Review your bag and total. Placing the order will connect to live
-                payment APIs once configured (Phase 5).
+                Review your selected products and total, then continue to secure payment.
               </p>
               <ul className="space-y-2">
                 {selectedLines.map((l) => (
@@ -183,11 +226,12 @@ export function CheckoutWizard() {
                 Continue
               </Button>
             ) : (
-              <Button type="button" onClick={placeDemoOrder}>
-                Place order (demo)
+              <Button type="button" onClick={placeOrder} disabled={submitting}>
+                {submitting ? "Redirecting..." : "Proceed to payment"}
               </Button>
             )}
           </div>
+          {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
         </div>
 
         <aside className="h-fit space-y-4 rounded-[var(--radius-lg)] border border-border bg-muted/40 p-6">
