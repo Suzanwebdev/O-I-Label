@@ -165,7 +165,7 @@ export async function POST(request: Request) {
       amountGhs: total,
       email,
       callbackUrl: resolveMoolreCallbackUrl(),
-      redirectUrl: `${base}/checkout/success?payment=success&order=${order.id}`,
+      redirectUrl: `${base}/checkout/success?order=${order.id}`,
       metadata: {
         order_number: order.order_number,
       },
