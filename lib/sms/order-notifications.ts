@@ -55,8 +55,10 @@ export async function trySendOrderSms(args: {
     return { ok: true, sent: false, reason: "disabled_by_env" };
   }
 
-  const vas = process.env.MOOLRE_SMS_VASKEY?.trim();
-  const sender = process.env.MOOLRE_SMS_SENDER_ID?.trim();
+  const vas =
+    process.env.MOOLRE_SMS_VASKEY?.trim() || process.env.MOOLRE_SMS_API_KEY?.trim();
+  const sender =
+    process.env.MOOLRE_SMS_SENDER_ID?.trim() || process.env.SMS_SENDER_ID?.trim();
   if (!vas || !sender) {
     return { ok: true, sent: false, reason: "sms_not_configured" };
   }

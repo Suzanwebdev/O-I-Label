@@ -1,6 +1,6 @@
 /**
  * Moolre SMS — POST https://api.moolre.com/open/sms/send
- * Docs: requires header `X-API-VASKEY`. Optional test header `X-Scenario-Key`.
+ * Env: `MOOLRE_SMS_VASKEY` (alias: `MOOLRE_SMS_API_KEY`). Optional test header via `MOOLRE_SMS_SCENARIO_KEY`.
  */
 
 const MOOLRE_SMS_URL = "https://api.moolre.com/open/sms/send";
@@ -18,9 +18,10 @@ export async function sendMoolreSms(params: {
   senderid: string;
   messages: MoolreSmsMessage[];
 }): Promise<{ status: number; code?: string; message?: string; raw: unknown }> {
-  const vasKey = process.env.MOOLRE_SMS_VASKEY?.trim();
+  const vasKey =
+    process.env.MOOLRE_SMS_VASKEY?.trim() || process.env.MOOLRE_SMS_API_KEY?.trim();
   if (!vasKey) {
-    throw new Error("MOOLRE_SMS_VASKEY is not set");
+    throw new Error("MOOLRE_SMS_VASKEY (or MOOLRE_SMS_API_KEY) is not set");
   }
 
   const senderid = params.senderid.trim();

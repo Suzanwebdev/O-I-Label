@@ -9,9 +9,24 @@ function requireEnv(name: string): string {
   return v.trim();
 }
 
+/** Prefer primary key; fall back to legacy alias keys used in `.env.local` / Vercel. */
+function requireEnvOrAlias(primary: string, aliases: readonly string[]): string {
+  const v = process.env[primary]?.trim();
+  if (v) return v;
+  for (const key of aliases) {
+    const a = process.env[key]?.trim();
+    if (a) return a;
+  }
+  throw new Error(`${primary} (or ${aliases.join(", ")}) is not set`);
+}
+
 function appBaseUrl(): string {
-  const base = process.env.APP_BASE_URL?.trim() || process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (!base) throw new Error("APP_BASE_URL or NEXT_PUBLIC_SITE_URL is required for Moolre redirects");
+  const base =
+    process.env.APP_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (!base)
+    throw new Error("APP_BASE_URL, NEXT_PUBLIC_SITE_URL, or NEXT_PUBLIC_APP_URL is required for Moolre redirects");
   return base.replace(/\/$/, "");
 }
 
@@ -31,14 +46,15 @@ type MoolreLinkSuccess = {
  * Generate a Moolre Web POS payment link (POST /embed/link).
  *
  * Env: `MOOLRE_API_USER`, `MOOLRE_API_PUBKEY`, `MOOLRE_ACCOUNT_NUMBER`, `MOOLRE_BUSINESS_EMAIL`
- * (business email per Moolre docs). Optional: `MOOLRE_REUSABLE` (`0` | `1`), `MOOLRE_WEBHOOK_SECRET`
- * (if set, webhook route must send the same value in header `x-moolre-callback-secret`).
+ * (alias: `MOOLRE_MERCHANT_EMAIL`). Optional: `MOOLRE_REUSABLE` (`0` | `1`),
+ * `MOOLRE_WEBHOOK_SECRET` (alias: `MOOLRE_CALLBACK_SECRET`) —
+ * if set, webhook route must send the same value in header `x-moolre-callback-secret`.
  */
 export async function initiateMoolre(input: InitiatePaymentInput): Promise<InitiatePaymentResult> {
   const apiUser = requireEnv("MOOLRE_API_USER");
   const apiPubKey = requireEnv("MOOLRE_API_PUBKEY");
   const accountNumber = requireEnv("MOOLRE_ACCOUNT_NUMBER");
-  const businessEmail = requireEnv("MOOLRE_BUSINESS_EMAIL");
+  const businessEmail = requireEnvOrAlias("MOOLRE_BUSINESS_EMAIL", ["MOOLRE_MERCHANT_EMAIL"]);
 
   const base = appBaseUrl();
   const redirect = input.redirectUrl?.trim() || `${base}/account/orders?payment=success`;
@@ -93,7 +109,8 @@ export async function initiateMoolre(input: InitiatePaymentInput): Promise<Initi
 }
 
 export function verifyMoolreWebhookSignature(_payload: string, headerSecret: string | null): boolean {
-  const expected = process.env.MOOLRE_WEBHOOK_SECRET?.trim();
+  const expected =
+    process.env.MOOLRE_WEBHOOK_SECRET?.trim() || process.env.MOOLRE_CALLBACK_SECRET?.trim();
   if (!expected) return true;
   if (!headerSecret) return false;
   const a = Buffer.from(headerSecret);

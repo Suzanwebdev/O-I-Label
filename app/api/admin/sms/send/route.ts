@@ -5,7 +5,7 @@ import { sendMoolreSms } from "@/lib/sms/moolre";
 /**
  * POST /api/admin/sms/send
  * Body: { senderid?: string, messages: { recipient: string, message: string, ref?: string }[] }
- * senderid defaults to MOOLRE_SMS_SENDER_ID when omitted.
+ * senderid defaults to MOOLRE_SMS_SENDER_ID or SMS_SENDER_ID when omitted.
  */
 export async function POST(request: Request) {
   const authz = await getRequestAuthz();
@@ -22,13 +22,17 @@ export async function POST(request: Request) {
 
   const b = body as { senderid?: unknown; messages?: unknown };
 
-  const defaultSender = process.env.MOOLRE_SMS_SENDER_ID?.trim() ?? "";
+  const defaultSender =
+    process.env.MOOLRE_SMS_SENDER_ID?.trim() || process.env.SMS_SENDER_ID?.trim() || "";
   const senderidRaw = typeof b.senderid === "string" ? b.senderid.trim() : "";
   const senderid = senderidRaw || defaultSender;
 
   if (!senderid) {
     return NextResponse.json(
-      { error: "senderid is required in the body, or set MOOLRE_SMS_SENDER_ID in the environment" },
+      {
+        error:
+          "senderid is required in the body, or set MOOLRE_SMS_SENDER_ID (or SMS_SENDER_ID) in the environment",
+      },
       { status: 400 }
     );
   }
