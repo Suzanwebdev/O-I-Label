@@ -47,7 +47,7 @@ function scoreRelatedProduct(current: Product, candidate: Product, collectionPee
 /**
  * Automatic related products: collection peers → same category → shared occasions → catalog fallback.
  */
-export async function getRelatedProducts(current: Product, limit = 16): Promise<Product[]> {
+export async function getRelatedProducts(current: Product, limit = 10): Promise<Product[]> {
   const [catalog, collectionPeers] = await Promise.all([
     listProducts(),
     getCollectionPeerIds(current.id),

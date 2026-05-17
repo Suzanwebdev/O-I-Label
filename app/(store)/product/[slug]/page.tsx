@@ -45,7 +45,7 @@ export default async function ProductPage({ params }: Props) {
     notFound();
   }
 
-  const relatedProducts = await getRelatedProducts(product, 16);
+  const relatedProducts = await getRelatedProducts(product, 10);
   const productPath = `/product/${product.slug}`;
 
   return (

@@ -3,10 +3,10 @@ import { ProductCard } from "@/components/store/product-card";
 import { cn } from "@/lib/utils";
 
 const MOBILE_VISIBLE = 10;
-const DESKTOP_VISIBLE = 16;
+const DESKTOP_VISIBLE = 8;
 
 export function ProductYouMayAlsoLike({ products }: { products: Product[] }) {
-  const items = products.slice(0, DESKTOP_VISIBLE);
+  const items = products.slice(0, MOBILE_VISIBLE);
   if (items.length === 0) return null;
 
   return (
@@ -20,7 +20,7 @@ export function ProductYouMayAlsoLike({ products }: { products: Product[] }) {
       </h2>
       <div className="mt-6 grid grid-cols-2 gap-4 md:gap-5 lg:grid-cols-4 lg:gap-6">
         {items.map((product, index) => (
-          <div key={product.id} className={cn(index >= MOBILE_VISIBLE && "hidden lg:block")}>
+          <div key={product.id} className={cn(index >= DESKTOP_VISIBLE && "lg:hidden")}>
             <ProductCard product={product} />
           </div>
         ))}
