@@ -11,6 +11,8 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { buildProductDescription, buildProductSeoTitle } from "@/lib/seo/descriptions";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/json-ld";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { getRelatedProducts } from "@/lib/data/related-products";
+import { ProductYouMayAlsoLike } from "@/components/product/product-you-may-also-like";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -43,6 +45,7 @@ export default async function ProductPage({ params }: Props) {
     notFound();
   }
 
+  const relatedProducts = await getRelatedProducts(product, 16);
   const productPath = `/product/${product.slug}`;
 
   return (
@@ -109,6 +112,8 @@ export default async function ProductPage({ params }: Props) {
             </div>
           </aside>
         </div>
+
+        <ProductYouMayAlsoLike products={relatedProducts} />
       </Container>
     </article>
   );
