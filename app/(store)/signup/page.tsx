@@ -1,6 +1,14 @@
 import { Suspense } from "react";
 import { Container } from "@/components/store/container";
 import SignupClient from "./signup-client";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Create Account",
+  description: "Create your O & I Label account.",
+  path: "/signup",
+  noIndex: true,
+});
 
 export default function SignupPage() {
   return (

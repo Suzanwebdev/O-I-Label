@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Container } from "@/components/store/container";
 import { SuperAdminAsideNav, SuperAdminMobileNav } from "@/components/superadmin/superadmin-nav";
 import { SuperAdminHeader } from "@/components/superadmin/superadmin-header";
 import { getRequestAuthz } from "@/lib/authz";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function SuperAdminLayout({
   children,

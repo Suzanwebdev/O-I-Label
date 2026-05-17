@@ -1,5 +1,14 @@
 import Link from "next/link";
 import { Container } from "@/components/store/container";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Contact & Customer Support",
+  description:
+    "Contact O & I Label for order support, sizing help, and styling advice. Premium women's fashion customer care in Ghana.",
+  path: "/contact",
+  keywords: ["contact O & I Label", "customer support", "fashion help Ghana"],
+});
 
 const TOPIC_COPY: Record<string, { title: string; body: string }> = {
   "size-guide": {

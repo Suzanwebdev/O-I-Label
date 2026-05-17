@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { Container } from "@/components/store/container";
 import { CartPageClient } from "@/components/store/cart-page-client";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Shopping Bag",
+  description: "Your O & I Label shopping bag.",
+  path: "/cart",
+  noIndex: true,
+});
 
 export default function CartPage() {
   return (

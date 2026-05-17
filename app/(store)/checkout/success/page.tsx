@@ -3,6 +3,14 @@ import { Container } from "@/components/store/container";
 import { Button } from "@/components/ui/button";
 import { CheckoutSuccessClient } from "@/components/checkout/checkout-success-client";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Order Confirmation",
+  description: "Your O & I Label order confirmation.",
+  path: "/checkout/success",
+  noIndex: true,
+});
 
 type Props = { searchParams: Promise<{ demo?: string; payment?: string; order?: string }> };
 

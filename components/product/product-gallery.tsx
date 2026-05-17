@@ -44,10 +44,11 @@ export function ProductGallery({
               >
                 <Image
                   src={src}
-                  alt=""
+                  alt={`${name} — image ${i + 1} of ${images.length}`}
                   fill
                   className="object-cover"
                   sizes="64px"
+                  loading="lazy"
                   quality={100}
                   unoptimized={preserveQuality}
                 />
@@ -86,11 +87,12 @@ export function ProductGallery({
           </span>
           <Image
             src={images[active]}
-            alt={name}
+            alt={`${name} — premium women's fashion at O & I Label`}
             fill
             className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
             sizes="(max-width: 1024px) 100vw, 55vw"
             priority
+            fetchPriority="high"
             quality={100}
             unoptimized={shouldBypassImageOptimization(images[active] ?? "")}
           />

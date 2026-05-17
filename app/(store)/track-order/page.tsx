@@ -2,6 +2,14 @@ import Link from "next/link";
 import { Container } from "@/components/store/container";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildPageMetadata({
+  title: "Track Your Order",
+  description:
+    "Track your O & I Label order status with your order number and email. Fast updates on premium women's fashion deliveries.",
+  path: "/track-order",
+});
 
 export default function TrackOrderPage() {
   return (

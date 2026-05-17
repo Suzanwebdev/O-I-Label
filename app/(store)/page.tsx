@@ -13,6 +13,9 @@ import { BestSellersRow } from "@/components/home/best-sellers-row";
 import { HomeHero } from "@/components/home/home-hero";
 import { HOME_HERO_SLIDES } from "@/lib/home-hero-slides";
 import { OccasionSection } from "@/components/home/occasion-section";
+import { homeMetadata } from "@/lib/seo/metadata";
+
+export const metadata = homeMetadata;
 
 /** Local assets in /public/home ' boutique hero + category thumbnails (order matches mockCategories). */
 const categoryImageBySlug: Record<string, string> = {

@@ -1,6 +1,9 @@
 import { Suspense } from "react";
 import { ShopCatalog } from "@/components/shop/shop-catalog";
 import { listProducts } from "@/lib/data/catalog";
+import { shopMetadata } from "@/lib/seo/metadata";
+
+export const metadata = shopMetadata;
 
 export default async function ShopPage() {
   const products = await listProducts();

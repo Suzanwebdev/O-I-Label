@@ -7,33 +7,32 @@ import { Container } from "@/components/store/container";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductVariantForm } from "@/components/product/product-variant-form";
 import { BadgeSet } from "@/components/store/badge-set";
+import { JsonLd } from "@/components/seo/json-ld";
+import { buildProductDescription, buildProductSeoTitle } from "@/lib/seo/descriptions";
+import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/json-ld";
+import { buildPageMetadata } from "@/lib/seo/metadata";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlugFromDb(decodeURIComponent(slug));
-  if (!product) return { title: "Product" };
-  const title = (product.seo_title?.trim() || product.name).slice(0, 200);
-  const descSource = product.seo_description?.trim() || product.description.trim() || `${product.name} · O & I Label`;
-  const description = descSource.slice(0, 320);
-  const ogImage = product.images[0];
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      ...(ogImage && (ogImage.startsWith("http") || ogImage.startsWith("/"))
-        ? { images: [{ url: ogImage, alt: product.name }] }
-        : {}),
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-    },
-  };
+  if (!product) {
+    return buildPageMetadata({
+      title: "Product Not Found",
+      description:
+        "This product is unavailable at O & I Label. Browse premium women's fashion in our shop.",
+      path: `/product/${slug}`,
+    });
+  }
+
+  return buildPageMetadata({
+    title: buildProductSeoTitle(product),
+    description: buildProductDescription(product),
+    path: `/product/${product.slug}`,
+    ogImage: product.images[0] ?? null,
+    keywords: [product.name, product.category_name, "women's fashion", "premium fashion"],
+  });
 }
 
 export default async function ProductPage({ params }: Props) {
@@ -44,10 +43,26 @@ export default async function ProductPage({ params }: Props) {
     notFound();
   }
 
+  const productPath = `/product/${product.slug}`;
+
   return (
-    <div className="border-border/60 border-b bg-background py-8 pb-24 md:py-12 md:pb-12">
+    <article className="border-border/60 border-b bg-background py-8 pb-24 md:py-12 md:pb-12">
+      <JsonLd
+        data={[
+          productJsonLd(product, productPath),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Shop", path: "/shop" },
+            { name: product.category_name, path: `/shop/${product.category_slug}` },
+            { name: product.name, path: productPath },
+          ]),
+        ]}
+      />
       <Container className="px-4 sm:px-6 lg:px-8">
-        <nav className="mb-6 flex flex-wrap items-center gap-1 text-xs text-muted-foreground md:mb-8">
+        <nav
+          className="mb-6 flex flex-wrap items-center gap-1 text-xs text-muted-foreground md:mb-8"
+          aria-label="Breadcrumb"
+        >
           <Link href="/shop" className="hover:text-foreground">
             Shop
           </Link>
@@ -56,7 +71,9 @@ export default async function ProductPage({ params }: Props) {
             {product.category_name}
           </Link>
           <ChevronRight className="h-3 w-3 opacity-70" aria-hidden />
-          <span className="text-foreground">{product.name}</span>
+          <span className="text-foreground" aria-current="page">
+            {product.name}
+          </span>
         </nav>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:gap-12 lg:items-start">
@@ -93,6 +110,6 @@ export default async function ProductPage({ params }: Props) {
           </aside>
         </div>
       </Container>
-    </div>
+    </article>
   );
 }

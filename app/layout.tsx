@@ -3,11 +3,15 @@ import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/providers/cart-provider";
 import { WishlistProvider } from "@/components/providers/wishlist-provider";
+import { JsonLd } from "@/components/seo/json-ld";
+import { organizationJsonLd, webSiteJsonLd } from "@/lib/seo/json-ld";
+import { DEFAULT_KEYWORDS, SITE_LOCALE, SITE_NAME, getSiteUrl } from "@/lib/seo/site";
 
 const manrope = Manrope({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-manrope-next",
+  preload: true,
 });
 
 const cormorantGaramond = Cormorant_Garamond({
@@ -16,23 +20,45 @@ const cormorantGaramond = Cormorant_Garamond({
   weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
   variable: "--font-cormorant-next",
+  preload: true,
 });
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.APP_BASE_URL ?? "http://localhost:3000"
-  ),
+  metadataBase: new URL(siteUrl),
   title: {
-    default: "O & I Label — Elevated essentials",
-    template: "%s · O & I Label",
+    default: "O & I Label | Premium Women's Fashion",
+    template: "%s | O & I Label",
   },
   description:
-    "Women's fashion and elevated essentials. Modern pieces designed to flatter and stand out.",
+    "Shop premium women's fashion, dresses, two-piece sets, and statement looks at O & I Label.",
+  keywords: [...DEFAULT_KEYWORDS],
+  applicationName: SITE_NAME,
+  alternates: {
+    canonical: siteUrl,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
   openGraph: {
     type: "website",
-    locale: "en_GH",
-    siteName: "O & I Label",
+    locale: SITE_LOCALE,
+    siteName: SITE_NAME,
+    url: siteUrl,
+    title: "O & I Label | Premium Women's Fashion",
+    description:
+      "Shop premium women's fashion, dresses, two-piece sets, and statement looks at O & I Label.",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "O & I Label | Premium Women's Fashion",
+    description:
+      "Shop premium women's fashion, dresses, two-piece sets, and statement looks at O & I Label.",
+  },
+  category: "fashion",
 };
 
 export default function RootLayout({
@@ -40,9 +66,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+
   return (
     <html lang="en" className={`h-full antialiased ${manrope.variable} ${cormorantGaramond.variable}`}>
+      <head>
+        {supabaseOrigin ? <link rel="preconnect" href={supabaseOrigin} crossOrigin="anonymous" /> : null}
+      </head>
       <body className="min-h-full flex flex-col font-sans">
+        <JsonLd data={[organizationJsonLd(), webSiteJsonLd()]} />
         <WishlistProvider>
           <CartProvider>{children}</CartProvider>
         </WishlistProvider>

@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Maintenance",
+  robots: { index: false, follow: false },
+};
+
 export default function MaintenancePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-6 text-center">
