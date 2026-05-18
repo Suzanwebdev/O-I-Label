@@ -52,6 +52,7 @@ export type AdminAnalyticsSnapshot = {
 
 export type AdminDashboardSnapshot = {
   revenue30d: number;
+  /** Paid orders only (last 30 days). */
   orders30d: number;
   aov30d: number;
   paidRatePct: number;
@@ -417,7 +418,7 @@ export async function getDashboardSnapshot(): Promise<AdminDashboardSnapshot> {
   since.setDate(since.getDate() - 30);
   const iso = since.toISOString();
 
-  const [{ count: orders30d }, { count: paid30d }, { data: paidTotals }] = await Promise.all([
+  const [{ count: totalOrders30d }, { count: paid30d }, { data: paidTotals }] = await Promise.all([
     supabase
       .from("orders")
       .select("id", { count: "exact", head: true })
@@ -436,13 +437,13 @@ export async function getDashboardSnapshot(): Promise<AdminDashboardSnapshot> {
 
   const revenue30d = (paidTotals ?? []).reduce((sum, row) => sum + Number(row.total_ghs ?? 0), 0);
   const paidCount = paid30d ?? 0;
-  const orderCount = orders30d ?? 0;
+  const totalOrderCount = totalOrders30d ?? 0;
 
   return {
     revenue30d,
-    orders30d: orderCount,
+    orders30d: paidCount,
     aov30d: paidCount > 0 ? revenue30d / paidCount : 0,
-    paidRatePct: orderCount > 0 ? (paidCount / orderCount) * 100 : 0,
+    paidRatePct: totalOrderCount > 0 ? (paidCount / totalOrderCount) * 100 : 0,
   };
 }
 

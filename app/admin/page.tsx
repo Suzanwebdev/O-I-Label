@@ -10,7 +10,7 @@ export default async function AdminDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Revenue (30d)", value: `GHc ${stats.revenue30d.toFixed(2)}` },
-          { label: "Orders (30d)", value: stats.orders30d.toString() },
+          { label: "Paid orders (30d)", value: stats.orders30d.toString() },
           { label: "AOV (paid)", value: `GHc ${stats.aov30d.toFixed(2)}` },
           { label: "Paid rate", value: `${stats.paidRatePct.toFixed(1)}%` },
         ].map((k) => (
