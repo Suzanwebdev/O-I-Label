@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -12,6 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { AdminOrderRow } from "@/lib/data/admin";
+import { computeOrdersKpi } from "@/lib/admin/orders-kpi";
 
 const statuses: AdminOrderRow["status"][] = [
   "pending",
@@ -30,8 +32,9 @@ function tone(status: AdminOrderRow["status"]) {
   return "bg-amber-100 text-amber-800";
 }
 
-export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
+export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrderRow[] }) {
   const router = useRouter();
+  const [orders, setOrders] = React.useState(initialOrders);
   const [q, setQ] = React.useState("");
   const [activeStatus, setActiveStatus] = React.useState<"all" | AdminOrderRow["status"]>("all");
   const [needsAttentionOnly, setNeedsAttentionOnly] = React.useState(false);
@@ -41,18 +44,51 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
   const [bulkStatus, setBulkStatus] = React.useState<AdminOrderRow["status"]>("processing");
   const [bulkBusy, setBulkBusy] = React.useState(false);
   const [busyId, setBusyId] = React.useState<string | null>(null);
-  const [statusById, setStatusById] = React.useState<Record<string, AdminOrderRow["status"]>>(
-    Object.fromEntries(orders.map((o) => [o.id, o.status])) as Record<string, AdminOrderRow["status"]>
+  const [statusById, setStatusById] = React.useState<Record<string, AdminOrderRow["status"]>>({});
+  const [notifyById, setNotifyById] = React.useState<Record<string, boolean>>({});
+  const [trackingById, setTrackingById] = React.useState<Record<string, string>>({});
+  const [carrierById, setCarrierById] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    setOrders(initialOrders);
+    setStatusById((prev) => {
+      const next = { ...prev };
+      for (const order of initialOrders) {
+        if (next[order.id] === order.status) delete next[order.id];
+      }
+      return next;
+    });
+    setNotifyById((prev) => {
+      const next = { ...prev };
+      for (const order of initialOrders) {
+        if (next[order.id] === order.notify_customer) delete next[order.id];
+      }
+      return next;
+    });
+    setTrackingById((prev) => {
+      const next = { ...prev };
+      for (const order of initialOrders) {
+        const saved = order.tracking_number ?? "";
+        if ((next[order.id] ?? saved) === saved) delete next[order.id];
+      }
+      return next;
+    });
+    setCarrierById((prev) => {
+      const next = { ...prev };
+      for (const order of initialOrders) {
+        const saved = order.carrier ?? "";
+        if ((next[order.id] ?? saved) === saved) delete next[order.id];
+      }
+      return next;
+    });
+  }, [initialOrders]);
+
+  const resolveStatus = React.useCallback(
+    (order: AdminOrderRow) => statusById[order.id] ?? order.status,
+    [statusById]
   );
-  const [notifyById, setNotifyById] = React.useState<Record<string, boolean>>(
-    Object.fromEntries(orders.map((o) => [o.id, o.notify_customer])) as Record<string, boolean>
-  );
-  const [trackingById, setTrackingById] = React.useState<Record<string, string>>(
-    Object.fromEntries(orders.map((o) => [o.id, o.tracking_number ?? ""])) as Record<string, string>
-  );
-  const [carrierById, setCarrierById] = React.useState<Record<string, string>>(
-    Object.fromEntries(orders.map((o) => [o.id, o.carrier ?? ""])) as Record<string, string>
-  );
+
+  const kpi = React.useMemo(() => computeOrdersKpi(orders, resolveStatus), [orders, resolveStatus]);
   const [error, setError] = React.useState<string | null>(null);
   const [openOrderId, setOpenOrderId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<{
@@ -86,12 +122,14 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
     const fromTime = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
     const toTime = toDate ? new Date(`${toDate}T23:59:59`).getTime() : null;
     return orders.filter((o) => {
+      const status = resolveStatus(o);
+      const tracking = trackingById[o.id] ?? o.tracking_number ?? "";
       const ageMs = Date.now() - new Date(o.created_at).getTime();
       const needsAttention =
-        ((o.status === "pending" || o.status === "processing") && ageMs > 24 * 60 * 60 * 1000) ||
-        (o.status === "shipped" && !(o.tracking_number ?? "").trim());
+        ((status === "pending" || status === "processing") && ageMs > 24 * 60 * 60 * 1000) ||
+        (status === "shipped" && !tracking.trim());
       if (needsAttentionOnly && !needsAttention) return false;
-      if (activeStatus !== "all" && o.status !== activeStatus) return false;
+      if (activeStatus !== "all" && status !== activeStatus) return false;
       if (fromTime != null || toTime != null) {
         const ts = new Date(o.created_at).getTime();
         if (fromTime != null && ts < fromTime) return false;
@@ -101,11 +139,11 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
       return (
         o.order_number.toLowerCase().includes(key) ||
         o.email.toLowerCase().includes(key) ||
-        o.status.toLowerCase().includes(key) ||
-        (o.tracking_number ?? "").toLowerCase().includes(key)
+        status.toLowerCase().includes(key) ||
+        tracking.toLowerCase().includes(key)
       );
     });
-  }, [orders, q, activeStatus, fromDate, toDate, needsAttentionOnly]);
+  }, [orders, q, activeStatus, fromDate, toDate, needsAttentionOnly, resolveStatus, trackingById]);
 
   const selectedIds = React.useMemo(
     () => filtered.filter((o) => selected[o.id]).map((o) => o.id),
@@ -122,9 +160,18 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
       cancelled: 0,
       refunded: 0,
     };
-    for (const order of orders) counts[order.status] += 1;
+    for (const order of orders) counts[resolveStatus(order)] += 1;
     return counts;
-  }, [orders]);
+  }, [orders, resolveStatus]);
+
+  function applySavedOrder(order: AdminOrderRow, patch: Partial<AdminOrderRow>) {
+    setOrders((prev) => prev.map((row) => (row.id === order.id ? { ...row, ...patch } : row)));
+    setStatusById((prev) => {
+      const next = { ...prev };
+      delete next[order.id];
+      return next;
+    });
+  }
 
   async function saveOrder(order: AdminOrderRow) {
     setBusyId(order.id);
@@ -146,6 +193,13 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
         setError(json.error ?? "Could not update order");
         return;
       }
+      const nextStatus = statusById[order.id] ?? order.status;
+      applySavedOrder(order, {
+        status: nextStatus,
+        notify_customer: notifyById[order.id] ?? order.notify_customer,
+        tracking_number: (trackingById[order.id] ?? order.tracking_number ?? "").trim() || null,
+        carrier: (carrierById[order.id] ?? order.carrier ?? "").trim() || null,
+      });
       router.refresh();
     } catch {
       setError("Network error while saving order");
@@ -169,6 +223,14 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
         setError(json.error ?? "Bulk update failed");
         return;
       }
+      setOrders((prev) =>
+        prev.map((row) => (selectedIds.includes(row.id) ? { ...row, status: bulkStatus } : row))
+      );
+      setStatusById((prev) => {
+        const next = { ...prev };
+        for (const id of selectedIds) delete next[id];
+        return next;
+      });
       setSelected({});
       router.refresh();
     } catch {
@@ -222,6 +284,34 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "Pending", value: kpi.pending },
+          { label: "Processing", value: kpi.processing },
+          { label: "Shipped", value: kpi.shipped },
+          { label: "Delivered", value: kpi.delivered },
+        ].map((card) => (
+          <Card key={card.label}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{card.label}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold tabular-nums">{card.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Paid pipeline value</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-2xl font-semibold tabular-nums">GHc {kpi.revenuePaid.toFixed(2)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Sum of paid, processing, shipped, and delivered orders.
+          </p>
+        </CardContent>
+      </Card>
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
@@ -309,7 +399,9 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((order) => (
+            {filtered.map((order) => {
+              const status = resolveStatus(order);
+              return (
               <tr key={order.id} className="border-t align-top">
                 <td className="px-3 py-3">
                   <input
@@ -328,11 +420,11 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
                 <td className="px-3 py-3">GHc {order.total_ghs.toFixed(2)}</td>
                 <td className="px-3 py-3">
                   <div className="space-y-2">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tone(statusById[order.id] ?? order.status)}`}>
-                      {(statusById[order.id] ?? order.status).toUpperCase()}
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tone(status)}`}>
+                      {status.toUpperCase()}
                     </span>
                     <select
-                      value={statusById[order.id] ?? order.status}
+                      value={status}
                       onChange={(e) =>
                         setStatusById((prev) => ({
                           ...prev,
@@ -352,12 +444,12 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
                 <td className="px-3 py-3">
                   <div className="space-y-2">
                     <Input
-                      value={trackingById[order.id] ?? ""}
+                      value={trackingById[order.id] ?? order.tracking_number ?? ""}
                       onChange={(e) => setTrackingById((prev) => ({ ...prev, [order.id]: e.target.value }))}
                       placeholder="Tracking number"
                     />
                     <Input
-                      value={carrierById[order.id] ?? ""}
+                      value={carrierById[order.id] ?? order.carrier ?? ""}
                       onChange={(e) => setCarrierById((prev) => ({ ...prev, [order.id]: e.target.value }))}
                       placeholder="Carrier"
                     />
@@ -385,7 +477,8 @@ export function AdminOrdersTable({ orders }: { orders: AdminOrderRow[] }) {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-3 py-8 text-center text-muted-foreground">
