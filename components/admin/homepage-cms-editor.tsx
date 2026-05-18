@@ -169,6 +169,33 @@ export function HomepageCmsEditor({ initial }: { initial: HomepageCms }) {
     });
   }
 
+  function addSocialLink() {
+    setCms((prev) => ({
+      ...prev,
+      footer: {
+        ...prev.footer,
+        social: [...prev.footer.social, { label: "TikTok", href: "https://" }],
+      },
+    }));
+  }
+
+  function removeSocialLink(index: number) {
+    setCms((prev) => ({
+      ...prev,
+      footer: {
+        ...prev.footer,
+        social: prev.footer.social.filter((_, i) => i !== index),
+      },
+    }));
+  }
+
+  function updateSocialLink(index: number, patch: Partial<{ label: string; href: string }>) {
+    setCms((prev) => {
+      const social = prev.footer.social.map((s, i) => (i === index ? { ...s, ...patch } : s));
+      return { ...prev, footer: { ...prev.footer, social } };
+    });
+  }
+
   return (
     <div className="space-y-6">
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -618,32 +645,39 @@ export function HomepageCmsEditor({ initial }: { initial: HomepageCms }) {
           ))}
           <div className="space-y-3">
             <p className="text-sm font-medium">Social links</p>
+            <p className="text-xs text-muted-foreground">
+              Use labels like Instagram, WhatsApp, or TikTok so the right icon appears. Other labels use a
+              generic link icon.
+            </p>
             {cms.footer.social.map((s, i) => (
-              <div key={i} className="grid gap-2 sm:grid-cols-2">
+              <div
+                key={`${i}-${s.label}-${s.href}`}
+                className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_1fr_auto]"
+              >
                 <Input
-                  placeholder="Label (Instagram)"
+                  placeholder="Label (e.g. TikTok)"
                   value={s.label}
-                  onChange={(e) =>
-                    setCms((prev) => {
-                      const social = [...prev.footer.social];
-                      social[i] = { ...social[i], label: e.target.value };
-                      return { ...prev, footer: { ...prev.footer, social } };
-                    })
-                  }
+                  onChange={(e) => updateSocialLink(i, { label: e.target.value })}
                 />
                 <Input
                   placeholder="https://..."
                   value={s.href}
-                  onChange={(e) =>
-                    setCms((prev) => {
-                      const social = [...prev.footer.social];
-                      social[i] = { ...social[i], href: e.target.value };
-                      return { ...prev, footer: { ...prev.footer, social } };
-                    })
-                  }
+                  onChange={(e) => updateSocialLink(i, { href: e.target.value })}
                 />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={cms.footer.social.length <= 1}
+                  onClick={() => removeSocialLink(i)}
+                >
+                  Remove
+                </Button>
               </div>
             ))}
+            <Button type="button" size="sm" variant="secondary" onClick={addSocialLink}>
+              Add social link
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -44,11 +44,47 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
-function pickSocialIcon(label: string) {
-  const key = label.toLowerCase();
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M14 8h2.5V5.5h-2.5C12.57 5.5 11 7.07 11 9.25V11H8.5v2.75H11V22h3v-8.25h2.55L17 11h-3V9.25c0-.69.56-1.25 1.25-1.25z" />
+    </svg>
+  );
+}
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M16.5 3c.6 2.4 2.2 4.2 4.5 4.5v3.2c-1.7 0-3.3-.6-4.5-1.6V15c0 3-2.5 5.5-5.5 5.5S5.5 18 5.5 15s2.5-5.5 5.5-5.5c.3 0 .6 0 .9.1v3.3a2.2 2.2 0 1 0 1.6 2.1V3h3z" />
+    </svg>
+  );
+}
+
+function GenericLinkIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function pickSocialIcon(label: string, href: string) {
+  const key = `${label} ${href}`.toLowerCase();
   if (key.includes("whatsapp")) return WhatsAppIcon;
   if (key.includes("instagram")) return InstagramIcon;
-  return InstagramIcon;
+  if (key.includes("facebook") || key.includes("fb.com")) return FacebookIcon;
+  if (key.includes("tiktok")) return TikTokIcon;
+  return GenericLinkIcon;
 }
 
 export function StoreFooter({ footer = DEFAULT_FOOTER }: { footer?: HomeFooterCms }) {
@@ -107,7 +143,7 @@ export function StoreFooter({ footer = DEFAULT_FOOTER }: { footer?: HomeFooterCm
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {social.map((item) => {
-              const Icon = pickSocialIcon(item.label);
+              const Icon = pickSocialIcon(item.label, item.href);
               return (
                 <a
                   key={`${item.label}-${item.href}`}
