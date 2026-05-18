@@ -94,7 +94,7 @@ export async function POST(request: Request) {
   let welcomed = false;
   if (!welcomeDisabled) {
     const res = await sendNewsletterWelcomeEmail({ to: emailRaw });
-    welcomed = Boolean(res.sent);
+    welcomed = "sent" in res && res.sent;
     if (welcomed) {
       await service
         .from("newsletter_subscribers")

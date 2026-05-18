@@ -92,6 +92,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
 
   const kpi = React.useMemo(() => computeOrdersKpi(orders, resolveStatus), [orders, resolveStatus]);
   const [error, setError] = React.useState<string | null>(null);
+  const [notice, setNotice] = React.useState<string | null>(null);
   const [openOrderId, setOpenOrderId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<{
     order: {
@@ -276,15 +277,27 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
     if (!openOrderId) return;
     setNotifyBusy(true);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch(`/api/admin/orders/${openOrderId}/notify`, { method: "POST" });
-      const json = (await res.json()) as { error?: string; skipped?: boolean };
+      const json = (await res.json()) as {
+        error?: string;
+        ok?: boolean;
+        summary?: string;
+        email?: { sent?: boolean; skipped?: boolean; reason?: string; error?: string };
+        sms?: { sent?: boolean; skipped?: string; error?: string };
+      };
       if (!res.ok) {
         setError(json.error ?? "Could not send update");
         return;
       }
-      if (json.skipped) {
-        setError("Email provider key missing, so update email was skipped.");
+      if (json.ok) {
+        setNotice(json.summary ?? "Update sent to the customer.");
+      } else {
+        setError(
+          json.summary ??
+            "Nothing was delivered. Check Vercel env: RESEND_API_KEY, RESEND_FROM (verified domain), MOOLRE_SMS_VASKEY, MOOLRE_SMS_SENDER_ID."
+        );
       }
       await openDetail(openOrderId);
       router.refresh();
@@ -383,6 +396,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
           </Button>
         </div>
       ) : null}
+      {notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full min-w-[1100px] text-left text-sm">
@@ -511,12 +525,23 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
           </tbody>
         </table>
       </div>
-      <Sheet open={Boolean(openOrderId)} onOpenChange={(open) => !open && setOpenOrderId(null)}>
+      <Sheet
+        open={Boolean(openOrderId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOpenOrderId(null);
+            setNotice(null);
+            setError(null);
+          }
+        }}
+      >
         <SheetContent className="w-full max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Order detail</SheetTitle>
             <SheetDescription>Customer, payment, shipment, and timeline information.</SheetDescription>
           </SheetHeader>
+          {notice ? <p className="mt-4 text-sm text-emerald-700">{notice}</p> : null}
+          {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
           {detailBusy ? (
             <p className="mt-6 text-sm text-muted-foreground">Loading order...</p>
           ) : detail ? (

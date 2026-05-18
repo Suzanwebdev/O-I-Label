@@ -12,6 +12,13 @@ type RouteContext = {
   params: Promise<{ orderId: string }>;
 };
 
+function describeEmailResult(result: Awaited<ReturnType<typeof sendOrderStatusEmail>>) {
+  if ("sent" in result && result.sent) return `Order status email sent`;
+  if ("skipped" in result && result.skipped) return `Email skipped: ${result.reason}`;
+  if ("error" in result) return `Email failed: ${result.error}`;
+  return "Email: unknown result";
+}
+
 export async function POST(_request: Request, context: RouteContext) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin || !authz.user) {
@@ -51,48 +58,71 @@ export async function POST(_request: Request, context: RouteContext) {
     order_id: order.id,
     event_type: "notification_sent",
     actor_id: authz.user.id,
-    message: emailResult.sent
-      ? `Order status email sent to ${order.email}`
-      : "Order status email skipped (missing email provider key)",
+    message: `${describeEmailResult(emailResult)} (${order.email})`,
     meta: {
+      channel: "email",
       status: order.status,
-      notify_customer: order.notify_customer,
-      skipped: Boolean((emailResult as { skipped?: boolean }).skipped),
+      result: emailResult,
     },
   });
 
-  let smsResult: { sent?: boolean; skipped?: string; error?: string } | undefined;
-  if (order.notify_customer) {
-    const phone = normalizeSmsRecipient(order.phone);
-    if (phone) {
-      const message = buildOrderStatusSmsBody({
-        orderNumber: order.order_number,
-        status: order.status,
-        trackingNumber: shipment?.tracking_number ?? null,
-      });
-      const sms = await trySendOrderSms({
-        recipient: phone,
-        message,
-        ref: `order_${order.id}_notify_manual`,
-      });
-      if (sms.ok) {
-        smsResult = sms.sent ? { sent: true } : { skipped: sms.reason };
-      } else {
-        smsResult = { error: sms.error };
-      }
-      await service.from("order_events").insert({
-        order_id: order.id,
-        event_type: "notification_sent",
-        actor_id: authz.user.id,
-        message: sms.ok
-          ? sms.sent
-            ? "Order status SMS sent"
-            : `Order status SMS skipped: ${sms.reason}`
-          : `Order status SMS failed: ${sms.error}`,
-        meta: { channel: "sms", status: order.status },
-      });
+  let smsResult: { sent?: boolean; skipped?: string; error?: string } = { skipped: "no_phone" };
+  const phone = normalizeSmsRecipient(order.phone);
+
+  // Manual admin send always attempts SMS when a valid phone exists.
+  if (phone) {
+    const message = buildOrderStatusSmsBody({
+      orderNumber: order.order_number,
+      status: order.status,
+      trackingNumber: shipment?.tracking_number ?? null,
+    });
+    const sms = await trySendOrderSms({
+      recipient: phone,
+      message,
+      ref: `order_${order.id}_notify_manual`,
+    });
+    if (sms.ok) {
+      smsResult = sms.sent ? { sent: true } : { skipped: sms.reason };
+    } else {
+      smsResult = { error: sms.error };
     }
+    const masked = phone.length > 4 ? `${phone.slice(0, -4)}****` : "****";
+    await service.from("order_events").insert({
+      order_id: order.id,
+      event_type: "notification_sent",
+      actor_id: authz.user.id,
+      message: sms.ok
+        ? sms.sent
+          ? `Order status SMS sent to ${masked}`
+          : `Order status SMS skipped: ${sms.reason}`
+        : `Order status SMS failed: ${sms.error}`,
+      meta: { channel: "sms", status: order.status, phone_masked: masked },
+    });
   }
 
-  return NextResponse.json({ ok: true, ...emailResult, sms: smsResult });
+  const emailOk = "sent" in emailResult && emailResult.sent;
+  const smsOk = Boolean(smsResult.sent);
+  const anySent = emailOk || smsOk;
+
+  return NextResponse.json({
+    ok: anySent,
+    email: emailResult,
+    sms: smsResult,
+    summary: [
+      emailOk
+        ? `Email sent to ${order.email}`
+        : "skipped" in emailResult
+          ? `Email not sent (${emailResult.reason})`
+          : "error" in emailResult
+            ? `Email failed: ${emailResult.error}`
+            : "Email not sent",
+      smsOk
+        ? "SMS sent"
+        : smsResult.error
+          ? `SMS failed: ${smsResult.error}`
+          : smsResult.skipped
+            ? `SMS not sent (${smsResult.skipped})`
+            : "SMS not sent",
+    ].join(" · "),
+  });
 }
