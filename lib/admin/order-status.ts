@@ -17,6 +17,45 @@ export function isOrderPaid(order: Pick<AdminOrderRow, "payment_status" | "paid_
   return order.payment_status === "paid" || Boolean(order.paid_at);
 }
 
+/** Tab/filter matching: "paid" = confirmed payment; other tabs = fulfillment status. */
+export function matchesOrderStatusFilter(
+  order: Pick<AdminOrderRow, "payment_status" | "paid_at">,
+  fulfillmentStatus: OrderFulfillmentStatus,
+  filter: "all" | OrderFulfillmentStatus
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "paid") return isOrderPaid(order);
+  return fulfillmentStatus === filter;
+}
+
+export function countOrdersForStatusFilter(
+  orders: AdminOrderRow[],
+  resolveStatus: (order: AdminOrderRow) => OrderFulfillmentStatus
+): Record<OrderFulfillmentStatus, number> {
+  const counts: Record<OrderFulfillmentStatus, number> = {
+    pending: 0,
+    paid: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0,
+    refunded: 0,
+  };
+
+  for (const order of orders) {
+    const fulfillment = resolveStatus(order);
+    if (isOrderPaid(order)) counts.paid += 1;
+    if (fulfillment === "pending" && !isOrderPaid(order)) {
+      counts.pending += 1;
+      continue;
+    }
+    if (fulfillment === "paid" && isOrderPaid(order)) continue;
+    counts[fulfillment] += 1;
+  }
+
+  return counts;
+}
+
 export function paymentTone(status: AdminOrderRow["payment_status"]) {
   if (status === "paid") return "bg-emerald-100 text-emerald-800";
   if (status === "refunded") return "bg-red-100 text-red-700";

@@ -16,8 +16,10 @@ import type { AdminOrderRow } from "@/lib/data/admin";
 import { computeOrdersKpi } from "@/lib/admin/orders-kpi";
 import {
   allowedFulfillmentStatuses,
+  countOrdersForStatusFilter,
   fulfillmentTone,
   isOrderPaid,
+  matchesOrderStatusFilter,
   paymentLabel,
   paymentTone,
 } from "@/lib/admin/order-status";
@@ -139,7 +141,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
           ageMs > 24 * 60 * 60 * 1000) ||
         (status === "shipped" && !tracking.trim());
       if (needsAttentionOnly && !needsAttention) return false;
-      if (activeStatus !== "all" && status !== activeStatus) return false;
+      if (activeStatus !== "all" && !matchesOrderStatusFilter(o, status, activeStatus)) return false;
       if (fromTime != null || toTime != null) {
         const ts = new Date(o.created_at).getTime();
         if (fromTime != null && ts < fromTime) return false;
@@ -150,6 +152,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
         o.order_number.toLowerCase().includes(key) ||
         o.email.toLowerCase().includes(key) ||
         status.toLowerCase().includes(key) ||
+        paymentLabel(o).toLowerCase().includes(key) ||
         tracking.toLowerCase().includes(key)
       );
     });
@@ -160,19 +163,10 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
     [filtered, selected]
   );
 
-  const statusCounts = React.useMemo(() => {
-    const counts: Record<AdminOrderRow["status"], number> = {
-      pending: 0,
-      paid: 0,
-      processing: 0,
-      shipped: 0,
-      delivered: 0,
-      cancelled: 0,
-      refunded: 0,
-    };
-    for (const order of orders) counts[resolveStatus(order)] += 1;
-    return counts;
-  }, [orders, resolveStatus]);
+  const statusCounts = React.useMemo(
+    () => countOrdersForStatusFilter(orders, resolveStatus),
+    [orders, resolveStatus]
+  );
 
   function applySavedOrder(order: AdminOrderRow, patch: Partial<AdminOrderRow>) {
     setOrders((prev) => prev.map((row) => (row.id === order.id ? { ...row, ...patch } : row)));
