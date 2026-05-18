@@ -204,6 +204,8 @@ export type AdminOrderRow = {
   order_number: string;
   email: string;
   status: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
+  payment_status: "pending" | "processing" | "paid" | "failed" | "refunded" | null;
+  paid_at: string | null;
   total_ghs: number;
   notify_customer: boolean;
   created_at: string;
@@ -397,8 +399,8 @@ export async function getAnalyticsSnapshot(): Promise<AdminAnalyticsSnapshot> {
   const [{ count: totalOrders }, { count: paidOrders }, { data: paidTotals }, { count: activeProducts }] =
     await Promise.all([
       supabase.from("orders").select("id", { count: "exact", head: true }),
-      supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "paid"),
-      supabase.from("orders").select("total_ghs").eq("status", "paid"),
+      supabase.from("orders").select("id", { count: "exact", head: true }).not("paid_at", "is", null),
+      supabase.from("orders").select("total_ghs").not("paid_at", "is", null),
       supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true),
     ]);
 
@@ -426,13 +428,11 @@ export async function getDashboardSnapshot(): Promise<AdminDashboardSnapshot> {
     supabase
       .from("orders")
       .select("id", { count: "exact", head: true })
-      .gte("created_at", iso)
-      .eq("status", "paid"),
+      .gte("paid_at", iso),
     supabase
       .from("orders")
       .select("total_ghs")
-      .gte("created_at", iso)
-      .eq("status", "paid"),
+      .gte("paid_at", iso),
   ]);
 
   const revenue30d = (paidTotals ?? []).reduce((sum, row) => sum + Number(row.total_ghs ?? 0), 0);
@@ -592,14 +592,38 @@ export async function listAdminProducts(): Promise<AdminProductRow[]> {
   });
 }
 
+function pickLatestPayment(
+  payments: Array<{ status: string; updated_at?: string | null; created_at?: string | null }> | null | undefined
+): AdminOrderRow["payment_status"] {
+  if (!payments?.length) return null;
+  const sorted = [...payments].sort((a, b) => {
+    const ta = new Date(a.updated_at ?? a.created_at ?? 0).getTime();
+    const tb = new Date(b.updated_at ?? b.created_at ?? 0).getTime();
+    return tb - ta;
+  });
+  const paid = sorted.find((p) => p.status === "paid");
+  const status = (paid ?? sorted[0])?.status;
+  if (
+    status === "pending" ||
+    status === "processing" ||
+    status === "paid" ||
+    status === "failed" ||
+    status === "refunded"
+  ) {
+    return status;
+  }
+  return null;
+}
+
 export async function listAdminOrders(): Promise<AdminOrderRow[]> {
   const supabase = createServiceRoleClient();
   const { data } = await supabase
     .from("orders")
     .select(
       `
-      id, order_number, email, status, total_ghs, notify_customer, created_at,
-      shipments ( tracking_number, carrier, status, created_at )
+      id, order_number, email, status, total_ghs, notify_customer, created_at, paid_at,
+      shipments ( tracking_number, carrier, status, created_at ),
+      payments ( status, updated_at, created_at )
     `
     )
     .order("created_at", { ascending: false })
@@ -607,11 +631,14 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
 
   return (data ?? []).map((row) => {
     const shipment = Array.isArray(row.shipments) ? row.shipments[0] : row.shipments;
+    const payments = Array.isArray(row.payments) ? row.payments : row.payments ? [row.payments] : [];
     return {
       id: row.id,
       order_number: row.order_number,
       email: row.email,
       status: row.status as AdminOrderRow["status"],
+      payment_status: pickLatestPayment(payments),
+      paid_at: row.paid_at ?? null,
       total_ghs: Number(row.total_ghs ?? 0),
       notify_customer: Boolean(row.notify_customer),
       created_at: row.created_at,
@@ -624,7 +651,7 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
 
 export async function getAdminOrdersKpi(): Promise<AdminOrdersKpi> {
   const supabase = createServiceRoleClient();
-  const { data } = await supabase.from("orders").select("status, total_ghs");
+  const { data } = await supabase.from("orders").select("status, total_ghs, paid_at");
 
   const kpi: AdminOrdersKpi = {
     pending: 0,
@@ -640,7 +667,8 @@ export async function getAdminOrdersKpi(): Promise<AdminOrdersKpi> {
   for (const row of data ?? []) {
     const status = row.status as keyof Omit<AdminOrdersKpi, "revenuePaid">;
     (kpi[status] as number) += 1;
-    if (row.status === "paid" || row.status === "processing" || row.status === "shipped" || row.status === "delivered") {
+    const paidAt = (row as { paid_at?: string | null }).paid_at;
+    if (paidAt) {
       kpi.revenuePaid += Number(row.total_ghs ?? 0);
     }
   }

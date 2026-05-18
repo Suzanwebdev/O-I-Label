@@ -64,15 +64,38 @@ export async function handleProviderWebhook(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, email, phone, total_ghs, notify_customer")
+    .select("id, order_number, email, phone, total_ghs, notify_customer, status, paid_at")
     .eq("id", payment.order_id)
     .single();
 
   if (order) {
+    const paidAt = new Date().toISOString();
+    const fromStatus = order.status ?? "pending";
     await supabase
       .from("orders")
-      .update({ status: "paid", updated_at: new Date().toISOString() })
+      .update({
+        status: "paid",
+        paid_at: order.paid_at ?? paidAt,
+        updated_at: paidAt,
+      })
       .eq("id", order.id);
+
+    await supabase.from("order_status_events").insert({
+      order_id: order.id,
+      from_status: fromStatus,
+      to_status: "paid",
+      payment_status: "paid",
+      actor_id: null,
+      note: "Payment confirmed via webhook",
+    });
+
+    await supabase.from("order_events").insert({
+      order_id: order.id,
+      event_type: "payment_received",
+      actor_id: null,
+      message: "Payment confirmed — order marked as paid",
+      meta: { reference: parsed.reference, provider },
+    });
 
     if (order.notify_customer && order.email) {
       await sendOrderConfirmationEmail({

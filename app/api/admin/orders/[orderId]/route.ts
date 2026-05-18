@@ -15,12 +15,18 @@ export async function GET(_request: Request, context: RouteContext) {
   const { orderId } = await context.params;
   const service = createServiceRoleClient();
 
-  const [{ data: order, error: orderError }, { data: items }, { data: payments }, { data: shipments }, { data: events }] =
-    await Promise.all([
+  const [
+    { data: order, error: orderError },
+    { data: items },
+    { data: payments },
+    { data: shipments },
+    { data: events },
+    { data: statusEvents },
+  ] = await Promise.all([
       service
         .from("orders")
         .select(
-          "id, order_number, email, phone, status, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, total_ghs, created_at, updated_at, notes, shipping_address, billing_address"
+          "id, order_number, email, phone, status, paid_at, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, total_ghs, created_at, updated_at, notes, shipping_address, billing_address"
         )
         .eq("id", orderId)
         .maybeSingle(),
@@ -41,6 +47,11 @@ export async function GET(_request: Request, context: RouteContext) {
       service
         .from("order_events")
         .select("id, event_type, message, created_at")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: false }),
+      service
+        .from("order_status_events")
+        .select("id, from_status, to_status, payment_status, note, created_at")
         .eq("order_id", orderId)
         .order("created_at", { ascending: false }),
     ]);
@@ -68,5 +79,6 @@ export async function GET(_request: Request, context: RouteContext) {
     })),
     shipments: shipments ?? [],
     events: events ?? [],
+    statusEvents: statusEvents ?? [],
   });
 }

@@ -14,8 +14,15 @@ import {
 } from "@/components/ui/sheet";
 import type { AdminOrderRow } from "@/lib/data/admin";
 import { computeOrdersKpi } from "@/lib/admin/orders-kpi";
+import {
+  allowedFulfillmentStatuses,
+  fulfillmentTone,
+  isOrderPaid,
+  paymentLabel,
+  paymentTone,
+} from "@/lib/admin/order-status";
 
-const statuses: AdminOrderRow["status"][] = [
+const filterStatuses: AdminOrderRow["status"][] = [
   "pending",
   "paid",
   "processing",
@@ -24,13 +31,6 @@ const statuses: AdminOrderRow["status"][] = [
   "cancelled",
   "refunded",
 ];
-
-function tone(status: AdminOrderRow["status"]) {
-  if (status === "delivered" || status === "paid") return "bg-emerald-100 text-emerald-800";
-  if (status === "processing" || status === "shipped") return "bg-blue-100 text-blue-800";
-  if (status === "cancelled" || status === "refunded") return "bg-red-100 text-red-700";
-  return "bg-amber-100 text-amber-800";
-}
 
 export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrderRow[] }) {
   const router = useRouter();
@@ -98,6 +98,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
       email: string;
       phone: string | null;
       status: string;
+      paid_at: string | null;
       subtotal_ghs: number;
       shipping_ghs: number;
       tax_ghs: number;
@@ -113,6 +114,14 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
     payments: Array<{ id: string; provider: string; status: string; amount_ghs: number; reference: string | null; created_at: string }>;
     shipments: Array<{ id: string; carrier: string | null; tracking_number: string | null; status: string | null; created_at: string }>;
     events: Array<{ id: string; event_type: string; message: string; created_at: string }>;
+    statusEvents: Array<{
+      id: string;
+      from_status: string | null;
+      to_status: string;
+      payment_status: string | null;
+      note: string | null;
+      created_at: string;
+    }>;
   } | null>(null);
   const [detailBusy, setDetailBusy] = React.useState(false);
   const [notifyBusy, setNotifyBusy] = React.useState(false);
@@ -126,7 +135,8 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
       const tracking = trackingById[o.id] ?? o.tracking_number ?? "";
       const ageMs = Date.now() - new Date(o.created_at).getTime();
       const needsAttention =
-        ((status === "pending" || status === "processing") && ageMs > 24 * 60 * 60 * 1000) ||
+        (((!isOrderPaid(o) && status === "pending") || status === "processing") &&
+          ageMs > 24 * 60 * 60 * 1000) ||
         (status === "shipped" && !tracking.trim());
       if (needsAttentionOnly && !needsAttention) return false;
       if (activeStatus !== "all" && status !== activeStatus) return false;
@@ -188,7 +198,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
           carrier: carrierById[order.id] ?? "",
         }),
       });
-      const json = (await res.json()) as { error?: string };
+      const json = (await res.json()) as { error?: string; payment_status?: AdminOrderRow["payment_status"] };
       if (!res.ok) {
         setError(json.error ?? "Could not update order");
         return;
@@ -196,6 +206,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
       const nextStatus = statusById[order.id] ?? order.status;
       applySavedOrder(order, {
         status: nextStatus,
+        payment_status: json.payment_status ?? order.payment_status,
         notify_customer: notifyById[order.id] ?? order.notify_customer,
         tracking_number: (trackingById[order.id] ?? order.tracking_number ?? "").trim() || null,
         carrier: (carrierById[order.id] ?? order.carrier ?? "").trim() || null,
@@ -224,7 +235,15 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
         return;
       }
       setOrders((prev) =>
-        prev.map((row) => (selectedIds.includes(row.id) ? { ...row, status: bulkStatus } : row))
+        prev.map((row) =>
+          selectedIds.includes(row.id)
+            ? {
+                ...row,
+                status: bulkStatus,
+                payment_status: bulkStatus === "refunded" ? "refunded" : row.payment_status,
+              }
+            : row
+        )
       );
       setStatusById((prev) => {
         const next = { ...prev };
@@ -308,7 +327,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
         <CardContent>
           <p className="text-2xl font-semibold tabular-nums">GHc {kpi.revenuePaid.toFixed(2)}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Sum of paid, processing, shipped, and delivered orders.
+            Sum of orders with confirmed payment (excludes cancelled and refunded).
           </p>
         </CardContent>
       </Card>
@@ -320,7 +339,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
         >
           All ({orders.length})
         </Button>
-        {statuses.map((s) => (
+        {filterStatuses.map((s) => (
           <Button
             key={s}
             size="sm"
@@ -359,7 +378,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
             onChange={(e) => setBulkStatus(e.target.value as AdminOrderRow["status"])}
             className="h-9 rounded-md border bg-background px-2 text-sm"
           >
-            {statuses.map((s) => (
+            {(["processing", "shipped", "delivered", "refunded", "cancelled"] as const).map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -391,7 +410,8 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
               <th className="px-3 py-2">Order</th>
               <th className="px-3 py-2">Customer</th>
               <th className="px-3 py-2">Total</th>
-              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Payment</th>
+              <th className="px-3 py-2">Fulfillment</th>
               <th className="px-3 py-2">Tracking</th>
               <th className="px-3 py-2">Notify</th>
               <th className="px-3 py-2">Created</th>
@@ -419,8 +439,16 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                 <td className="px-3 py-3">{order.email}</td>
                 <td className="px-3 py-3">GHc {order.total_ghs.toFixed(2)}</td>
                 <td className="px-3 py-3">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${paymentTone(order.payment_status)}`}
+                    title={order.paid_at ? `Paid ${new Date(order.paid_at).toLocaleString()}` : undefined}
+                  >
+                    {paymentLabel(order)}
+                  </span>
+                </td>
+                <td className="px-3 py-3">
                   <div className="space-y-2">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tone(status)}`}>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${fulfillmentTone(status)}`}>
                       {status.toUpperCase()}
                     </span>
                     <select
@@ -433,7 +461,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                       }
                       className="h-9 rounded-md border bg-background px-2 text-sm"
                     >
-                      {statuses.map((s) => (
+                      {allowedFulfillmentStatuses(order).map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
@@ -481,7 +509,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
             })}
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">
                   No orders found.
                 </td>
               </tr>
@@ -515,7 +543,16 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                 <h3 className="font-medium">Summary</h3>
                 <div className="mt-2 space-y-1 text-muted-foreground">
                   <p>Order: {detail.order.order_number}</p>
-                  <p>Status: {detail.order.status}</p>
+                  <p>
+                    Payment:{" "}
+                    {detail.payments.some((p) => p.status === "paid")
+                      ? "Paid"
+                      : detail.payments[0]?.status ?? "Unpaid"}
+                    {detail.order.paid_at
+                      ? ` (${new Date(detail.order.paid_at).toLocaleString()})`
+                      : ""}
+                  </p>
+                  <p>Fulfillment: {detail.order.status}</p>
                   <p>Email: {detail.order.email}</p>
                   <p>Total: GHc {detail.order.total_ghs.toFixed(2)}</p>
                 </div>
@@ -554,6 +591,24 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                     </li>
                   ))}
                   {detail.shipments.length === 0 ? <li className="text-muted-foreground">No shipment yet.</li> : null}
+                </ul>
+              </section>
+              <section>
+                <h3 className="font-medium">Status history</h3>
+                <ul className="mt-2 space-y-2">
+                  {detail.statusEvents.map((ev) => (
+                    <li key={ev.id} className="rounded border p-2 text-muted-foreground">
+                      <p className="font-medium text-foreground">
+                        {ev.from_status ? `${ev.from_status} → ${ev.to_status}` : ev.to_status}
+                        {ev.payment_status ? ` (payment: ${ev.payment_status})` : ""}
+                      </p>
+                      {ev.note ? <p>{ev.note}</p> : null}
+                      <p className="text-xs">{new Date(ev.created_at).toLocaleString()}</p>
+                    </li>
+                  ))}
+                  {detail.statusEvents.length === 0 ? (
+                    <li className="text-muted-foreground">No status changes recorded yet.</li>
+                  ) : null}
                 </ul>
               </section>
               <section>

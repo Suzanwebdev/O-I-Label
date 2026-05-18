@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import {
+  recordOrderStatusEvent,
+  syncPaymentForFulfillment,
+  validateFulfillmentChange,
+} from "@/lib/admin/order-status";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import {
   buildOrderStatusSmsBody,
   normalizeSmsRecipient,
   trySendOrderSms,
 } from "@/lib/sms/order-notifications";
+import type { AdminOrderRow } from "@/lib/data/admin";
 
 const allowedStatuses = new Set([
   "pending",
@@ -50,9 +56,32 @@ export async function PATCH(request: Request) {
   const service = createServiceRoleClient();
   const { data: before } = await service
     .from("orders")
-    .select("status, notify_customer")
+    .select("status, notify_customer, paid_at")
     .eq("id", orderId)
     .maybeSingle();
+
+  const { data: paymentRows } = await service
+    .from("payments")
+    .select("status, updated_at, created_at")
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const paymentPaid = (paymentRows ?? []).find((p) => p.status === "paid");
+  const latestPayment = paymentPaid ?? paymentRows?.[0];
+  const paymentStatus = (latestPayment?.status ?? null) as AdminOrderRow["payment_status"];
+
+  const orderContext = {
+    status: (before?.status ?? "pending") as AdminOrderRow["status"],
+    payment_status: paymentStatus,
+    paid_at: before?.paid_at ?? null,
+  };
+
+  const validationError = validateFulfillmentChange(orderContext, status as AdminOrderRow["status"]);
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
+  }
+
   const orderUpdate: Record<string, unknown> = {
     status,
     updated_at: new Date().toISOString(),
@@ -65,6 +94,8 @@ export async function PATCH(request: Request) {
   if (orderError) {
     return NextResponse.json({ error: orderError.message }, { status: 500 });
   }
+
+  await syncPaymentForFulfillment(service, orderId, status as AdminOrderRow["status"]);
 
   if (status === "shipped" || trackingNumber || carrier) {
     const shipmentPayload = {
@@ -102,28 +133,51 @@ export async function PATCH(request: Request) {
     }
   }
 
+  const statusChanged = before?.status !== status;
+  const effectivePaymentStatus =
+    status === "refunded" ? "refunded" : paymentStatus === "refunded" ? "refunded" : paymentStatus;
+
+  if (statusChanged) {
+    await recordOrderStatusEvent(service, {
+      orderId,
+      fromStatus: (before?.status as AdminOrderRow["status"]) ?? null,
+      toStatus: status as AdminOrderRow["status"],
+      paymentStatus: effectivePaymentStatus,
+      actorId: authz.user.id,
+      note: `Fulfillment status updated by admin`,
+    });
+  }
+
   const notes: string[] = [];
   if (before?.status && before.status !== status) {
-    notes.push(`Status changed from ${before.status} to ${status}`);
-  } else {
-    notes.push(`Status set to ${status}`);
+    notes.push(`Fulfillment: ${before.status} → ${status}`);
+  } else if (statusChanged) {
+    notes.push(`Fulfillment set to ${status}`);
   }
   if (notifyCustomer !== undefined && before?.notify_customer !== notifyCustomer) {
     notes.push(`Notify customer set to ${notifyCustomer ? "on" : "off"}`);
   }
   if (trackingNumber) notes.push(`Tracking number updated`);
   if (carrier) notes.push(`Carrier updated`);
+  if (status === "refunded") notes.push(`Payment marked refunded`);
 
-  await service.from("order_events").insert({
-    order_id: orderId,
-    event_type: "order_update",
-    actor_id: authz.user.id,
-    message: notes.join(" • "),
-    meta: { status, notifyCustomer, trackingNumber: Boolean(trackingNumber), carrier: Boolean(carrier) },
-  });
+  if (notes.length) {
+    await service.from("order_events").insert({
+      order_id: orderId,
+      event_type: "order_update",
+      actor_id: authz.user.id,
+      message: notes.join(" • "),
+      meta: {
+        status,
+        paymentStatus: effectivePaymentStatus,
+        notifyCustomer,
+        trackingNumber: Boolean(trackingNumber),
+        carrier: Boolean(carrier),
+      },
+    });
+  }
 
   const smsStatuses = new Set(["paid", "processing", "shipped", "delivered"]);
-  const statusChanged = before?.status !== status;
   let sms: { sent?: boolean; skipped?: string; error?: string } | undefined;
 
   if (statusChanged && smsStatuses.has(status)) {
@@ -188,5 +242,5 @@ export async function PATCH(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, sms });
+  return NextResponse.json({ ok: true, sms, payment_status: effectivePaymentStatus });
 }

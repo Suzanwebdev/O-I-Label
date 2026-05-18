@@ -1,4 +1,5 @@
 import type { AdminOrderRow, AdminOrdersKpi } from "@/lib/data/admin";
+import { isOrderPaid } from "@/lib/admin/order-status";
 
 export function computeOrdersKpi(
   orders: AdminOrderRow[],
@@ -18,12 +19,7 @@ export function computeOrdersKpi(
   for (const order of orders) {
     const status = resolveStatus(order);
     kpi[status] += 1;
-    if (
-      status === "paid" ||
-      status === "processing" ||
-      status === "shipped" ||
-      status === "delivered"
-    ) {
+    if (isOrderPaid(order) && status !== "cancelled" && order.payment_status !== "refunded") {
       kpi.revenuePaid += Number(order.total_ghs ?? 0);
     }
   }
