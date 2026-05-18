@@ -23,6 +23,7 @@ import {
   paymentLabel,
   paymentTone,
 } from "@/lib/admin/order-status";
+import { formatOrderShippingAddressLines } from "@/lib/orders/format-address";
 
 const filterStatuses: AdminOrderRow["status"][] = [
   "pending",
@@ -152,6 +153,9 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
       return (
         o.order_number.toLowerCase().includes(key) ||
         o.email.toLowerCase().includes(key) ||
+        (o.phone ?? "").toLowerCase().includes(key) ||
+        (o.customer_name ?? "").toLowerCase().includes(key) ||
+        (o.location_summary ?? "").toLowerCase().includes(key) ||
         status.toLowerCase().includes(key) ||
         paymentLabel(o).toLowerCase().includes(key) ||
         tracking.toLowerCase().includes(key)
@@ -370,7 +374,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="w-[320px]"
-            placeholder="Search by order #, email, status, tracking..."
+            placeholder="Search order #, email, phone, city, tracking..."
           />
           <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-[170px]" />
           <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-[170px]" />
@@ -444,7 +448,24 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                   />
                 </td>
                 <td className="px-3 py-3 font-medium">{order.order_number}</td>
-                <td className="px-3 py-3">{order.email}</td>
+                <td className="px-3 py-3">
+                  <div className="max-w-[220px] space-y-0.5">
+                    {order.customer_name ? (
+                      <p className="font-medium text-foreground">{order.customer_name}</p>
+                    ) : null}
+                    <p className="break-all">{order.email}</p>
+                    {order.phone ? (
+                      <p className="text-muted-foreground">
+                        <a href={`tel:${order.phone.replace(/\s/g, "")}`} className="hover:underline">
+                          {order.phone}
+                        </a>
+                      </p>
+                    ) : null}
+                    {order.location_summary ? (
+                      <p className="text-xs text-muted-foreground">{order.location_summary}</p>
+                    ) : null}
+                  </div>
+                </td>
                 <td className="px-3 py-3">GHc {order.total_ghs.toFixed(2)}</td>
                 <td className="px-3 py-3">
                   <span
@@ -559,6 +580,45 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                 </Button>
               </section>
               <section>
+                <h3 className="font-medium">Customer &amp; delivery</h3>
+                <div className="mt-2 space-y-1 text-muted-foreground">
+                  <p>
+                    <span className="text-foreground">Email:</span> {detail.order.email}
+                  </p>
+                  {detail.order.phone ? (
+                    <p>
+                      <span className="text-foreground">Phone:</span>{" "}
+                      <a
+                        href={`tel:${detail.order.phone.replace(/\s/g, "")}`}
+                        className="hover:underline"
+                      >
+                        {detail.order.phone}
+                      </a>
+                    </p>
+                  ) : (
+                    <p className="text-amber-700">No phone on file</p>
+                  )}
+                  {formatOrderShippingAddressLines(
+                    detail.order.shipping_address,
+                    detail.order.phone
+                  ).length > 0 ? (
+                    <div className="rounded-md border bg-muted/30 p-3 text-foreground">
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Ship to
+                      </p>
+                      {formatOrderShippingAddressLines(
+                        detail.order.shipping_address,
+                        detail.order.phone
+                      ).map((line) => (
+                        <p key={line}>{line}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-amber-700">No delivery address on file</p>
+                  )}
+                </div>
+              </section>
+              <section>
                 <h3 className="font-medium">Summary</h3>
                 <div className="mt-2 space-y-1 text-muted-foreground">
                   <p>Order: {detail.order.order_number}</p>
@@ -572,7 +632,6 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                       : ""}
                   </p>
                   <p>Fulfillment: {detail.order.status}</p>
-                  <p>Email: {detail.order.email}</p>
                   <p>Total: GHc {detail.order.total_ghs.toFixed(2)}</p>
                 </div>
               </section>

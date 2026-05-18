@@ -1,5 +1,9 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { mockCategories } from "@/lib/mock-data";
+import {
+  formatOrderCustomerName,
+  formatOrderLocationSummary,
+} from "@/lib/orders/format-address";
 
 export type AdminCategory = {
   id: string;
@@ -203,6 +207,9 @@ export type AdminOrderRow = {
   id: string;
   order_number: string;
   email: string;
+  phone: string | null;
+  customer_name: string | null;
+  location_summary: string | null;
   status: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
   payment_status: "pending" | "processing" | "paid" | "failed" | "refunded" | null;
   paid_at: string | null;
@@ -621,7 +628,7 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
     .from("orders")
     .select(
       `
-      id, order_number, email, status, total_ghs, notify_customer, created_at, paid_at,
+      id, order_number, email, phone, shipping_address, status, total_ghs, notify_customer, created_at, paid_at,
       shipments ( tracking_number, carrier, status, created_at ),
       payments ( status, updated_at, created_at )
     `
@@ -632,10 +639,17 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
   return (data ?? []).map((row) => {
     const shipment = Array.isArray(row.shipments) ? row.shipments[0] : row.shipments;
     const payments = Array.isArray(row.payments) ? row.payments : row.payments ? [row.payments] : [];
+    const shippingAddress =
+      row.shipping_address && typeof row.shipping_address === "object" && !Array.isArray(row.shipping_address)
+        ? (row.shipping_address as Record<string, unknown>)
+        : null;
     return {
       id: row.id,
       order_number: row.order_number,
       email: row.email,
+      phone: row.phone ?? null,
+      customer_name: formatOrderCustomerName(shippingAddress),
+      location_summary: formatOrderLocationSummary(shippingAddress),
       status: row.status as AdminOrderRow["status"],
       payment_status: pickLatestPayment(payments),
       paid_at: row.paid_at ?? null,
