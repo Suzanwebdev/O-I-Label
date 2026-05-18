@@ -3,21 +3,23 @@ import { ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { Container } from "@/components/store/container";
 import { Section } from "@/components/store/section";
+import { PromoBanner } from "@/components/store/promo-banner";
 import { mockCategories } from "@/lib/mock-data";
 import { listProducts } from "@/lib/data/catalog";
 import { listCategoriesFromDb } from "@/lib/data/catalog";
 import { getHomeContentSections } from "@/lib/data/home-content";
+import { getHomepageCms } from "@/lib/data/homepage-cms";
+import { heroSlidesForUi } from "@/lib/home/homepage-cms";
 import { mergeShopOccasionItemsFromSections } from "@/lib/home/shop-by-occasion";
 import { filterProducts, sortProducts } from "@/lib/shop-utils";
 import { BestSellersRow } from "@/components/home/best-sellers-row";
 import { HomeHero } from "@/components/home/home-hero";
-import { HOME_HERO_SLIDES } from "@/lib/home-hero-slides";
 import { OccasionSection } from "@/components/home/occasion-section";
 import { homeMetadata } from "@/lib/seo/metadata";
 
 export const metadata = homeMetadata;
 
-/** Local assets in /public/home ' boutique hero + category thumbnails (order matches mockCategories). */
+/** Local assets in /public/home — category thumbnails (order matches mockCategories). */
 const categoryImageBySlug: Record<string, string> = {
   tops: "/home/category-tops.png",
   dresses: "/home/category-dresses.png",
@@ -33,13 +35,17 @@ const categoryImageBySlug: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [catalog, categories, homeSections] = await Promise.all([
+  const [catalog, categories, homeSections, cms] = await Promise.all([
     listProducts(),
     listCategoriesFromDb(),
     getHomeContentSections(),
+    getHomepageCms(),
   ]);
   const occasionItems = mergeShopOccasionItemsFromSections(homeSections);
   const categoriesToRender = categories.length ? categories : mockCategories;
+  const heroSlides = heroSlidesForUi(cms.hero.slides);
+  const labels = cms.homepage_sections;
+
   let bestSellers = filterProducts(catalog, { tag: "best_seller" }).filter(
     (p) => p.variants.length > 0
   );
@@ -62,32 +68,31 @@ export default async function HomePage() {
   return (
     <>
       <Section className="px-0 !py-0 pb-0">
-        <HomeHero slides={HOME_HERO_SLIDES}>
+        <HomeHero slides={heroSlides}>
           <div className="flex h-[min(85svh,calc(100svh-5.5rem))] items-end px-4 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-10 sm:h-[min(85svh,calc(100svh-6rem))] sm:px-5 sm:pb-8 sm:pt-12 md:h-auto md:min-h-[calc(100dvh-8rem)] md:px-8 md:pb-12 md:pt-0">
             <Container className="px-0 sm:px-6 lg:px-8">
               <div className="max-w-xl space-y-2.5 text-white sm:space-y-3 md:max-w-lg">
                 <p className="text-[10px] uppercase tracking-[0.18em] text-white/80">
-                  The O & I Label edit
+                  {cms.hero.eyebrow}
                 </p>
                 <h1 className="text-balance font-serif-display text-[clamp(1.625rem,5.5vw,2rem)] leading-[1.08] tracking-[-0.02em] sm:text-[32px] md:text-[36px] md:leading-none">
-                  Minimal. Elegant. Timeless.
+                  {cms.hero.headline}
                 </h1>
                 <p className="max-w-md text-pretty text-[11px] leading-relaxed text-white/88 sm:text-xs md:max-w-lg">
-                  Premium essentials with a clean feminine silhouette and modern
-                  editorial confidence.
+                  {cms.hero.subtext}
                 </p>
                 <div className="grid grid-cols-2 gap-2.5 pt-1 sm:flex sm:flex-row sm:flex-wrap sm:gap-2">
                   <Link
-                    href="/shop"
+                    href={cms.hero.primary_cta.href}
                     className="group inline-flex h-11 min-h-11 w-full items-center justify-center rounded-full bg-white px-4 text-[13px] font-semibold tracking-[0.01em] text-black shadow-[0_10px_28px_-14px_rgba(0,0,0,0.6)] ring-1 ring-white/85 transition-all duration-300 hover:-translate-y-[1px] hover:shadow-[0_16px_34px_-16px_rgba(0,0,0,0.68)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 sm:h-10 sm:min-h-10 sm:w-auto sm:px-5 sm:text-[11px]"
                   >
-                    Shop now
+                    {cms.hero.primary_cta.label}
                   </Link>
                   <Link
-                    href="/shop?tag=best_seller"
+                    href={cms.hero.secondary_cta.href}
                     className="group inline-flex h-11 min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-white/55 bg-black/20 px-4 text-[13px] font-semibold tracking-[0.01em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_12px_32px_-18px_rgba(0,0,0,0.72)] backdrop-blur-md transition-all duration-300 hover:-translate-y-[1px] hover:border-white/75 hover:bg-black/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 sm:h-10 sm:min-h-10 sm:w-auto sm:px-5 sm:text-[11px]"
                   >
-                    <span>View lookbook</span>
+                    <span>{cms.hero.secondary_cta.label}</span>
                     <ChevronRight className="h-3.5 w-3.5 opacity-85 transition-transform duration-300 group-hover:translate-x-0.5" />
                   </Link>
                 </div>
@@ -97,14 +102,23 @@ export default async function HomePage() {
         </HomeHero>
       </Section>
 
+      {cms.promo_band.enabled ? (
+        <PromoBanner
+          title={cms.promo_band.title}
+          subtitle={cms.promo_band.subtitle}
+          href={cms.promo_band.href}
+          cta={cms.promo_band.cta}
+        />
+      ) : null}
+
       <Section className="pt-5 pb-7 md:py-3">
         <Container>
           <div className="mb-4 flex items-center justify-between md:mb-3">
             <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              Shop by category
+              {labels.shop_category.eyebrow}
             </p>
             <Link href="/shop" className="text-xs text-navy hover:underline">
-              Shop all
+              {labels.shop_category.link_label}
             </Link>
           </div>
           <div className="grid grid-cols-4 gap-x-4 gap-y-6 pb-3 md:gap-y-5 md:pb-1">
@@ -137,10 +151,10 @@ export default async function HomePage() {
       </Section>
 
       <OccasionSection
-        eyebrow="Shop by occasion"
-        title="Clean pieces. Strong looks."
-        ctaHref="/shop"
-        ctaLabel="View lookbook"
+        eyebrow={labels.occasion.eyebrow}
+        title={labels.occasion.title}
+        ctaHref={labels.occasion.cta_href}
+        ctaLabel={labels.occasion.cta_label}
         items={occasionItems}
         className="pt-7 pb-10 md:pt-6 md:pb-14"
       />
@@ -149,18 +163,18 @@ export default async function HomePage() {
         <Container>
           <div className="mb-5 flex items-center justify-between">
             <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              Best sellers
+              {labels.best_sellers.eyebrow}
             </p>
             <Link
               href="/shop?tag=best_seller"
               className="inline-flex items-center gap-1 text-xs text-navy hover:underline"
             >
-              View all
+              {labels.best_sellers.link_label}
               <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
           <h2 className="mb-6 font-serif-display text-[28px] leading-tight md:text-[34px]">
-            The pieces everyone wants.
+            {labels.best_sellers.title}
           </h2>
           <div className="px-1 md:px-2">
             <BestSellersRow products={bestSellers} />
@@ -170,4 +184,3 @@ export default async function HomePage() {
     </>
   );
 }
-

@@ -1,40 +1,11 @@
 import Link from "next/link";
 import { Container } from "@/components/store/container";
 import { HomeNewsletter } from "@/components/home/newsletter-block";
+import type { HomeFooterCms } from "@/lib/home/homepage-cms";
+import { DEFAULT_FOOTER } from "@/lib/home/homepage-cms";
 
 const colLabel =
   "mb-5 text-[10px] font-medium uppercase tracking-[0.28em] text-white/55";
-
-const cols = [
-  {
-    title: "Shop",
-    links: [
-      { href: "/shop", label: "All products" },
-      { href: "/shop/new-arrivals", label: "New Arrivals" },
-      { href: "/shop?tag=best_seller", label: "Best Sellers" },
-      { href: "/blog", label: "Shop The Look" },
-    ],
-  },
-  {
-    title: "Support",
-    links: [
-      { href: "/contact", label: "Help & Contact" },
-      { href: "/policies/shipping", label: "Shipping & Delivery" },
-      { href: "/contact?topic=size-guide", label: "Size Guide" },
-      { href: "/contact?topic=faq", label: "FAQs" },
-      { href: "/track-order", label: "Track My Order" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { href: "/about", label: "Our story" },
-      { href: "/blog", label: "Style Journal" },
-      { href: "/policies/privacy", label: "Privacy" },
-      { href: "/policies/terms", label: "Terms" },
-    ],
-  },
-];
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -73,21 +44,18 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
-const socialLinks = [
-  {
-    href: "https://www.instagram.com/outfitsideas_gh?igsh=MTdqcTljZm00ZGQwbw%3D%3D&utm_source=qr",
-    label: "Instagram",
-    Icon: InstagramIcon,
-  },
-  {
-    href: "https://api.whatsapp.com/send?phone=233503163721&text=Hello%20O%20%26%20I%20Label%2C%20I%20need%20help%20with%20an%20order.",
-    label: "WhatsApp",
-    Icon: WhatsAppIcon,
-  },
-];
+function pickSocialIcon(label: string) {
+  const key = label.toLowerCase();
+  if (key.includes("whatsapp")) return WhatsAppIcon;
+  if (key.includes("instagram")) return InstagramIcon;
+  return InstagramIcon;
+}
 
-export function StoreFooter() {
+export function StoreFooter({ footer = DEFAULT_FOOTER }: { footer?: HomeFooterCms }) {
   const year = new Date().getFullYear();
+  const cols = footer.columns.length ? footer.columns : DEFAULT_FOOTER.columns;
+  const social = footer.social.length ? footer.social : DEFAULT_FOOTER.social;
+  const brand = footer.copyright_brand.trim() || DEFAULT_FOOTER.copyright_brand;
 
   return (
     <footer className="border-t border-white/10 bg-black text-white">
@@ -118,7 +86,7 @@ export function StoreFooter() {
                 <p className={colLabel}>{col.title}</p>
                 <ul className="space-y-2.5">
                   {col.links.map((l) => (
-                    <li key={`${col.title}-${l.label}`}>
+                    <li key={`${col.title}-${l.label}-${l.href}`}>
                       <Link
                         href={l.href}
                         className="inline-block text-[13px] leading-snug text-white/82 transition-colors duration-200 hover:text-white"
@@ -134,13 +102,15 @@ export function StoreFooter() {
         </div>
 
         <div className="mt-16 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-8 md:mt-[4.5rem] md:pt-10">
-          <p className="text-[11px] tracking-[0.06em] text-white/50">© {year} O & I Label</p>
+          <p className="text-[11px] tracking-[0.06em] text-white/50">
+            © {year} {brand}
+          </p>
           <div className="flex flex-wrap items-center gap-2">
-            {socialLinks.map((item) => {
-              const Icon = item.Icon;
+            {social.map((item) => {
+              const Icon = pickSocialIcon(item.label);
               return (
                 <a
-                  key={item.label}
+                  key={`${item.label}-${item.href}`}
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
