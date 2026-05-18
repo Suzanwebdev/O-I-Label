@@ -12,7 +12,14 @@ function client() {
 }
 
 function fromAddress() {
-  return process.env.RESEND_FROM ?? "O & I Label <onboarding@resend.dev>";
+  const explicit = process.env.RESEND_FROM?.trim();
+  if (explicit) return explicit;
+  const emailFrom = process.env.EMAIL_FROM?.trim();
+  if (emailFrom) {
+    const addr = emailFrom.includes("<") ? emailFrom : `O & I Label <${emailFrom}>`;
+    return addr;
+  }
+  return "O & I Label <onboarding@resend.dev>";
 }
 
 async function dispatchEmail(payload: {
