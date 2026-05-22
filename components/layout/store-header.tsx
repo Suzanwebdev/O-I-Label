@@ -82,13 +82,12 @@ export function StoreHeader() {
       >
         <Container
           className={cn(
-            "flex items-center gap-4 transition-[height,padding] duration-300",
+            "relative flex items-center gap-3 transition-[height,padding] duration-300 md:gap-4",
             isScrolled ? "h-14 md:h-[4.25rem]" : "h-16 md:h-[4.75rem]"
           )}
         >
-        <div className="flex min-w-0 items-center gap-4">
         <Sheet>
-          <SheetTrigger asChild className="lg:hidden">
+          <SheetTrigger asChild className="relative z-10 shrink-0 lg:hidden">
             <Button variant="ghost" size="icon" aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
@@ -139,11 +138,14 @@ export function StoreHeader() {
 
         <Link
           href="/"
-          className="truncate font-serif-display text-xl tracking-tight md:text-2xl"
+          className={cn(
+            "font-serif-display text-xl tracking-tight md:text-2xl",
+            "pointer-events-auto absolute left-1/2 top-1/2 z-[1] max-w-[calc(100%-11rem)] -translate-x-1/2 -translate-y-1/2 truncate text-center",
+            "lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:translate-y-0 lg:text-left"
+          )}
         >
           O & I Label
         </Link>
-        </div>
 
         <NavigationMenu className="mx-auto hidden max-w-max flex-1 lg:flex">
           <NavigationMenuList>
@@ -239,7 +241,7 @@ export function StoreHeader() {
           </div>
           </form>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-0 md:gap-2">
+        <div className="relative z-10 ml-auto flex shrink-0 items-center gap-0 md:ml-0 md:gap-2">
           <Button
             variant="ghost"
             size="icon"
