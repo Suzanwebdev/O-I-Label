@@ -86,6 +86,7 @@ export function StoreHeader() {
             isScrolled ? "h-14 md:h-[4.25rem]" : "h-16 md:h-[4.75rem]"
           )}
         >
+        <div className="flex min-w-0 items-center gap-4">
         <Sheet>
           <SheetTrigger asChild className="lg:hidden">
             <Button variant="ghost" size="icon" aria-label="Open menu">
@@ -138,10 +139,11 @@ export function StoreHeader() {
 
         <Link
           href="/"
-          className="font-serif-display text-xl tracking-tight md:text-2xl"
+          className="truncate font-serif-display text-xl tracking-tight md:text-2xl"
         >
           O & I Label
         </Link>
+        </div>
 
         <NavigationMenu className="mx-auto hidden max-w-max flex-1 lg:flex">
           <NavigationMenuList>
@@ -237,7 +239,7 @@ export function StoreHeader() {
           </div>
           </form>
 
-        <div className="flex items-center gap-1 md:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-0 md:gap-2">
           <Button
             variant="ghost"
             size="icon"
