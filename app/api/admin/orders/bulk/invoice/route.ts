@@ -4,15 +4,18 @@ import {
   buildInvoiceErrorHtml,
   buildInvoiceHtmlDocument,
   buildOrderInvoiceSection,
-  isOrderPaid,
   MAX_BULK_INVOICE_ORDERS,
   type OrderInvoiceItem,
   type OrderInvoiceOrder,
   type OrderInvoiceShipment,
 } from "@/lib/admin/order-invoice";
-import type { AdminOrderRow } from "@/lib/data/admin";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { OrderAddressJson } from "@/lib/orders/format-address";
+
+function orderIsPaidForPrint(row: { id: string; paid_at: string | null }, payments: { status: string }[]): boolean {
+  if (row.paid_at) return true;
+  return payments.some((p) => p.status === "paid");
+}
 
 function parseOrderIds(url: URL): string[] {
   const raw = url.searchParams.get("ids")?.trim() ?? "";
@@ -58,11 +61,16 @@ export async function GET(request: Request) {
   }
 
   const service = createServiceRoleClient();
-  const [{ data: orders, error: ordersError }, { data: items }, { data: shipments }] = await Promise.all([
+  const [
+    { data: orders, error: ordersError },
+    { data: items },
+    { data: shipments },
+    { data: allPayments },
+  ] = await Promise.all([
     service
       .from("orders")
       .select(
-        "id, order_number, email, phone, status, shipping_address, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, total_ghs, created_at, payment_status, paid_at"
+        "id, order_number, email, phone, status, shipping_address, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, total_ghs, created_at, paid_at"
       )
       .in("id", orderIds),
     service
@@ -74,17 +82,26 @@ export async function GET(request: Request) {
       .select("order_id, tracking_number, carrier, created_at")
       .in("order_id", orderIds)
       .order("created_at", { ascending: false }),
+    service.from("payments").select("order_id, status").in("order_id", orderIds),
   ]);
 
   if (ordersError) {
     return invoiceHtmlResponse(buildInvoiceErrorHtml(ordersError.message), 500);
   }
 
+  const paymentsByOrder = new Map<string, { status: string }[]>();
+  for (const p of allPayments ?? []) {
+    const orderId = p.order_id as string;
+    const list = paymentsByOrder.get(orderId) ?? [];
+    list.push({ status: String(p.status ?? "") });
+    paymentsByOrder.set(orderId, list);
+  }
+
   const paid = (orders ?? []).filter((o) =>
-    isOrderPaid({
-      payment_status: o.payment_status as AdminOrderRow["payment_status"],
-      paid_at: o.paid_at == null ? null : String(o.paid_at),
-    })
+    orderIsPaidForPrint(
+      { id: o.id as string, paid_at: o.paid_at == null ? null : String(o.paid_at) },
+      paymentsByOrder.get(o.id as string) ?? []
+    )
   );
 
   if (!paid.length) {
