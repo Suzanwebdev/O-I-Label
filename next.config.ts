@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import type { NextConfig } from "next";
 
-/** Real project path — matches subst drives (e.g. `X:\`) to their underlying folder so Turbopack and PostCSS agree on root. */
-function projectFilesystemRoot(): string {
+/** Windows/subst-drive dev only — omitted on Vercel (breaks modifyConfig if set there). */
+function devTurbopackRoot(): string | undefined {
+  if (process.env.VERCEL) return undefined;
   try {
     return fs.realpathSync.native(process.cwd());
   } catch {
@@ -14,11 +15,11 @@ function projectFilesystemRoot(): string {
   }
 }
 
+const turbopackRoot = devTurbopackRoot();
+
 const nextConfig: NextConfig = {
   output: "standalone",
-  turbopack: {
-    root: projectFilesystemRoot(),
-  },
+  ...(turbopackRoot ? { turbopack: { root: turbopackRoot } } : {}),
   images: {
     qualities: [75, 95, 100],
     remotePatterns: [
