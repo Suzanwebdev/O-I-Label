@@ -3,6 +3,7 @@ import { Container } from "@/components/store/container";
 import { Button } from "@/components/ui/button";
 import { CheckoutSuccessClient } from "@/components/checkout/checkout-success-client";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { reconcileOrderPayment } from "@/lib/payments/reconcile-payment";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildPageMetadata({
@@ -22,6 +23,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
 
   if (!isDemo && order) {
     try {
+      const reconciled = await reconcileOrderPayment(order);
       const service = createServiceRoleClient();
       const { data: paymentRow } = await service
         .from("payments")
@@ -31,7 +33,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
         .limit(1)
         .maybeSingle();
       const status = typeof paymentRow?.status === "string" ? paymentRow.status : "";
-      if (status === "paid") {
+      if (status === "paid" || (reconciled.ok && reconciled.paid)) {
         paid = true;
         state = "paid";
       } else if (status === "failed") {

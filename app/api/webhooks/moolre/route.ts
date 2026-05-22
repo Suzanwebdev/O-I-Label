@@ -10,8 +10,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, reason: "invalid_json" }, { status: 400 });
   }
 
-  const headerSecret = request.headers.get("x-moolre-callback-secret");
-  const result = await handleProviderWebhook("moolre", rawBody, headerSecret, parsedJson);
+  const url = new URL(request.url);
+  const providedSecret =
+    request.headers.get("x-moolre-callback-secret") ??
+    url.searchParams.get("secret") ??
+    url.searchParams.get("callback_secret");
+  const result = await handleProviderWebhook("moolre", rawBody, providedSecret, parsedJson);
 
   if (!result.ok) {
     return NextResponse.json(result, { status: 400 });

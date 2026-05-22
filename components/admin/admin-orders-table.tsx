@@ -129,6 +129,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
   } | null>(null);
   const [detailBusy, setDetailBusy] = React.useState(false);
   const [notifyBusy, setNotifyBusy] = React.useState(false);
+  const [confirmPayBusy, setConfirmPayBusy] = React.useState(false);
 
   const filtered = React.useMemo(() => {
     const key = q.trim().toLowerCase();

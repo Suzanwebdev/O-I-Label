@@ -45,11 +45,12 @@ export async function initiatePayment(
 export function verifyWebhook(
   provider: PaymentProviderId,
   rawBody: string,
-  signature: string | null
+  signature: string | null,
+  body?: unknown
 ): boolean {
   switch (provider) {
     case "moolre":
-      return verifyMoolreWebhookSignature(rawBody, signature);
+      return verifyMoolreWebhookSignature(rawBody, signature, body);
     case "paystack":
       return verifyPaystackSignature(rawBody, signature);
     case "flutterwave":

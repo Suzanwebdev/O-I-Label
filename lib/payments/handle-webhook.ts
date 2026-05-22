@@ -1,12 +1,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { PaymentProviderId } from "./types";
 import { parseWebhook, verifyWebhook } from "./index";
-import { sendOrderConfirmationEmail } from "@/lib/email/resend";
-import {
-  buildOrderStatusSmsBody,
-  normalizeSmsRecipient,
-  trySendOrderSms,
-} from "@/lib/sms/order-notifications";
+import { markOrderPaidByReference } from "./mark-order-paid";
 
 export async function handleProviderWebhook(
   provider: PaymentProviderId,
@@ -15,9 +10,8 @@ export async function handleProviderWebhook(
   parsedJson: unknown
 ) {
   const supabase = createServiceRoleClient();
-
-  const sigOk = verifyWebhook(provider, rawBody, signature);
   const parsed = parseWebhook(provider, parsedJson);
+  const sigOk = verifyWebhook(provider, rawBody, signature, parsedJson);
 
   await supabase.from("webhook_logs").insert({
     provider,
@@ -29,118 +23,31 @@ export async function handleProviderWebhook(
   });
 
   if (!sigOk || !parsed.success || !parsed.reference) {
-    return { ok: false, reason: "verify_or_parse" };
+    return {
+      ok: false,
+      reason: !sigOk ? "verify" : !parsed.success ? "parse" : "no_reference",
+    };
   }
 
-  const { data: payment } = await supabase
-    .from("payments")
-    .select("id, order_id, status")
-    .eq("reference", parsed.reference)
-    .maybeSingle();
-
-  if (!payment?.order_id) {
-    return { ok: false, reason: "payment_not_found" };
-  }
-
-  if (payment.status === "paid") {
-    return { ok: true, idempotent: true };
-  }
-
-  const { error: payErr } = await supabase
-    .from("payments")
-    .update({ status: "paid", updated_at: new Date().toISOString() })
-    .eq("id", payment.id);
-
-  if (payErr) {
+  const marked = await markOrderPaidByReference(parsed.reference, provider, "webhook");
+  if (!marked.ok) {
     await supabase.from("webhook_logs").insert({
       provider,
       event_type: "payment_error",
-      payload: { error: String(payErr.message) },
-      signature_ok: true,
+      payload: { error: marked.reason, reference: parsed.reference },
+      signature_ok: sigOk,
       processed: false,
     });
-    return { ok: false, reason: "payment_update" };
-  }
-
-  const { data: order } = await supabase
-    .from("orders")
-    .select("id, order_number, email, phone, total_ghs, notify_customer, status, paid_at")
-    .eq("id", payment.order_id)
-    .single();
-
-  if (order) {
-    const paidAt = new Date().toISOString();
-    const fromStatus = order.status ?? "pending";
-    await supabase
-      .from("orders")
-      .update({
-        status: "paid",
-        paid_at: order.paid_at ?? paidAt,
-        updated_at: paidAt,
-      })
-      .eq("id", order.id);
-
-    await supabase.from("order_status_events").insert({
-      order_id: order.id,
-      from_status: fromStatus,
-      to_status: "paid",
-      payment_status: "paid",
-      actor_id: null,
-      note: "Payment confirmed via webhook",
-    });
-
-    await supabase.from("order_events").insert({
-      order_id: order.id,
-      event_type: "payment_received",
-      actor_id: null,
-      message: "Payment confirmed — order marked as paid",
-      meta: { reference: parsed.reference, provider },
-    });
-
-    if (order.notify_customer && order.email) {
-      await sendOrderConfirmationEmail({
-        to: order.email,
-        orderNumber: order.order_number,
-        totalGhs: Number(order.total_ghs),
-      });
-    }
-
-    if (order.notify_customer) {
-      const phone = normalizeSmsRecipient(order.phone);
-      if (phone) {
-        const msg = buildOrderStatusSmsBody({
-          orderNumber: order.order_number,
-          status: "paid",
-          trackingNumber: null,
-        });
-        const smsResult = await trySendOrderSms({
-          recipient: phone,
-          message: msg,
-          ref: `order_${order.id}_paid_webhook`,
-        });
-        const smsMessage = smsResult.ok
-          ? smsResult.sent
-            ? "Payment confirmation SMS sent"
-            : `Payment SMS skipped: ${smsResult.reason}`
-          : `Payment SMS failed: ${smsResult.error}`;
-        await supabase.from("order_events").insert({
-          order_id: order.id,
-          event_type: "notification_sent",
-          actor_id: null,
-          message: smsMessage,
-          meta: { channel: "sms", status: "paid" },
-        });
-      }
-    }
+    return { ok: false, reason: marked.reason };
   }
 
   await supabase.from("webhook_logs").insert({
     provider,
     event_type: "payment_processed",
-    payload: { reference: parsed.reference, order_id: payment.order_id },
-    signature_ok: true,
+    payload: { reference: parsed.reference, order_id: marked.orderId },
+    signature_ok: sigOk,
     processed: true,
   });
 
-  return { ok: true };
+  return { ok: true, idempotent: marked.idempotent };
 }

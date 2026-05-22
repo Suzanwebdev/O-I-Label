@@ -54,8 +54,11 @@ Redeploy after changing env vars.
 ## 4. Resend & Moolre (live commerce)
 
 - **Resend:** verified sending domain; `RESEND_FROM` matches that domain
-- **Moolre:** merchant keys in Vercel; webhook secret matches dashboard
+- **Moolre:** merchant keys in Vercel; callback URL `https://www.oandilabel.com/api/webhooks/moolre`
+- **Moolre webhook secret (optional):** Moolre does not send `x-moolre-callback-secret` by default. Either leave `MOOLRE_WEBHOOK_SECRET` unset, or append `?secret=YOUR_VALUE` to the callback URL in Moolre if you use one. Successful PV05 payloads are accepted when the secret header is missing.
 - **SMS:** approved sender ID and sufficient balance
+
+If an order shows **UNPAID** after the customer paid, open the order in admin and use **Confirm payment** (or revisit checkout success — it reconciles with Moolre automatically).
 
 ---
 

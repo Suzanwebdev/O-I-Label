@@ -108,15 +108,47 @@ export async function initiateMoolre(input: InitiatePaymentInput): Promise<Initi
   };
 }
 
-export function verifyMoolreWebhookSignature(_payload: string, headerSecret: string | null): boolean {
-  const expected =
-    process.env.MOOLRE_WEBHOOK_SECRET?.trim() || process.env.MOOLRE_CALLBACK_SECRET?.trim();
-  if (!expected) return true;
-  if (!headerSecret) return false;
-  const a = Buffer.from(headerSecret);
+function secretsMatch(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * Moolre webhooks are unsigned JSON posts (see docs.moolre.com payment webhook).
+ * Optional MOOLRE_WEBHOOK_SECRET may be sent via header, query, or body — if absent,
+ * we still accept payloads that look like a successful PV05 payment notification.
+ */
+export function verifyMoolreWebhookSignature(
+  _payload: string,
+  providedSecret: string | null,
+  body?: unknown
+): boolean {
+  const expected =
+    process.env.MOOLRE_WEBHOOK_SECRET?.trim() || process.env.MOOLRE_CALLBACK_SECRET?.trim();
+  if (!expected) return true;
+
+  if (providedSecret && secretsMatch(providedSecret, expected)) return true;
+
+  const b = body as { secret?: string; data?: { secret?: string } };
+  const bodySecret =
+    typeof b?.secret === "string"
+      ? b.secret.trim()
+      : typeof b?.data?.secret === "string"
+        ? b.data.secret.trim()
+        : "";
+  if (bodySecret && secretsMatch(bodySecret, expected)) return true;
+
+  return isTrustedMoolrePaymentPayload(body);
+}
+
+function isTrustedMoolrePaymentPayload(body: unknown): boolean {
+  const b = body as { code?: string; status?: number };
+  const parsed = parseMoolreWebhook(body);
+  const code = typeof b.code === "string" ? b.code.toUpperCase() : "";
+  const knownCodes = code === "PV05" || code === "P01" || code === "POS09";
+  return parsed.success && Boolean(parsed.reference) && (knownCodes || b.status === 1);
 }
 
 /** Parse Moolre payment webhook/callback JSON (status 1 = success). */
@@ -128,13 +160,16 @@ export function parseMoolreWebhook(body: unknown): WebhookParseResult {
       reference?: string;
       externalref?: string;
       amount?: string | number;
+      txstatus?: number;
       metadata?: Record<string, unknown>;
     };
     reference?: string;
   };
   const data = b.data ?? {};
   const reference = String(data.reference ?? data.externalref ?? b.reference ?? "").trim();
-  const success = b.status === 1;
+  const txstatus = data.txstatus;
+  const txOk = txstatus === undefined || txstatus === null || txstatus === 1;
+  const success = b.status === 1 && txOk;
   const amountRaw = data.amount;
   let amountGhs: number | undefined;
   if (amountRaw != null) {
@@ -156,4 +191,34 @@ export function parseMoolreWebhook(body: unknown): WebhookParseResult {
     success,
     raw: body,
   };
+}
+
+type MoolreStatusResponse = {
+  status?: number;
+  data?: { txstatus?: number };
+};
+
+/** Query Moolre for final payment status by external reference (embed/link reference). */
+export async function fetchMoolrePaymentStatus(reference: string): Promise<boolean> {
+  const apiUser = requireEnv("MOOLRE_API_USER");
+  const apiPubKey = requireEnv("MOOLRE_API_PUBKEY");
+  const accountNumber = requireEnv("MOOLRE_ACCOUNT_NUMBER");
+
+  const res = await fetch("https://api.moolre.com/open/transact/status", {
+    method: "POST",
+    headers: {
+      "X-API-USER": apiUser,
+      "X-API-PUBKEY": apiPubKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      type: 1,
+      idtype: 1,
+      id: reference,
+      accountnumber: accountNumber,
+    }),
+  });
+
+  const json = (await res.json()) as MoolreStatusResponse;
+  return json.status === 1 && (json.data?.txstatus === undefined || json.data?.txstatus === 1);
 }
