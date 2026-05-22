@@ -12,13 +12,12 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ secrets.VERCEL_DEPLOY_HOOK != '' || secrets.VERCEL_TOKEN != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Prefer a Deploy Hook (Vercel → Project → Settings → Git → Deploy Hooks): no CLI token issues.
-      # Otherwise uses VERCEL_TOKEN + committed `.vercel/project.json`.
       - name: Deploy to Vercel (production)
         env:
           VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
@@ -35,7 +34,5 @@ jobs:
             npx --yes vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN"
             exit 0
           fi
-          echo "::error::Add a GitHub Actions secret: VERCEL_DEPLOY_HOOK (recommended) or VERCEL_TOKEN."
-          echo "Deploy hook: Vercel dashboard → o-i-label → Settings → Git → Deploy Hooks → Create (Production branch)."
-          echo "Token (alternative): https://vercel.com/account/tokens"
+          echo "::error::Deploy secrets missing at runtime."
           exit 1

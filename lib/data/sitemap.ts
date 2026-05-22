@@ -1,3 +1,4 @@
+import { listPublishedBlogPosts } from "@/lib/data/blog";
 import { listCategoriesFromDb, listProducts } from "@/lib/data/catalog";
 
 export type SitemapEntry = {
@@ -8,11 +9,16 @@ export type SitemapEntry = {
 };
 
 export async function getStoreSitemapEntries(): Promise<SitemapEntry[]> {
-  const [products, categories] = await Promise.all([listProducts(), listCategoriesFromDb()]);
+  const [products, categories, blogPosts] = await Promise.all([
+    listProducts(),
+    listCategoriesFromDb(),
+    listPublishedBlogPosts(),
+  ]);
 
   const staticPages: SitemapEntry[] = [
     { path: "", priority: 1, changeFrequency: "daily" },
     { path: "/shop", priority: 0.9, changeFrequency: "daily" },
+    { path: "/blog", priority: 0.7, changeFrequency: "weekly" },
     { path: "/contact", priority: 0.6, changeFrequency: "monthly" },
     { path: "/track-order", priority: 0.5, changeFrequency: "monthly" },
     { path: "/policies/shipping", priority: 0.4, changeFrequency: "yearly" },
@@ -35,5 +41,12 @@ export async function getStoreSitemapEntries(): Promise<SitemapEntry[]> {
     changeFrequency: "weekly" as const,
   }));
 
-  return [...staticPages, ...categoryEntries, ...productEntries];
+  const blogEntries: SitemapEntry[] = blogPosts.map((p) => ({
+    path: `/blog/${p.slug}`,
+    priority: 0.65,
+    changeFrequency: "monthly" as const,
+    lastModified: p.publishedAt ? new Date(p.publishedAt) : undefined,
+  }));
+
+  return [...staticPages, ...categoryEntries, ...productEntries, ...blogEntries];
 }
