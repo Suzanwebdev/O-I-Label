@@ -1,4 +1,4 @@
-import { EMAIL_BRAND, emailFooterLinks } from "@/lib/email/brand";
+import { EMAIL_BRAND, type EmailFooterLinks } from "@/lib/email/brand";
 import { escapeHtml } from "@/lib/orders/format-address";
 
 const { colors } = EMAIL_BRAND;
@@ -7,6 +7,7 @@ export type TransactionalEmailLayoutOpts = {
   preheader: string;
   title: string;
   contentHtml: string;
+  footerLinks: EmailFooterLinks;
 };
 
 function preheaderHtml(text: string): string {
@@ -27,8 +28,7 @@ function headerHtml(): string {
 </table>`;
 }
 
-function footerHtml(): string {
-  const links = emailFooterLinks();
+function footerHtml(links: EmailFooterLinks): string {
   const year = new Date().getFullYear();
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-top:8px;">
   <tr>
@@ -43,7 +43,7 @@ function footerHtml(): string {
         <span style="color:${colors.border};">|</span>
         <a href="${escapeHtml(links.returns)}" style="color:${colors.textMuted};text-decoration:none;margin:0 8px;">Returns</a>
         <span style="color:${colors.border};">|</span>
-        <a href="${escapeHtml(links.instagram)}" style="color:${colors.textMuted};text-decoration:none;margin:0 8px;">Instagram</a>
+        <a href="${escapeHtml(links.instagram)}" target="_blank" rel="noopener noreferrer" style="color:${colors.textMuted};text-decoration:none;margin:0 8px;">Instagram</a>
       </p>
       <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:${colors.textMuted};" class="email-muted">
         &copy; ${year} ${escapeHtml(EMAIL_BRAND.name)}
@@ -112,7 +112,7 @@ export function wrapTransactionalEmail(opts: TransactionalEmailLayoutOpts): stri
                   </td>
                 </tr>
               </table>
-              ${footerHtml()}
+              ${footerHtml(opts.footerLinks)}
             </td>
           </tr>
         </table>

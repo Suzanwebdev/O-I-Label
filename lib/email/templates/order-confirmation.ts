@@ -1,4 +1,5 @@
-import { EMAIL_BRAND, emailFooterLinks } from "@/lib/email/brand";
+import { EMAIL_BRAND, type EmailFooterLinks } from "@/lib/email/brand";
+import { escapeHtml } from "@/lib/orders/format-address";
 import type { OrderEmailContext } from "@/lib/email/fetch-order-email-context";
 import { orderConfirmationCopy } from "@/lib/email/templates/copy";
 import { wrapTransactionalEmail } from "@/lib/email/templates/layout";
@@ -11,9 +12,12 @@ import {
   formatEmailDate,
 } from "@/lib/email/templates/parts";
 
-export function renderOrderConfirmationEmail(ctx: OrderEmailContext): string {
+export function renderOrderConfirmationEmail(
+  ctx: OrderEmailContext,
+  footerLinks: EmailFooterLinks
+): string {
   const copy = orderConfirmationCopy(ctx.customerName);
-  const links = emailFooterLinks();
+  const links = footerLinks;
   const trackUrl = `${links.trackOrder}?order=${encodeURIComponent(ctx.orderNumber)}&email=${encodeURIComponent(ctx.email)}`;
 
   const content = `
@@ -36,22 +40,26 @@ export function renderOrderConfirmationEmail(ctx: OrderEmailContext): string {
       totalGhs: ctx.totalGhs,
     })}
     ${emailCtaButton(copy.ctaLabel, trackUrl)}
-    <p style="margin:0;font-size:13px;line-height:1.65;color:${EMAIL_BRAND.colors.textMuted};" class="email-muted">Need help? Reply to this email or visit our <a href="${links.contact}" style="color:${EMAIL_BRAND.colors.text};text-decoration:underline;" class="email-text">contact page</a>.</p>
+    <p style="margin:0;font-size:13px;line-height:1.65;color:${EMAIL_BRAND.colors.textMuted};" class="email-muted">Need help? Reply to this email or visit our <a href="${escapeHtml(links.contact)}" style="color:${EMAIL_BRAND.colors.text};text-decoration:underline;" class="email-text">contact page</a>.</p>
   `;
 
   return wrapTransactionalEmail({
     title: copy.subject(ctx.orderNumber),
     preheader: `Your O & I Label order ${ctx.orderNumber} is confirmed.`,
     contentHtml: content,
+    footerLinks: links,
   });
 }
 
-export function renderOrderConfirmationEmailFallback(opts: {
-  orderNumber: string;
-  totalGhs: number;
-}): string {
+export function renderOrderConfirmationEmailFallback(
+  opts: {
+    orderNumber: string;
+    totalGhs: number;
+  },
+  footerLinks: EmailFooterLinks
+): string {
   const copy = orderConfirmationCopy(null);
-  const links = emailFooterLinks();
+  const links = footerLinks;
   const content = `
     ${emailHeroBlock({
       eyebrow: copy.eyebrow,
@@ -73,5 +81,6 @@ export function renderOrderConfirmationEmailFallback(opts: {
     title: copy.subject(opts.orderNumber),
     preheader: `Order ${opts.orderNumber} confirmed.`,
     contentHtml: content,
+    footerLinks: links,
   });
 }

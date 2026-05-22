@@ -1,9 +1,9 @@
-import { EMAIL_BRAND, emailFooterLinks } from "@/lib/email/brand";
+import { EMAIL_BRAND, type EmailFooterLinks } from "@/lib/email/brand";
 import { wrapTransactionalEmail } from "@/lib/email/templates/layout";
 import { emailCtaButton, emailHeroBlock } from "@/lib/email/templates/parts";
 
-export function renderPasswordResetEmail(link: string): string {
-  const links = emailFooterLinks();
+export function renderPasswordResetEmail(link: string, footerLinks: EmailFooterLinks): string {
+  const links = footerLinks;
   const content = `
     ${emailHeroBlock({
       eyebrow: "Account",
@@ -19,5 +19,6 @@ export function renderPasswordResetEmail(link: string): string {
     title: "Reset your password — O & I Label",
     preheader: "Reset your O & I Label account password.",
     contentHtml: content,
+    footerLinks: links,
   });
 }

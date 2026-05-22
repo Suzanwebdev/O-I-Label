@@ -1,8 +1,7 @@
 import { Resend } from "resend";
+import { getEmailFooterLinks } from "@/lib/email/brand";
 import { fetchOrderEmailContext } from "@/lib/email/fetch-order-email-context";
-import {
-  renderNewsletterWelcomeEmail,
-} from "@/lib/email/templates/newsletter-welcome";
+import { renderNewsletterWelcomeEmail } from "@/lib/email/templates/newsletter-welcome";
 import {
   renderOrderConfirmationEmail,
   renderOrderConfirmationEmailFallback,
@@ -62,6 +61,7 @@ export async function sendOrderConfirmationEmail(opts: {
   totalGhs: number;
   orderId?: string;
 }): Promise<EmailSendResult> {
+  const footerLinks = await getEmailFooterLinks();
   let html: string;
   let subject: string;
 
@@ -71,7 +71,7 @@ export async function sendOrderConfirmationEmail(opts: {
       const ctx = await fetchOrderEmailContext(service, opts.orderId);
       if (ctx) {
         const copy = orderConfirmationCopy(ctx.customerName);
-        html = renderOrderConfirmationEmail(ctx);
+        html = renderOrderConfirmationEmail(ctx, footerLinks);
         subject = copy.subject(ctx.orderNumber);
         return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
       }
@@ -81,30 +81,35 @@ export async function sendOrderConfirmationEmail(opts: {
   }
 
   const copy = orderConfirmationCopy(null);
-  html = renderOrderConfirmationEmailFallback({
-    orderNumber: opts.orderNumber,
-    totalGhs: opts.totalGhs,
-  });
+  html = renderOrderConfirmationEmailFallback(
+    {
+      orderNumber: opts.orderNumber,
+      totalGhs: opts.totalGhs,
+    },
+    footerLinks
+  );
   subject = copy.subject(opts.orderNumber);
 
   return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
 }
 
 export async function sendPasswordResetEmail(opts: { to: string; link: string }): Promise<EmailSendResult> {
+  const footerLinks = await getEmailFooterLinks();
   return dispatchEmail({
     from: fromAddress(),
     to: opts.to,
     subject: "Reset your password — O & I Label",
-    html: renderPasswordResetEmail(opts.link),
+    html: renderPasswordResetEmail(opts.link, footerLinks),
   });
 }
 
 export async function sendNewsletterWelcomeEmail(opts: { to: string }): Promise<EmailSendResult> {
+  const footerLinks = await getEmailFooterLinks();
   return dispatchEmail({
     from: fromAddress(),
     to: opts.to,
     subject: "Welcome to O & I Label",
-    html: renderNewsletterWelcomeEmail(),
+    html: renderNewsletterWelcomeEmail(footerLinks),
   });
 }
 
@@ -115,6 +120,7 @@ export async function sendOrderStatusEmail(opts: {
   trackingNumber?: string | null;
   orderId?: string;
 }): Promise<EmailSendResult> {
+  const footerLinks = await getEmailFooterLinks();
   const copy = orderStatusEmailCopy(opts.status);
   let html: string;
   const subject = `${copy.subject} — ${opts.orderNumber}`;
@@ -124,7 +130,7 @@ export async function sendOrderStatusEmail(opts: {
       const service = createServiceRoleClient();
       const ctx = await fetchOrderEmailContext(service, opts.orderId);
       if (ctx) {
-        html = renderOrderStatusEmail(ctx, opts.status, opts.trackingNumber);
+        html = renderOrderStatusEmail(ctx, opts.status, footerLinks, opts.trackingNumber);
         return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
       }
     } catch (e) {
@@ -132,12 +138,15 @@ export async function sendOrderStatusEmail(opts: {
     }
   }
 
-  html = renderOrderStatusEmailFallback({
-    orderNumber: opts.orderNumber,
-    status: opts.status,
-    trackingNumber: opts.trackingNumber,
-    email: opts.to,
-  });
+  html = renderOrderStatusEmailFallback(
+    {
+      orderNumber: opts.orderNumber,
+      status: opts.status,
+      trackingNumber: opts.trackingNumber,
+      email: opts.to,
+    },
+    footerLinks
+  );
 
   return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
 }

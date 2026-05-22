@@ -1,4 +1,4 @@
-import { EMAIL_BRAND, emailFooterLinks } from "@/lib/email/brand";
+import { EMAIL_BRAND, type EmailFooterLinks } from "@/lib/email/brand";
 import { escapeHtml } from "@/lib/orders/format-address";
 import type { OrderEmailContext } from "@/lib/email/fetch-order-email-context";
 import { orderStatusEmailCopy } from "@/lib/email/templates/copy";
@@ -16,10 +16,11 @@ import {
 export function renderOrderStatusEmail(
   ctx: OrderEmailContext,
   status: string,
+  footerLinks: EmailFooterLinks,
   trackingNumber?: string | null
 ): string {
   const copy = orderStatusEmailCopy(status);
-  const links = emailFooterLinks();
+  const links = footerLinks;
   const trackUrl = `${links.trackOrder}?order=${encodeURIComponent(ctx.orderNumber)}&email=${encodeURIComponent(ctx.email)}`;
   const ctaHref =
     status === "delivered"
@@ -61,17 +62,21 @@ export function renderOrderStatusEmail(
     title: `${copy.subject} — ${ctx.orderNumber}`,
     preheader: `${copy.headline} — Order ${ctx.orderNumber}`,
     contentHtml: content,
+    footerLinks: links,
   });
 }
 
-export function renderOrderStatusEmailFallback(opts: {
-  orderNumber: string;
-  status: string;
-  trackingNumber?: string | null;
-  email?: string;
-}): string {
+export function renderOrderStatusEmailFallback(
+  opts: {
+    orderNumber: string;
+    status: string;
+    trackingNumber?: string | null;
+    email?: string;
+  },
+  footerLinks: EmailFooterLinks
+): string {
   const copy = orderStatusEmailCopy(opts.status);
-  const links = emailFooterLinks();
+  const links = footerLinks;
   const trackUrl = opts.email
     ? `${links.trackOrder}?order=${encodeURIComponent(opts.orderNumber)}&email=${encodeURIComponent(opts.email)}`
     : links.trackOrder;
@@ -88,5 +93,6 @@ export function renderOrderStatusEmailFallback(opts: {
     title: `${copy.subject} — ${opts.orderNumber}`,
     preheader: `Update for order ${opts.orderNumber}`,
     contentHtml: content,
+    footerLinks: links,
   });
 }

@@ -95,7 +95,7 @@ export const DEFAULT_FOOTER: HomeFooterCms = {
   social: [
     {
       label: "Instagram",
-      href: "https://www.instagram.com/outfitsideas_gh?igsh=MTdqcTljZm00ZGQwbw%3D%3D&utm_source=qr",
+      href: "https://www.instagram.com/o_and_i_label/",
     },
     {
       label: "WhatsApp",
