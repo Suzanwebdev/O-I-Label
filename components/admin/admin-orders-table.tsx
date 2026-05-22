@@ -27,6 +27,8 @@ import {
 import { formatOrderShippingAddressLines } from "@/lib/orders/format-address";
 import { OrderItemPreviews } from "@/components/admin/order-item-previews";
 import Image from "next/image";
+import { Printer } from "lucide-react";
+import { MAX_BULK_INVOICE_ORDERS } from "@/lib/admin/order-invoice";
 
 const filterStatuses: AdminOrderRow["status"][] = [
   "pending",
@@ -180,6 +182,39 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
     () => filtered.filter((o) => selected[o.id]).map((o) => o.id),
     [filtered, selected]
   );
+
+  const selectedOrders = React.useMemo(
+    () => filtered.filter((o) => selected[o.id]),
+    [filtered, selected]
+  );
+
+  const paidOnFiltered = React.useMemo(() => filtered.filter(isOrderPaid), [filtered]);
+
+  function openBulkPrint(candidates: AdminOrderRow[]) {
+    setError(null);
+    setNotice(null);
+    const paid = candidates.filter(isOrderPaid);
+    const skipped = candidates.length - paid.length;
+    if (!paid.length) {
+      setError(
+        skipped > 0
+          ? "No paid orders to print. Unpaid orders are skipped."
+          : "No paid orders match this selection."
+      );
+      return;
+    }
+    if (paid.length > MAX_BULK_INVOICE_ORDERS) {
+      setError(
+        `Too many paid orders (${paid.length}). Print at most ${MAX_BULK_INVOICE_ORDERS} at once — narrow filters or select fewer rows.`
+      );
+      return;
+    }
+    if (skipped > 0) {
+      setNotice(`Opening print for ${paid.length} paid order(s). ${skipped} unpaid skipped.`);
+    }
+    const url = `/api/admin/orders/bulk/invoice?ids=${encodeURIComponent(paid.map((o) => o.id).join(","))}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   const statusCounts = React.useMemo(
     () => countOrdersForStatusFilter(orders, resolveStatus),
@@ -463,7 +498,23 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
           <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-[170px]" />
           <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-[170px]" />
         </div>
-        <p className="text-sm text-muted-foreground">{filtered.length} orders</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-muted-foreground">{filtered.length} orders</p>
+          {paidOnFiltered.length > 0 ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openBulkPrint(paidOnFiltered)}
+              title={`Print up to ${MAX_BULK_INVOICE_ORDERS} paid invoices from the current view`}
+            >
+              <Printer className="mr-1.5 size-3.5" aria-hidden />
+              Print paid on screen
+              {paidOnFiltered.length > MAX_BULK_INVOICE_ORDERS
+                ? ` (${MAX_BULK_INVOICE_ORDERS} max)`
+                : ` (${Math.min(paidOnFiltered.length, MAX_BULK_INVOICE_ORDERS)})`}
+            </Button>
+          ) : null}
+        </div>
       </div>
       {selectedIds.length > 0 ? (
         <div className="flex flex-col gap-3 rounded-md border bg-muted/30 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -501,9 +552,19 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
           >
             {bulkNotifyBusy ? "Sending..." : "Notify selected only"}
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkBusy || bulkNotifyBusy}
+            onClick={() => openBulkPrint(selectedOrders)}
+            title="Paid orders only; unpaid rows are skipped"
+          >
+            <Printer className="mr-1.5 size-3.5" aria-hidden />
+            Print selected
+          </Button>
           <p className="w-full text-xs text-muted-foreground sm:w-auto sm:max-w-md">
             Each customer gets their own email and SMS for their order number and status. Orders
-            with Notify off are skipped.
+            with Notify off are skipped. Print includes paid orders only (max {MAX_BULK_INVOICE_ORDERS}).
           </p>
         </div>
       ) : null}
