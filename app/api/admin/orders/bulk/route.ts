@@ -5,6 +5,7 @@ import {
   syncPaymentForFulfillment,
   validateFulfillmentChange,
 } from "@/lib/admin/order-status";
+import { sendOrderCustomerUpdates } from "@/lib/admin/send-order-customer-update";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { AdminOrderRow } from "@/lib/data/admin";
 
@@ -40,6 +41,7 @@ export async function PATCH(request: Request) {
     typeof (body as { status?: unknown })?.status === "string"
       ? (body as { status: string }).status
       : "";
+  const notifyCustomers = Boolean((body as { notifyCustomers?: unknown })?.notifyCustomers);
 
   if (!orderIds.length || !allowedStatuses.has(status)) {
     return NextResponse.json({ error: "orderIds and valid status are required" }, { status: 400 });
@@ -128,13 +130,37 @@ export async function PATCH(request: Request) {
       event_type: "bulk_status_change",
       actor_id: authz.user?.id ?? null,
       message: `Fulfillment status changed to ${status} via bulk action`,
-      meta: { status },
+      meta: { status, notifyCustomers },
     }))
   );
+
+  let notifySummary: string | undefined;
+  let notifySent = 0;
+  let notifyFailed = 0;
+  let notifySkipped = 0;
+
+  if (notifyCustomers && allowedIds.length) {
+    const statusOverride = Object.fromEntries(allowedIds.map((id) => [id, nextStatus]));
+    const notify = await sendOrderCustomerUpdates(service, allowedIds, {
+      actorId: authz.user.id,
+      respectNotifyFlag: true,
+      statusOverrideByOrderId: statusOverride,
+      eventSource: "bulk_status",
+    });
+    notifySent = notify.sent;
+    notifyFailed = notify.failed;
+    notifySkipped = notify.skipped;
+    notifySummary = `${notifySent} notified, ${notifyFailed} failed, ${notifySkipped} skipped`;
+  }
 
   return NextResponse.json({
     ok: true,
     updated: allowedIds.length,
     skipped: blocked.length,
+    notifyCustomers,
+    notifySent,
+    notifyFailed,
+    notifySkipped,
+    notifySummary,
   });
 }

@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
@@ -48,6 +49,8 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
   const [selected, setSelected] = React.useState<Record<string, boolean>>({});
   const [bulkStatus, setBulkStatus] = React.useState<AdminOrderRow["status"]>("processing");
   const [bulkBusy, setBulkBusy] = React.useState(false);
+  const [bulkNotifyBusy, setBulkNotifyBusy] = React.useState(false);
+  const [bulkNotifyOnStatus, setBulkNotifyOnStatus] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [statusById, setStatusById] = React.useState<Record<string, AdminOrderRow["status"]>>({});
   const [notifyById, setNotifyById] = React.useState<Record<string, boolean>>({});
@@ -232,13 +235,24 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
     if (!selectedIds.length) return;
     setBulkBusy(true);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch("/api/admin/orders/bulk", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderIds: selectedIds, status: bulkStatus }),
+        body: JSON.stringify({
+          orderIds: selectedIds,
+          status: bulkStatus,
+          notifyCustomers: bulkNotifyOnStatus,
+        }),
       });
-      const json = (await res.json()) as { error?: string };
+      const json = (await res.json()) as {
+        error?: string;
+        updated?: number;
+        skipped?: number;
+        notifySummary?: string;
+        notifyCustomers?: boolean;
+      };
       if (!res.ok) {
         setError(json.error ?? "Bulk update failed");
         return;
@@ -259,12 +273,50 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
         for (const id of selectedIds) delete next[id];
         return next;
       });
+      const parts = [`Updated ${json.updated ?? selectedIds.length} order(s).`];
+      if (json.skipped) parts.push(`${json.skipped} could not change status.`);
+      if (json.notifyCustomers && json.notifySummary) {
+        parts.push(`Notifications: ${json.notifySummary}.`);
+      }
+      setNotice(parts.join(" "));
       setSelected({});
       router.refresh();
     } catch {
       setError("Network error while applying bulk update");
     } finally {
       setBulkBusy(false);
+    }
+  }
+
+  async function applyBulkNotify() {
+    if (!selectedIds.length) return;
+    setBulkNotifyBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/admin/orders/bulk/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderIds: selectedIds }),
+      });
+      const json = (await res.json()) as { error?: string; summary?: string; ok?: boolean };
+      if (!res.ok) {
+        setError(json.error ?? "Bulk notify failed");
+        return;
+      }
+      if (json.ok) {
+        setNotice(json.summary ?? "Updates sent.");
+      } else {
+        setError(
+          json.summary ??
+            "No messages were delivered. Check Resend and Moolre SMS env on Vercel."
+        );
+      }
+      router.refresh();
+    } catch {
+      setError("Network error while sending bulk updates");
+    } finally {
+      setBulkNotifyBusy(false);
     }
   }
 
@@ -414,8 +466,8 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
         <p className="text-sm text-muted-foreground">{filtered.length} orders</p>
       </div>
       {selectedIds.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
-          <p className="text-sm">{selectedIds.length} selected</p>
+        <div className="flex flex-col gap-3 rounded-md border bg-muted/30 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <p className="text-sm font-medium">{selectedIds.length} selected</p>
           <select
             value={bulkStatus}
             onChange={(e) => setBulkStatus(e.target.value as AdminOrderRow["status"])}
@@ -427,9 +479,32 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
               </option>
             ))}
           </select>
-          <Button size="sm" disabled={bulkBusy} onClick={() => void applyBulkStatus()}>
+          <Button
+            size="sm"
+            disabled={bulkBusy || bulkNotifyBusy}
+            onClick={() => void applyBulkStatus()}
+          >
             {bulkBusy ? "Applying..." : "Apply status"}
           </Button>
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <Checkbox
+              checked={bulkNotifyOnStatus}
+              onCheckedChange={(c) => setBulkNotifyOnStatus(c === true)}
+            />
+            <span>Notify customers when applying status</span>
+          </label>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkBusy || bulkNotifyBusy}
+            onClick={() => void applyBulkNotify()}
+          >
+            {bulkNotifyBusy ? "Sending..." : "Notify selected only"}
+          </Button>
+          <p className="w-full text-xs text-muted-foreground sm:w-auto sm:max-w-md">
+            Each customer gets their own email and SMS for their order number and status. Orders
+            with Notify off are skipped.
+          </p>
         </div>
       ) : null}
       {notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
