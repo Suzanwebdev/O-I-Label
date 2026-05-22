@@ -36,15 +36,13 @@ function footerHtml(links: EmailFooterLinks): string {
       <p style="margin:0 0 14px 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:${colors.textMuted};" class="email-muted">
         <a href="mailto:${escapeHtml(links.supportEmail)}" style="color:${colors.text};text-decoration:underline;" class="email-text">${escapeHtml(links.supportEmail)}</a>
       </p>
-      <p style="margin:0 0 16px 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;line-height:1.8;letter-spacing:0.06em;" class="email-muted">
-        <a href="${escapeHtml(links.contact)}" style="color:${colors.textMuted};text-decoration:none;margin:0 8px;">Contact</a>
-        <span style="color:${colors.border};">|</span>
-        <a href="${escapeHtml(links.trackOrder)}" style="color:${colors.textMuted};text-decoration:none;margin:0 8px;">Track order</a>
-        <span style="color:${colors.border};">|</span>
-        <a href="${escapeHtml(links.returns)}" style="color:${colors.textMuted};text-decoration:none;margin:0 8px;">Returns</a>
-        <span style="color:${colors.border};">|</span>
-        <a href="${escapeHtml(links.instagram)}" target="_blank" rel="noopener noreferrer" style="color:${colors.textMuted};text-decoration:none;margin:0 8px;">Instagram</a>
-      </p>
+      <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 16px auto;border-collapse:collapse;">
+        <tr>
+          <td align="center" nowrap="nowrap" style="white-space:nowrap;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:10px;line-height:1.4;letter-spacing:0.04em;color:${colors.textMuted};" class="email-muted">
+            <a href="${escapeHtml(links.contact)}" style="color:${colors.textMuted};text-decoration:none;">Contact</a><span style="color:${colors.border};padding:0 5px;">&nbsp;|&nbsp;</span><a href="${escapeHtml(links.trackOrder)}" style="color:${colors.textMuted};text-decoration:none;">Track&nbsp;order</a><span style="color:${colors.border};padding:0 5px;">&nbsp;|&nbsp;</span><a href="${escapeHtml(links.returns)}" style="color:${colors.textMuted};text-decoration:none;">Returns</a><span style="color:${colors.border};padding:0 5px;">&nbsp;|&nbsp;</span><a href="${escapeHtml(links.instagram)}" target="_blank" rel="noopener noreferrer" style="color:${colors.textMuted};text-decoration:none;">Instagram</a>
+          </td>
+        </tr>
+      </table>
       <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:${colors.textMuted};" class="email-muted">
         &copy; ${year} ${escapeHtml(EMAIL_BRAND.name)}
       </p>
