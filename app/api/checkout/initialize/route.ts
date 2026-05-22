@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  aggregateVariantQuantities,
+  findInsufficientStock,
+} from "@/lib/inventory/deduct-order-stock";
 import { initiatePayment } from "@/lib/payments";
 import { resolveMoolreCallbackUrl } from "@/lib/payments/providers/moolre";
 import { createServiceRoleClient } from "@/lib/supabase/server";
@@ -89,6 +93,26 @@ export async function POST(request: Request) {
   const missing = variantIds.filter((id) => !variantMap.has(id));
   if (missing.length) {
     return NextResponse.json({ error: "One or more selected items are no longer available" }, { status: 409 });
+  }
+
+  const requestedByVariant = aggregateVariantQuantities(parsedLines);
+  const insufficient = findInsufficientStock(
+    requestedByVariant,
+    variants.map((v) => ({ id: v.id, stock: Number(v.stock ?? 0), sku: v.sku }))
+  );
+  if (insufficient.length) {
+    const detail = insufficient
+      .map((s) => `${s.sku}: only ${s.available} left (${s.requested} requested)`)
+      .join("; ");
+    return NextResponse.json(
+      {
+        error: "Not enough stock for one or more items",
+        code: "insufficient_stock",
+        items: insufficient,
+        detail,
+      },
+      { status: 409 }
+    );
   }
 
   const subtotal = parsedLines.reduce((sum, line) => {

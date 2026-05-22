@@ -88,9 +88,14 @@ export function CheckoutWizard() {
           })),
         }),
       });
-      const json = (await res.json()) as { redirectUrl?: string; error?: string };
+      const json = (await res.json()) as {
+        redirectUrl?: string;
+        error?: string;
+        detail?: string;
+      };
       if (!res.ok) {
-        setError(json.error ?? "Could not initialize payment. Please try again.");
+        const msg = json.detail ? `${json.error ?? "Checkout failed"}. ${json.detail}` : json.error;
+        setError(msg ?? "Could not initialize payment. Please try again.");
         return;
       }
       if (json.redirectUrl) {

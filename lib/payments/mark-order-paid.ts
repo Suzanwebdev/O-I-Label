@@ -1,3 +1,4 @@
+import { deductStockForPaidOrder } from "@/lib/inventory/deduct-order-stock";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { sendOrderConfirmationEmail } from "@/lib/email/resend";
 import {
@@ -86,6 +87,20 @@ export async function markOrderPaidByReference(
     message: "Payment confirmed — order marked as paid",
     meta: { reference, provider, source },
   });
+
+  const stockResult = await deductStockForPaidOrder(supabase, order.id, {
+    orderNumber: order.order_number,
+    source,
+  });
+  if (!stockResult.ok) {
+    await supabase.from("order_events").insert({
+      order_id: order.id,
+      event_type: "inventory_error",
+      actor_id: null,
+      message: `Stock deduction failed: ${stockResult.reason}`,
+      meta: { reference, provider, source },
+    });
+  }
 
   if (order.notify_customer && order.email) {
     await sendOrderConfirmationEmail({
