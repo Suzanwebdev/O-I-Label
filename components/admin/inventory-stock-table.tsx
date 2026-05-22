@@ -9,7 +9,14 @@ import { InventoryStockCell } from "@/components/admin/inventory-stock-cell";
 
 const UNCATEGORIZED = "__uncategorized__";
 
-export function InventoryStockTable({ rows }: { rows: AdminInventoryRow[] }) {
+export function InventoryStockTable({
+  rows,
+  scopedToProduct = false,
+}: {
+  rows: AdminInventoryRow[];
+  /** When true, opened from Products → Inventory (single product); hide category filter. */
+  scopedToProduct?: boolean;
+}) {
   const [query, setQuery] = React.useState("");
   const [categoryKey, setCategoryKey] = React.useState<string>("all");
 
@@ -46,37 +53,47 @@ export function InventoryStockTable({ rows }: { rows: AdminInventoryRow[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 sm:items-end sm:gap-6 lg:max-w-3xl">
+      <div
+        className={
+          scopedToProduct
+            ? "max-w-xl space-y-1.5"
+            : "grid gap-4 sm:grid-cols-2 sm:items-end sm:gap-6 lg:max-w-3xl"
+        }
+      >
+        {!scopedToProduct ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="inventory-category">Category</Label>
+            <Select value={categoryKey} onValueChange={setCategoryKey}>
+              <SelectTrigger id="inventory-category">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {categoryOptions.map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
         <div className="space-y-1.5">
-          <Label htmlFor="inventory-category">Category</Label>
-          <Select value={categoryKey} onValueChange={setCategoryKey}>
-            <SelectTrigger id="inventory-category">
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              {categoryOptions.map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="inventory-search">Search products or SKUs</Label>
+          <Label htmlFor="inventory-search">
+            {scopedToProduct ? "Search SKUs" : "Search products or SKUs"}
+          </Label>
           <Input
             id="inventory-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. ribbed-top, satin, BLK-M-001..."
+            placeholder={scopedToProduct ? "e.g. BLK-M-001..." : "e.g. ribbed-top, satin, BLK-M-001..."}
             autoComplete="off"
           />
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
         Showing {filtered.length} variant{filtered.length === 1 ? "" : "s"}
-        {categoryKey !== "all" ? " in this category" : ""}
+        {scopedToProduct ? " for this product" : categoryKey !== "all" ? " in this category" : ""}
         {query.trim() ? ` matching "${query.trim()}"` : ""}.
       </p>
 

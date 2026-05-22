@@ -338,7 +338,7 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
                         <Link href={`/admin/products/${product.id}`}>Edit</Link>
                       </Button>
                       <Button asChild variant="outline" size="sm">
-                        <Link href="/admin/inventory">Inventory</Link>
+                        <Link href={`/admin/inventory?product=${product.id}`}>Inventory</Link>
                       </Button>
                     </div>
                   </TableCell>

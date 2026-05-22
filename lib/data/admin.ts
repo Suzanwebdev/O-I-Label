@@ -24,6 +24,7 @@ export type AdminCollection = {
 
 export type AdminInventoryRow = {
   variant_id: string;
+  product_id: string;
   sku: string;
   stock: number;
   price_ghs: number;
@@ -346,15 +347,23 @@ export async function listAdminDiscounts(): Promise<AdminDiscountRow[]> {
   }));
 }
 
-export async function listAdminInventory(): Promise<AdminInventoryRow[]> {
+export async function listAdminInventory(opts?: {
+  productId?: string;
+}): Promise<AdminInventoryRow[]> {
   const supabase = createServiceRoleClient();
-  const { data } = await supabase
+  let query = supabase
     .from("variants")
     .select(
-      "id, sku, stock, price_ghs, products!inner(name, slug, categories ( slug, name ))"
+      "id, product_id, sku, stock, price_ghs, products!inner(name, slug, categories ( slug, name ))"
     )
     .order("stock", { ascending: true })
-    .limit(200);
+    .limit(opts?.productId ? 100 : 200);
+
+  if (opts?.productId) {
+    query = query.eq("product_id", opts.productId);
+  }
+
+  const { data } = await query;
 
   return (data ?? []).map((row) => {
     const product = Array.isArray(row.products) ? row.products[0] : row.products;
@@ -365,6 +374,7 @@ export async function listAdminInventory(): Promise<AdminInventoryRow[]> {
       : null;
     return {
       variant_id: row.id,
+      product_id: row.product_id,
       sku: row.sku,
       stock: row.stock,
       price_ghs: Number(row.price_ghs),
