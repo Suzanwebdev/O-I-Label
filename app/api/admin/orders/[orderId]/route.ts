@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { pickProductImageFromJoin } from "@/lib/admin/order-item-image";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -32,7 +33,9 @@ export async function GET(_request: Request, context: RouteContext) {
         .maybeSingle(),
       service
         .from("order_items")
-        .select("id, name, sku, unit_price_ghs, quantity")
+        .select(
+          "id, name, sku, unit_price_ghs, quantity, products ( product_images ( storage_path, sort_order ) )"
+        )
         .eq("order_id", orderId),
       service
         .from("payments")
@@ -72,6 +75,7 @@ export async function GET(_request: Request, context: RouteContext) {
     items: (items ?? []).map((i) => ({
       ...i,
       unit_price_ghs: Number(i.unit_price_ghs ?? 0),
+      image: pickProductImageFromJoin(i.products),
     })),
     payments: (payments ?? []).map((p) => ({
       ...p,

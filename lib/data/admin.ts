@@ -1,9 +1,16 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { mockCategories } from "@/lib/mock-data";
+import { pickProductImageFromJoin } from "@/lib/admin/order-item-image";
 import {
   formatOrderCustomerName,
   formatOrderLocationSummary,
 } from "@/lib/orders/format-address";
+
+export type AdminOrderPreviewItem = {
+  name: string;
+  quantity: number;
+  image: string | null;
+};
 
 export type AdminCategory = {
   id: string;
@@ -220,6 +227,8 @@ export type AdminOrderRow = {
   tracking_number: string | null;
   carrier: string | null;
   shipment_status: string | null;
+  preview_items: AdminOrderPreviewItem[];
+  item_count: number;
 };
 
 export type AdminOrdersKpi = {
@@ -661,7 +670,12 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
       `
       id, order_number, email, phone, shipping_address, status, total_ghs, notify_customer, created_at, paid_at,
       shipments ( tracking_number, carrier, status, created_at ),
-      payments ( status, updated_at, created_at )
+      payments ( status, updated_at, created_at ),
+      order_items (
+        name,
+        quantity,
+        products ( product_images ( storage_path, sort_order ) )
+      )
     `
     )
     .order("created_at", { ascending: false })
@@ -674,6 +688,12 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
       row.shipping_address && typeof row.shipping_address === "object" && !Array.isArray(row.shipping_address)
         ? (row.shipping_address as Record<string, unknown>)
         : null;
+    const orderItems = Array.isArray(row.order_items) ? row.order_items : [];
+    const preview_items: AdminOrderPreviewItem[] = orderItems.slice(0, 4).map((item) => ({
+      name: String(item.name ?? "Item"),
+      quantity: Number(item.quantity ?? 1),
+      image: pickProductImageFromJoin(item.products),
+    }));
     return {
       id: row.id,
       order_number: row.order_number,
@@ -690,6 +710,8 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
       tracking_number: shipment?.tracking_number ?? null,
       carrier: shipment?.carrier ?? null,
       shipment_status: shipment?.status ?? null,
+      preview_items,
+      item_count: orderItems.length,
     };
   });
 }

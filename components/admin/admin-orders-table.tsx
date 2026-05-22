@@ -24,6 +24,8 @@ import {
   paymentTone,
 } from "@/lib/admin/order-status";
 import { formatOrderShippingAddressLines } from "@/lib/orders/format-address";
+import { OrderItemPreviews } from "@/components/admin/order-item-previews";
+import Image from "next/image";
 
 const filterStatuses: AdminOrderRow["status"][] = [
   "pending",
@@ -114,7 +116,14 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
       shipping_address: Record<string, unknown> | null;
       billing_address: Record<string, unknown> | null;
     };
-    items: Array<{ id: string; name: string; sku: string | null; unit_price_ghs: number; quantity: number }>;
+    items: Array<{
+      id: string;
+      name: string;
+      sku: string | null;
+      unit_price_ghs: number;
+      quantity: number;
+      image: string | null;
+    }>;
     payments: Array<{ id: string; provider: string; status: string; amount_ghs: number; reference: string | null; created_at: string }>;
     shipments: Array<{ id: string; carrier: string | null; tracking_number: string | null; status: string | null; created_at: string }>;
     events: Array<{ id: string; event_type: string; message: string; created_at: string }>;
@@ -470,7 +479,15 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                     }
                   />
                 </td>
-                <td className="px-3 py-3 font-medium">{order.order_number}</td>
+                <td className="px-3 py-3">
+                  <div className="space-y-2">
+                    <p className="font-medium">{order.order_number}</p>
+                    <OrderItemPreviews
+                      items={order.preview_items}
+                      totalCount={order.item_count}
+                    />
+                  </div>
+                </td>
                 <td className="px-3 py-3">
                   <div className="max-w-[220px] space-y-0.5">
                     {order.customer_name ? (
@@ -672,11 +689,23 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                 <h3 className="font-medium">Items</h3>
                 <ul className="mt-2 space-y-2">
                   {detail.items.map((item) => (
-                    <li key={item.id} className="rounded border p-2">
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.sku ?? "No SKU"} • Qty {item.quantity} • GHc {item.unit_price_ghs.toFixed(2)}
-                      </p>
+                    <li key={item.id} className="flex gap-3 rounded border p-2">
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+                        <Image
+                          src={item.image || "/file.svg"}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                          sizes="56px"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.sku ?? "No SKU"} • Qty {item.quantity} • GHc{" "}
+                          {item.unit_price_ghs.toFixed(2)}
+                        </p>
+                      </div>
                     </li>
                   ))}
                 </ul>
