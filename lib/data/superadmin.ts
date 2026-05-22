@@ -1,4 +1,11 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  parseSuperadminPaymentsPeriod,
+  resolvePaymentsPeriodRange,
+  type SuperadminPaymentsPeriod,
+} from "@/lib/superadmin/payments-period";
+
+export type { SuperadminPaymentsPeriod };
 
 export type SuperadminUsersSnapshot = {
   roleCounts: Array<{ role: "superadmin" | "admin" | "staff"; users: number; description: string }>;
@@ -6,11 +13,26 @@ export type SuperadminUsersSnapshot = {
   recentMembers: Array<{ email: string; role: "superadmin" | "admin" | "staff"; created_at: string }>;
 };
 
+export type SuperadminPaymentRow = {
+  id: string;
+  created_at: string;
+  order_number: string | null;
+  order_id: string;
+  provider: string;
+  reference: string | null;
+  amount_ghs: number;
+  status: string;
+};
+
 export type SuperadminPaymentsSnapshot = {
-  successful7d: number;
-  failed7d: number;
-  gross7d: number;
-  avgPaidAmount7d: number;
+  period: SuperadminPaymentsPeriod;
+  periodLabel: string;
+  successful: number;
+  failed: number;
+  pending: number;
+  gross: number;
+  avgPaidAmount: number;
+  transactions: SuperadminPaymentRow[];
   providers: Array<{ name: string; status: "Enabled" | "Disabled"; note: string }>;
 };
 
@@ -113,16 +135,30 @@ export async function getSuperadminUsersSnapshot(): Promise<SuperadminUsersSnaps
   };
 }
 
-export async function getSuperadminPaymentsSnapshot(): Promise<SuperadminPaymentsSnapshot> {
+export async function getSuperadminPaymentsSnapshot(
+  periodInput?: string
+): Promise<SuperadminPaymentsSnapshot> {
   const supabase = createServiceRoleClient();
-  const since = new Date();
-  since.setDate(since.getDate() - 7);
+  const period = parseSuperadminPaymentsPeriod(periodInput);
+  const range = resolvePaymentsPeriodRange(period);
+
+  let paymentsQuery = supabase
+    .from("payments")
+    .select(
+      "id, order_id, status, provider, reference, amount_ghs, created_at, orders ( order_number )"
+    )
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  if (range.since) {
+    paymentsQuery = paymentsQuery.gte("created_at", range.since);
+  }
+  if (range.until) {
+    paymentsQuery = paymentsQuery.lte("created_at", range.until);
+  }
 
   const [{ data: payments }, { data: settings }] = await Promise.all([
-    supabase
-      .from("payments")
-      .select("status, provider, amount_ghs")
-      .gte("created_at", since.toISOString()),
+    paymentsQuery,
     supabase
       .from("site_settings")
       .select("payment_moolre_enabled, payment_paystack_enabled, payment_flutterwave_enabled")
@@ -130,27 +166,52 @@ export async function getSuperadminPaymentsSnapshot(): Promise<SuperadminPayment
       .maybeSingle(),
   ]);
 
-  let successful7d = 0;
-  let failed7d = 0;
-  let gross7d = 0;
+  let successful = 0;
+  let failed = 0;
+  let pending = 0;
+  let gross = 0;
   const paidAmounts: number[] = [];
+  const transactions: SuperadminPaymentRow[] = [];
 
   for (const payment of payments ?? []) {
     const amount = Number(payment.amount_ghs ?? 0);
-    if (payment.status === "paid") {
-      successful7d += 1;
-      gross7d += amount;
+    const status = String(payment.status ?? "pending");
+    const orders = payment.orders as { order_number?: string } | { order_number?: string }[] | null;
+    const orderNumber = Array.isArray(orders)
+      ? orders[0]?.order_number ?? null
+      : orders?.order_number ?? null;
+
+    transactions.push({
+      id: payment.id,
+      created_at: payment.created_at,
+      order_id: payment.order_id,
+      order_number: orderNumber,
+      provider: payment.provider,
+      reference: payment.reference,
+      amount_ghs: amount,
+      status,
+    });
+
+    if (status === "paid") {
+      successful += 1;
+      gross += amount;
       paidAmounts.push(amount);
-    } else if (payment.status === "failed" || payment.status === "cancelled") {
-      failed7d += 1;
+    } else if (status === "failed" || status === "refunded") {
+      failed += 1;
+    } else if (status === "pending" || status === "processing") {
+      pending += 1;
     }
   }
 
   return {
-    successful7d,
-    failed7d,
-    gross7d,
-    avgPaidAmount7d: paidAmounts.length ? gross7d / paidAmounts.length : 0,
+    period,
+    periodLabel: range.label,
+    successful,
+    failed,
+    pending,
+    gross,
+    avgPaidAmount: paidAmounts.length ? gross / paidAmounts.length : 0,
+    transactions,
     providers: [
       {
         name: "Moolre",

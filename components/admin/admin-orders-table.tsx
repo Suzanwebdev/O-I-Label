@@ -278,6 +278,28 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
     }
   }
 
+  async function confirmPayment() {
+    if (!openOrderId) return;
+    setConfirmPayBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${openOrderId}/confirm-payment`, { method: "POST" });
+      const json = (await res.json()) as { error?: string; ok?: boolean; source?: string };
+      if (!res.ok) {
+        setError(json.error ?? "Could not confirm payment");
+        return;
+      }
+      setNotice("Payment confirmed. Order is now marked as paid.");
+      await openDetail(openOrderId);
+      router.refresh();
+    } catch {
+      setError("Network error while confirming payment");
+    } finally {
+      setConfirmPayBusy(false);
+    }
+  }
+
   async function sendUpdate() {
     if (!openOrderId) return;
     setNotifyBusy(true);
@@ -576,6 +598,16 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                 >
                   Print invoice
                 </Button>
+                {!detail.payments.some((p) => p.status === "paid") && !detail.order.paid_at ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void confirmPayment()}
+                    disabled={confirmPayBusy}
+                  >
+                    {confirmPayBusy ? "Confirming..." : "Confirm payment"}
+                  </Button>
+                ) : null}
                 <Button size="sm" onClick={() => void sendUpdate()} disabled={notifyBusy}>
                   {notifyBusy ? "Sending..." : "Send customer update"}
                 </Button>
