@@ -39,6 +39,9 @@ const megaLinks = [
   { href: "/shop?tag=trending", label: "Trending Now" },
 ];
 
+/** Tighter mobile touch targets — icons stay in one right-side group */
+const mobileNavIconBtn = "max-lg:size-9 max-lg:shrink-0";
+
 export function StoreHeader() {
   const router = useRouter();
   const { lines, toggleCart } = useCart();
@@ -82,13 +85,15 @@ export function StoreHeader() {
       >
         <Container
           className={cn(
-            "relative flex items-center gap-3 transition-[height,padding] duration-300 md:gap-4",
+            "relative items-center transition-[height,padding] duration-300",
+            "max-lg:grid max-lg:grid-cols-[2.75rem_minmax(0,1fr)_auto] max-lg:grid-rows-1 max-lg:gap-x-0",
+            "flex gap-3 md:gap-4",
             isScrolled ? "h-14 md:h-[4.25rem]" : "h-16 md:h-[4.75rem]"
           )}
         >
         <Sheet>
-          <SheetTrigger asChild className="relative z-10 shrink-0 lg:hidden">
-            <Button variant="ghost" size="icon" aria-label="Open menu">
+          <SheetTrigger asChild className="max-lg:col-start-1 max-lg:row-start-1 shrink-0 lg:hidden">
+            <Button variant="ghost" size="icon" className={mobileNavIconBtn} aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
@@ -140,8 +145,8 @@ export function StoreHeader() {
           href="/"
           className={cn(
             "font-serif-display text-xl tracking-tight md:text-2xl",
-            "pointer-events-auto absolute left-1/2 top-1/2 z-[1] max-w-[calc(100%-11rem)] -translate-x-1/2 -translate-y-1/2 truncate text-center",
-            "lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:translate-y-0 lg:text-left"
+            "max-lg:col-start-2 max-lg:row-start-1 max-lg:justify-self-center max-lg:truncate max-lg:px-2 max-lg:text-center",
+            "lg:static lg:max-w-none lg:text-left"
           )}
         >
           O & I Label
@@ -241,18 +246,29 @@ export function StoreHeader() {
           </div>
           </form>
 
-        <div className="relative z-10 ml-auto flex shrink-0 items-center gap-0 md:ml-0 md:gap-2">
+        <div
+          className={cn(
+            "flex shrink-0 items-center max-lg:col-start-3 max-lg:row-start-1 max-lg:-space-x-1 max-lg:gap-0",
+            "ml-auto md:ml-0 md:gap-2 md:space-x-0"
+          )}
+        >
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className={cn(mobileNavIconBtn, "md:hidden")}
             type="button"
             aria-label="Search"
             onClick={() => router.push("/shop")}
           >
             <Search className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" asChild aria-label="Wishlist" className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            aria-label="Wishlist"
+            className={cn(mobileNavIconBtn, "relative")}
+          >
             <Link href="/account/wishlist">
               <Heart className={cn("h-5 w-5", wishlistCount > 0 && "fill-current text-rose-600")} />
               {wishlistCount > 0 ? (
@@ -264,7 +280,7 @@ export function StoreHeader() {
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Account">
+              <Button variant="ghost" size="icon" className={mobileNavIconBtn} aria-label="Account">
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -286,7 +302,7 @@ export function StoreHeader() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative"
+            className={cn(mobileNavIconBtn, "relative")}
             type="button"
             onClick={toggleCart}
             aria-label="Open cart"
