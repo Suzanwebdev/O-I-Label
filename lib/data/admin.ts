@@ -347,6 +347,22 @@ export async function listAdminDiscounts(): Promise<AdminDiscountRow[]> {
   }));
 }
 
+function sortAdminInventoryRows(
+  rows: Array<AdminInventoryRow & { variant_created_at: string }>
+): AdminInventoryRow[] {
+  return [...rows]
+    .sort((a, b) => {
+      const byProduct = a.product_name.localeCompare(b.product_name, "en", {
+        sensitivity: "base",
+      });
+      if (byProduct !== 0) return byProduct;
+      return (
+        new Date(a.variant_created_at).getTime() - new Date(b.variant_created_at).getTime()
+      );
+    })
+    .map(({ variant_created_at: _ignored, ...row }) => row);
+}
+
 export async function listAdminInventory(opts?: {
   productId?: string;
 }): Promise<AdminInventoryRow[]> {
@@ -354,10 +370,11 @@ export async function listAdminInventory(opts?: {
   let query = supabase
     .from("variants")
     .select(
-      "id, product_id, sku, stock, price_ghs, products!inner(name, slug, categories ( slug, name ))"
+      "id, product_id, sku, stock, price_ghs, created_at, products!inner(name, slug, categories ( slug, name ))"
     )
-    .order("stock", { ascending: true })
-    .limit(opts?.productId ? 100 : 200);
+    .order("name", { foreignTable: "products", ascending: true })
+    .order("created_at", { ascending: true })
+    .limit(opts?.productId ? 100 : 500);
 
   if (opts?.productId) {
     query = query.eq("product_id", opts.productId);
@@ -365,7 +382,7 @@ export async function listAdminInventory(opts?: {
 
   const { data } = await query;
 
-  return (data ?? []).map((row) => {
+  const mapped = (data ?? []).map((row) => {
     const product = Array.isArray(row.products) ? row.products[0] : row.products;
     const cat = product?.categories
       ? Array.isArray(product.categories)
@@ -382,8 +399,12 @@ export async function listAdminInventory(opts?: {
       product_slug: product?.slug ?? "",
       category_slug: typeof cat?.slug === "string" ? cat.slug : null,
       category_name: typeof cat?.name === "string" ? cat.name : null,
+      variant_created_at:
+        typeof row.created_at === "string" ? row.created_at : new Date(0).toISOString(),
     };
   });
+
+  return sortAdminInventoryRows(mapped);
 }
 
 export async function getSupportSnapshot(): Promise<AdminSupportSnapshot> {
