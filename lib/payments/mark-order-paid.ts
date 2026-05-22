@@ -107,6 +107,7 @@ export async function markOrderPaidByReference(
       to: order.email,
       orderNumber: order.order_number,
       totalGhs: Number(order.total_ghs),
+      orderId: order.id,
     });
   }
 

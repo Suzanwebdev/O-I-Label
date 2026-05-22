@@ -103,6 +103,7 @@ export async function sendOrderCustomerUpdate(
     orderNumber: order.order_number,
     status,
     trackingNumber,
+    orderId: order.id,
   });
 
   const emailCh = emailChannel(emailResult);

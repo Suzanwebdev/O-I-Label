@@ -1,4 +1,19 @@
 import { Resend } from "resend";
+import { fetchOrderEmailContext } from "@/lib/email/fetch-order-email-context";
+import {
+  renderNewsletterWelcomeEmail,
+} from "@/lib/email/templates/newsletter-welcome";
+import {
+  renderOrderConfirmationEmail,
+  renderOrderConfirmationEmailFallback,
+} from "@/lib/email/templates/order-confirmation";
+import {
+  renderOrderStatusEmail,
+  renderOrderStatusEmailFallback,
+} from "@/lib/email/templates/order-status";
+import { orderConfirmationCopy, orderStatusEmailCopy } from "@/lib/email/templates/copy";
+import { renderPasswordResetEmail } from "@/lib/email/templates/password-reset";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 
 export type EmailSendResult =
   | { sent: true; id?: string }
@@ -45,23 +60,42 @@ export async function sendOrderConfirmationEmail(opts: {
   to: string;
   orderNumber: string;
   totalGhs: number;
+  orderId?: string;
 }): Promise<EmailSendResult> {
-  return dispatchEmail({
-    from: fromAddress(),
-    to: opts.to,
-    subject: `Order confirmed — ${opts.orderNumber}`,
-    html: `<p>Thank you for shopping with O &amp; I Label.</p>
-      <p>Order <strong>${opts.orderNumber}</strong></p>
-      <p>Total: GHS ${opts.totalGhs.toFixed(2)}</p>`,
+  let html: string;
+  let subject: string;
+
+  if (opts.orderId) {
+    try {
+      const service = createServiceRoleClient();
+      const ctx = await fetchOrderEmailContext(service, opts.orderId);
+      if (ctx) {
+        const copy = orderConfirmationCopy(ctx.customerName);
+        html = renderOrderConfirmationEmail(ctx);
+        subject = copy.subject(ctx.orderNumber);
+        return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+      }
+    } catch (e) {
+      console.warn("Order confirmation email context fetch failed:", e);
+    }
+  }
+
+  const copy = orderConfirmationCopy(null);
+  html = renderOrderConfirmationEmailFallback({
+    orderNumber: opts.orderNumber,
+    totalGhs: opts.totalGhs,
   });
+  subject = copy.subject(opts.orderNumber);
+
+  return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
 }
 
 export async function sendPasswordResetEmail(opts: { to: string; link: string }): Promise<EmailSendResult> {
   return dispatchEmail({
     from: fromAddress(),
     to: opts.to,
-    subject: "Reset your password",
-    html: `<p>Reset your password:</p><p><a href="${opts.link}">${opts.link}</a></p>`,
+    subject: "Reset your password — O & I Label",
+    html: renderPasswordResetEmail(opts.link),
   });
 }
 
@@ -69,48 +103,41 @@ export async function sendNewsletterWelcomeEmail(opts: { to: string }): Promise<
   return dispatchEmail({
     from: fromAddress(),
     to: opts.to,
-    subject: "You're on the list — O & I Label",
-    html: `<p>Thanks for subscribing.</p>
-      <p>You'll hear from us with new arrivals, offers, and style notes by <strong>email</strong>.</p>
-      <p>For <strong>SMS/WhatsApp promos</strong>, we saved the number you provided for occasional messages (you can opt out anytime when we include an opt-out in those texts).</p>
-      <p>— O &amp; I Label</p>`,
+    subject: "Welcome to O & I Label",
+    html: renderNewsletterWelcomeEmail(),
   });
 }
-
-const statusLabels: Record<string, string> = {
-  pending: "pending payment",
-  paid: "paid — we received your payment",
-  processing: "being prepared",
-  shipped: "shipped",
-  delivered: "delivered",
-  cancelled: "cancelled",
-  refunded: "refunded",
-};
 
 export async function sendOrderStatusEmail(opts: {
   to: string;
   orderNumber: string;
   status: string;
   trackingNumber?: string | null;
+  orderId?: string;
 }): Promise<EmailSendResult> {
-  const label = statusLabels[opts.status] ?? opts.status;
-  const trackingLine = opts.trackingNumber
-    ? `<p>Tracking number: <strong>${opts.trackingNumber}</strong></p>`
-    : "";
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    process.env.APP_BASE_URL?.trim() ||
-    "https://www.oandilabel.com";
-  const trackLine = `<p><a href="${baseUrl}/track-order">Track your order</a></p>`;
+  const copy = orderStatusEmailCopy(opts.status);
+  let html: string;
+  const subject = `${copy.subject} — ${opts.orderNumber}`;
 
-  return dispatchEmail({
-    from: fromAddress(),
-    to: opts.to,
-    subject: `Order update — ${opts.orderNumber}`,
-    html: `<p>Hello,</p>
-      <p>Your O &amp; I Label order <strong>${opts.orderNumber}</strong> is now <strong>${label}</strong>.</p>
-      ${trackingLine}
-      ${trackLine}
-      <p>Thank you for shopping with us.</p>`,
+  if (opts.orderId) {
+    try {
+      const service = createServiceRoleClient();
+      const ctx = await fetchOrderEmailContext(service, opts.orderId);
+      if (ctx) {
+        html = renderOrderStatusEmail(ctx, opts.status, opts.trackingNumber);
+        return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+      }
+    } catch (e) {
+      console.warn("Order status email context fetch failed:", e);
+    }
+  }
+
+  html = renderOrderStatusEmailFallback({
+    orderNumber: opts.orderNumber,
+    status: opts.status,
+    trackingNumber: opts.trackingNumber,
+    email: opts.to,
   });
+
+  return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
 }
