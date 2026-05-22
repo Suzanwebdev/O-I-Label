@@ -39,6 +39,32 @@ const megaLinks = [
   { href: "/shop?tag=trending", label: "Trending Now" },
 ];
 
+/** Compact, optically centered touch targets — mobile header refinement */
+const headerIconBtn =
+  "relative inline-flex size-9 shrink-0 items-center justify-center rounded-full p-0 hover:bg-muted/70 md:size-10 [&_svg]:!size-[1.125rem] md:[&_svg]:!size-5";
+const headerIconGlyph = "shrink-0 stroke-[1.5]";
+
+function HeaderCountBadge({
+  count,
+  tone = "navy",
+}: {
+  count: number;
+  tone?: "navy" | "rose";
+}) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className={cn(
+        "pointer-events-none absolute end-1 top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-[3px] text-[9px] font-medium leading-none tabular-nums tracking-tight text-white ring-1 ring-background",
+        tone === "rose" ? "bg-rose-600" : "bg-navy"
+      )}
+      aria-hidden
+    >
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
 export function StoreHeader() {
   const router = useRouter();
   const { lines, toggleCart } = useCart();
@@ -82,14 +108,15 @@ export function StoreHeader() {
       >
         <Container
           className={cn(
-            "flex items-center gap-4 transition-[height,padding] duration-300",
+            "flex items-center gap-3 transition-[height,padding] duration-300 md:gap-4",
             isScrolled ? "h-14 md:h-[4.25rem]" : "h-16 md:h-[4.75rem]"
           )}
         >
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3 lg:min-w-0 lg:gap-4">
         <Sheet>
           <SheetTrigger asChild className="lg:hidden">
-            <Button variant="ghost" size="icon" aria-label="Open menu">
-              <Menu className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className={headerIconBtn} aria-label="Open menu">
+              <Menu className={headerIconGlyph} />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[min(100%,320px)] p-0">
@@ -138,10 +165,11 @@ export function StoreHeader() {
 
         <Link
           href="/"
-          className="font-serif-display text-xl tracking-tight md:text-2xl"
+          className="truncate font-serif-display text-lg leading-none tracking-tight sm:text-xl md:text-2xl"
         >
           O & I Label
         </Link>
+        </div>
 
         <NavigationMenu className="mx-auto hidden max-w-max flex-1 lg:flex">
           <NavigationMenuList>
@@ -237,31 +265,37 @@ export function StoreHeader() {
           </div>
           </form>
 
-        <div className="flex items-center gap-1 md:gap-2">
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-0 md:ml-0 md:gap-1 lg:gap-2",
+            "ml-auto"
+          )}
+        >
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className={cn(headerIconBtn, "md:hidden")}
             type="button"
             aria-label="Search"
             onClick={() => router.push("/shop")}
           >
-            <Search className="h-5 w-5" />
+            <Search className={headerIconGlyph} />
           </Button>
-          <Button variant="ghost" size="icon" asChild aria-label="Wishlist" className="relative">
-            <Link href="/account/wishlist">
-              <Heart className={cn("h-5 w-5", wishlistCount > 0 && "fill-current text-rose-600")} />
-              {wishlistCount > 0 ? (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold text-white">
-                  {wishlistCount > 9 ? "9+" : wishlistCount}
-                </span>
-              ) : null}
+          <Button variant="ghost" size="icon" asChild aria-label="Wishlist" className={headerIconBtn}>
+            <Link
+              href="/account/wishlist"
+              className="relative inline-flex size-full items-center justify-center"
+            >
+              <Heart
+                className={cn(headerIconGlyph, wishlistCount > 0 && "fill-current text-rose-600")}
+              />
+              <HeaderCountBadge count={wishlistCount} tone="rose" />
             </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Account">
-                <User className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className={headerIconBtn} aria-label="Account">
+                <User className={headerIconGlyph} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -282,17 +316,13 @@ export function StoreHeader() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative"
+            className={headerIconBtn}
             type="button"
             onClick={toggleCart}
             aria-label="Open cart"
           >
-            <ShoppingBag className="h-5 w-5" />
-            {count > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-navy px-1 text-[10px] font-semibold text-white">
-                {count > 9 ? "9+" : count}
-              </span>
-            ) : null}
+            <ShoppingBag className={headerIconGlyph} />
+            <HeaderCountBadge count={count} tone="navy" />
           </Button>
         </div>
         </Container>
