@@ -14,11 +14,16 @@ function projectFilesystemRoot(): string {
   }
 }
 
+/** Standalone is for Docker/VPS only; it breaks Vercel lambda packaging for /blog/[slug]. */
 const nextConfig: NextConfig = {
-  output: "standalone",
-  turbopack: {
-    root: projectFilesystemRoot(),
-  },
+  ...(!process.env.VERCEL ? { output: "standalone" as const } : {}),
+  ...(process.env.NODE_ENV === "development"
+    ? {
+        turbopack: {
+          root: projectFilesystemRoot(),
+        },
+      }
+    : {}),
   images: {
     qualities: [75, 95, 100],
     remotePatterns: [

@@ -3,15 +3,13 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { Container } from "@/components/store/container";
-import { getPublishedBlogPostBySlug, listPublishedBlogPosts } from "@/lib/data/blog";
+import { getPublishedBlogPostBySlug } from "@/lib/data/blog";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export async function generateStaticParams() {
-  const posts = await listPublishedBlogPosts();
-  return posts.map((p) => ({ slug: p.slug }));
-}
+/** Server-rendered so Vercel can package the route (static SSG + local path with "&" breaks deploy). */
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
