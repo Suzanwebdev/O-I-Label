@@ -16,13 +16,9 @@ function projectFilesystemRoot(): string {
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  ...(process.env.NODE_ENV === "development"
-    ? {
-        turbopack: {
-          root: projectFilesystemRoot(),
-        },
-      }
-    : {}),
+  turbopack: {
+    root: projectFilesystemRoot(),
+  },
   images: {
     qualities: [75, 95, 100],
     remotePatterns: [
