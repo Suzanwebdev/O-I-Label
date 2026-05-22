@@ -15,7 +15,7 @@ import { resolveSwatchColor } from "@/lib/color-swatch";
 
 export function ProductVariantForm({ product }: { product: Product }) {
   const router = useRouter();
-  const { addItem, openCart, replaceCheckoutLines } = useCart();
+  const { addItem, openCart, beginBuyNowCheckout } = useCart();
   const { hasItem, toggleItem } = useWishlist();
   const sizes = Array.from(
     new Set(product.variants.map((v) => v.size).filter(Boolean))
@@ -106,7 +106,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
 
   function buyNow(nextQty: number) {
     if (oos) return;
-    replaceCheckoutLines([lineForVariant(nextQty)]);
+    beginBuyNowCheckout([lineForVariant(nextQty)]);
     router.push("/checkout");
   }
 
@@ -230,9 +230,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
           size="lg"
           className="w-full rounded-[var(--radius-lg)] border-black/25 bg-white font-medium transition-colors hover:bg-muted"
           disabled={oos}
-          onClick={() => {
-            addVariantToCart(safeQty);
-          }}
+          onClick={() => buyNow(safeQty)}
         >
           Buy now
         </Button>

@@ -1,6 +1,11 @@
 "use client";
 
 import * as React from "react";
+import {
+  clearBuyNowLines,
+  readBuyNowLines,
+  writeBuyNowLines,
+} from "@/lib/cart/buy-now-storage";
 import type { CartLine } from "@/lib/types";
 
 function coerceCartLine(row: CartLine): CartLine {
@@ -26,8 +31,10 @@ const CartContext = React.createContext<{
   deselectAllLines: () => void;
   /** After checkout: remove purchased (selected) lines; keep unchecked items in the bag. */
   removePurchasedLines: () => void;
-  /** Replace bag with one line for Buy now → checkout (does not open the cart drawer). */
-  replaceCheckoutLines: (lines: CartLine[]) => void;
+  /** Express checkout: only these lines at checkout; saved bag is unchanged. */
+  isExpressCheckout: boolean;
+  beginBuyNowCheckout: (lines: CartLine[]) => void;
+  clearExpressCheckout: () => void;
   subtotalGhs: number;
   bagSubtotalGhs: number;
 } | null>(null);
@@ -49,11 +56,13 @@ function loadLines(): CartLine[] {
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = React.useState<CartLine[]>([]);
+  const [buyNowLines, setBuyNowLines] = React.useState<CartLine[] | null>(null);
   const [isOpen, setOpen] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
 
   React.useEffect(() => {
     setLines(loadLines());
+    setBuyNowLines(readBuyNowLines());
     setHydrated(true);
   }, []);
 
@@ -62,9 +71,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
   }, [lines, hydrated]);
 
+  const isExpressCheckout = buyNowLines != null && buyNowLines.length > 0;
+
   const selectedLines = React.useMemo(
-    () => lines.filter((l) => l.selected !== false),
-    [lines]
+    () =>
+      isExpressCheckout
+        ? buyNowLines
+        : lines.filter((l) => l.selected !== false),
+    [isExpressCheckout, buyNowLines, lines]
   );
 
   const subtotalGhs = React.useMemo(
@@ -129,8 +143,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setLines((prev) => prev.filter((l) => l.selected === false));
   }, []);
 
-  const replaceCheckoutLines = React.useCallback((next: CartLine[]) => {
-    setLines(next.map((l) => coerceCartLine({ ...l, selected: true })));
+  const beginBuyNowCheckout = React.useCallback((next: CartLine[]) => {
+    const rows = next.map((l) => coerceCartLine({ ...l, selected: true }));
+    writeBuyNowLines(rows);
+    setBuyNowLines(rows);
+  }, []);
+
+  const clearExpressCheckout = React.useCallback(() => {
+    clearBuyNowLines();
+    setBuyNowLines(null);
   }, []);
 
   const value = React.useMemo(
@@ -149,7 +170,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       selectAllLines,
       deselectAllLines,
       removePurchasedLines,
-      replaceCheckoutLines,
+      isExpressCheckout,
+      beginBuyNowCheckout,
+      clearExpressCheckout,
       subtotalGhs,
       bagSubtotalGhs,
     }),
@@ -165,7 +188,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       selectAllLines,
       deselectAllLines,
       removePurchasedLines,
-      replaceCheckoutLines,
+      isExpressCheckout,
+      beginBuyNowCheckout,
+      clearExpressCheckout,
       subtotalGhs,
       bagSubtotalGhs,
     ]

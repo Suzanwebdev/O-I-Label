@@ -16,7 +16,7 @@ import { mergeFeatureFlags } from "@/lib/feature-flags";
 const steps = ["Details", "Shipping", "Payment", "Review"] as const;
 
 export function CheckoutWizard() {
-  const { selectedLines, subtotalGhs, lines } = useCart();
+  const { selectedLines, subtotalGhs, isExpressCheckout } = useCart();
   const [step, setStep] = React.useState(0);
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
@@ -29,28 +29,26 @@ export function CheckoutWizard() {
   const [error, setError] = React.useState<string | null>(null);
   const flags = mergeFeatureFlags();
 
-  if (lines.length === 0) {
-    return (
-      <Container className="py-16 text-center">
-        <p className="text-muted-foreground">
-          Your bag is empty.{" "}
-          <Link href="/shop" className="text-navy underline">
-            Shop pieces
-          </Link>
-        </p>
-      </Container>
-    );
-  }
-
   if (selectedLines.length === 0) {
     return (
       <Container className="py-16 text-center">
         <p className="text-muted-foreground">
-          No items selected for checkout.{" "}
-          <Link href="/cart" className="text-navy underline">
-            Return to your bag
-          </Link>{" "}
-          and choose the products you want to buy.
+          {isExpressCheckout ? (
+            <>
+              Your buy-now session expired.{" "}
+              <Link href="/shop" className="text-navy underline">
+                Return to shop
+              </Link>
+            </>
+          ) : (
+            <>
+              No items selected for checkout.{" "}
+              <Link href="/cart" className="text-navy underline">
+                Return to your bag
+              </Link>{" "}
+              and choose the products you want to buy.
+            </>
+          )}
         </p>
       </Container>
     );

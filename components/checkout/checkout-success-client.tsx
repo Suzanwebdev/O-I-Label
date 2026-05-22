@@ -8,14 +8,24 @@ export function CheckoutSuccessClient({
 }: {
   shouldClearSelected: boolean;
 }) {
-  const { removePurchasedLines } = useCart();
+  const { removePurchasedLines, clearExpressCheckout, isExpressCheckout } = useCart();
   const [cleared, setCleared] = React.useState(false);
 
   React.useEffect(() => {
     if (!shouldClearSelected || cleared) return;
-    removePurchasedLines();
+    if (isExpressCheckout) {
+      clearExpressCheckout();
+    } else {
+      removePurchasedLines();
+    }
     setCleared(true);
-  }, [shouldClearSelected, cleared, removePurchasedLines]);
+  }, [
+    shouldClearSelected,
+    cleared,
+    removePurchasedLines,
+    clearExpressCheckout,
+    isExpressCheckout,
+  ]);
 
   return null;
 }
