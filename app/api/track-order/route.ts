@@ -9,14 +9,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  const b = body as { orderNumber?: unknown; order?: unknown; email?: unknown };
   const orderNumber =
-    typeof (body as { orderNumber?: unknown })?.orderNumber === "string"
-      ? (body as { orderNumber: string }).orderNumber
-      : "";
-  const email =
-    typeof (body as { email?: unknown })?.email === "string"
-      ? (body as { email: string }).email
-      : "";
+    typeof b.orderNumber === "string"
+      ? b.orderNumber
+      : typeof b.order === "string"
+        ? b.order
+        : "";
+  const email = typeof b.email === "string" ? b.email : "";
 
   if (!orderNumber.trim()) {
     return NextResponse.json({ error: "Order number is required" }, { status: 400 });
@@ -25,16 +25,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A valid email is required" }, { status: 400 });
   }
 
-  const result = await lookupOrderForTracking(orderNumber, email);
-  if (!result) {
+  try {
+    const result = await lookupOrderForTracking(orderNumber, email);
+    if (!result) {
+      return NextResponse.json(
+        {
+          error:
+            "We could not find an order with that number and email. Check both fields and try again.",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, order: result });
+  } catch (e) {
+    console.error("[track-order] API error:", e);
     return NextResponse.json(
-      {
-        error:
-          "We could not find an order with that number and email. Check both fields and try again.",
-      },
-      { status: 404 }
+      { error: "Could not look up your order right now. Please try again shortly." },
+      { status: 500 }
     );
   }
-
-  return NextResponse.json({ ok: true, order: result });
 }
