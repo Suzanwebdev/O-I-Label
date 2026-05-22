@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import type { HomeHeroSlide } from "@/lib/home-hero-slides";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 const AUTO_MS = 1000;
 
@@ -34,7 +35,9 @@ export function HomeHero({
       {/* 1 — slides */}
       <div className="absolute inset-0 z-0">
         {n > 0 &&
-          slides.map((slide, i) => (
+          slides.map((slide, i) => {
+            const preserveQuality = shouldBypassImageOptimization(slide.src);
+            return (
             <motion.div
               key={slide.src}
               className="absolute inset-0"
@@ -50,6 +53,8 @@ export function HomeHero({
                 className="object-cover object-[center_32%] sm:object-center md:object-center"
                 sizes="100vw"
                 priority={i === 0}
+                quality={100}
+                unoptimized={preserveQuality}
               />
               <div
                 className={`pointer-events-none absolute inset-0 z-[1] md:hidden ${slide.mobileOverlayClassName ?? "bg-gradient-to-t from-black/78 via-black/45 to-black/15"}`}
@@ -60,7 +65,8 @@ export function HomeHero({
                 aria-hidden
               />
             </motion.div>
-          ))}
+            );
+          })}
       </div>
 
       {/* 3 — copy + CTAs */}

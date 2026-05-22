@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
     root: projectFilesystemRoot(),
   },
   images: {
-    qualities: [75, 95],
+    qualities: [75, 95, 100],
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
       {
