@@ -2,8 +2,17 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Product } from "@/lib/types";
+import type { Product, ProductBadge } from "@/lib/types";
 import { filterProducts, sortProducts } from "@/lib/shop-utils";
+
+const TAG_PAGE_TITLES: Partial<Record<ProductBadge, string>> = {
+  new: "New arrivals",
+  best_seller: "Best sellers",
+  trending: "Trending now",
+  sale: "Sales",
+  limited: "Limited edition",
+  selling_fast: "Selling fast",
+};
 import { ProductCard } from "@/components/store/product-card";
 import { Container } from "@/components/store/container";
 import { Heading } from "@/components/store/heading";
@@ -172,7 +181,7 @@ export function ShopCatalog({
     <Container className="py-10 md:py-14">
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <Heading as="h1" eyebrow="Shop">
-          {title ?? "All pieces"}
+          {(tag && TAG_PAGE_TITLES[tag as ProductBadge]) ?? title ?? "All pieces"}
         </Heading>
         <div className="flex flex-wrap items-center gap-2">
           <form

@@ -37,6 +37,7 @@ const megaLinks = [
   { href: "/shop?tag=new", label: "New Arrivals" },
   { href: "/shop?tag=best_seller", label: "Best Sellers" },
   { href: "/shop?tag=trending", label: "Trending Now" },
+  { href: "/shop?tag=sale", label: "Sales" },
 ];
 
 /** Tighter mobile touch targets — icons stay in one right-side group */
@@ -116,6 +117,15 @@ export function StoreHeader() {
               >
                 Shop all
               </Link>
+              {megaLinks.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="rounded-[var(--radius-md)] px-4 py-3 text-sm hover:bg-muted"
+                >
+                  {l.label}
+                </Link>
+              ))}
               {mockCategories.map((c) => (
                 <Link
                   key={c.slug}
