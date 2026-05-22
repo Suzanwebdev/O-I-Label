@@ -1,7 +1,5 @@
-import Link from "next/link";
+import { TrackOrderForm } from "@/components/track-order/track-order-form";
 import { Container } from "@/components/store/container";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildPageMetadata({
@@ -11,7 +9,13 @@ export const metadata = buildPageMetadata({
   path: "/track-order",
 });
 
-export default function TrackOrderPage() {
+type Props = {
+  searchParams: Promise<{ order?: string; email?: string }>;
+};
+
+export default async function TrackOrderPage({ searchParams }: Props) {
+  const { order: orderParam, email: emailParam } = await searchParams;
+
   return (
     <Container className="py-10 md:py-14">
       <div className="mx-auto w-full max-w-2xl space-y-6 rounded-[var(--radius-lg)] border border-border bg-card p-6 shadow-[var(--shadow-soft)] md:p-8">
@@ -23,23 +27,11 @@ export default function TrackOrderPage() {
           </p>
         </div>
 
-        <form className="grid gap-3 sm:grid-cols-2">
-          <Input placeholder="Order number (e.g. OIL-2041)" aria-label="Order number" />
-          <Input type="email" placeholder="Email address" aria-label="Email address" />
-          <Button type="button" className="sm:col-span-2">
-            Check status
-          </Button>
-        </form>
-
-        <p className="text-xs text-muted-foreground">
-          Need account-based history?{" "}
-          <Link href="/login?next=/account/orders" className="text-navy underline-offset-4 hover:underline">
-            Sign in
-          </Link>
-          .
-        </p>
+        <TrackOrderForm
+          initialOrderNumber={orderParam?.trim() ?? ""}
+          initialEmail={emailParam?.trim() ?? ""}
+        />
       </div>
     </Container>
   );
 }
-
