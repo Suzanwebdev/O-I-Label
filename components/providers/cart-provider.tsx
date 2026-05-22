@@ -26,6 +26,8 @@ const CartContext = React.createContext<{
   deselectAllLines: () => void;
   /** After checkout: remove purchased (selected) lines; keep unchecked items in the bag. */
   removePurchasedLines: () => void;
+  /** Replace bag with one line for Buy now → checkout (does not open the cart drawer). */
+  replaceCheckoutLines: (lines: CartLine[]) => void;
   subtotalGhs: number;
   bagSubtotalGhs: number;
 } | null>(null);
@@ -127,6 +129,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setLines((prev) => prev.filter((l) => l.selected === false));
   }, []);
 
+  const replaceCheckoutLines = React.useCallback((next: CartLine[]) => {
+    setLines(next.map((l) => coerceCartLine({ ...l, selected: true })));
+  }, []);
+
   const value = React.useMemo(
     () => ({
       lines,
@@ -143,6 +149,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       selectAllLines,
       deselectAllLines,
       removePurchasedLines,
+      replaceCheckoutLines,
       subtotalGhs,
       bagSubtotalGhs,
     }),
@@ -158,6 +165,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       selectAllLines,
       deselectAllLines,
       removePurchasedLines,
+      replaceCheckoutLines,
       subtotalGhs,
       bagSubtotalGhs,
     ]

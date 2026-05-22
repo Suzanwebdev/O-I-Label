@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,8 @@ import { cn } from "@/lib/utils";
 import { resolveSwatchColor } from "@/lib/color-swatch";
 
 export function ProductVariantForm({ product }: { product: Product }) {
-  const { addItem, openCart } = useCart();
+  const router = useRouter();
+  const { addItem, openCart, replaceCheckoutLines } = useCart();
   const { hasItem, toggleItem } = useWishlist();
   const sizes = Array.from(
     new Set(product.variants.map((v) => v.size).filter(Boolean))
@@ -82,9 +84,8 @@ export function ProductVariantForm({ product }: { product: Product }) {
     if (safeQty !== qty) setQty(safeQty);
   }, [safeQty, qty]);
 
-  function addVariantToCart(nextQty: number) {
-    if (oos) return;
-    addItem({
+  function lineForVariant(nextQty: number) {
+    return {
       variantId: variant.id,
       productId: product.id,
       productSlug: product.slug,
@@ -94,7 +95,19 @@ export function ProductVariantForm({ product }: { product: Product }) {
       color: variant.color,
       quantity: nextQty,
       unitPriceGhs: variant.price_ghs,
-    });
+      selected: true as const,
+    };
+  }
+
+  function addVariantToCart(nextQty: number) {
+    if (oos) return;
+    addItem(lineForVariant(nextQty));
+  }
+
+  function buyNow(nextQty: number) {
+    if (oos) return;
+    replaceCheckoutLines([lineForVariant(nextQty)]);
+    router.push("/checkout");
   }
 
   return (
@@ -291,9 +304,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
               size="sm"
               className="rounded-[var(--radius-lg)] border-black/20 px-3 font-medium"
               disabled={oos}
-              onClick={() => {
-                addVariantToCart(safeQty);
-              }}
+              onClick={() => buyNow(safeQty)}
             >
               Buy now
             </Button>
