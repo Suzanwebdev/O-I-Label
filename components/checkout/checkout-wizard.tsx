@@ -11,9 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { mergeFeatureFlags } from "@/lib/feature-flags";
-
 const steps = ["Details", "Shipping", "Payment", "Review"] as const;
+
+type AppliedPromo = {
+  code: string;
+  label: string;
+  discountGhs: number;
+};
 
 export function CheckoutWizard() {
   const { selectedLines, subtotalGhs, isExpressCheckout } = useCart();
@@ -27,7 +31,14 @@ export function CheckoutWizard() {
   const [region, setRegion] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const flags = mergeFeatureFlags();
+  const [promoInput, setPromoInput] = React.useState("");
+  const [appliedPromo, setAppliedPromo] = React.useState<AppliedPromo | null>(null);
+  const [promoBusy, setPromoBusy] = React.useState(false);
+  const [promoError, setPromoError] = React.useState<string | null>(null);
+
+  const shippingGhs = 0;
+  const discountGhs = appliedPromo?.discountGhs ?? 0;
+  const totalGhs = Math.max(0, subtotalGhs + shippingGhs - discountGhs);
 
   if (selectedLines.length === 0) {
     return (
@@ -63,6 +74,51 @@ export function CheckoutWizard() {
     setStep((s) => Math.max(s - 1, 0));
   }
 
+  async function applyPromoCode() {
+    const code = promoInput.trim();
+    if (!code) {
+      setPromoError("Enter a promo code");
+      return;
+    }
+    setPromoBusy(true);
+    setPromoError(null);
+    try {
+      const res = await fetch("/api/checkout/validate-discount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotalGhs, shippingGhs }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        code?: string;
+        label?: string;
+        discountGhs?: number;
+      };
+      if (!res.ok || !json.ok) {
+        setAppliedPromo(null);
+        setPromoError(json.error ?? "Could not apply promo code");
+        return;
+      }
+      setAppliedPromo({
+        code: json.code ?? code.toUpperCase(),
+        label: json.label ?? "Discount applied",
+        discountGhs: Number(json.discountGhs ?? 0),
+      });
+      setPromoInput(json.code ?? code.toUpperCase());
+    } catch {
+      setPromoError("Network error. Try again.");
+    } finally {
+      setPromoBusy(false);
+    }
+  }
+
+  function removePromo() {
+    setAppliedPromo(null);
+    setPromoInput("");
+    setPromoError(null);
+  }
+
   async function placeOrder() {
     if (submitting) return;
     setError(null);
@@ -84,6 +140,7 @@ export function CheckoutWizard() {
             quantity: line.quantity,
             name: line.name,
           })),
+          ...(appliedPromo ? { discountCode: appliedPromo.code } : {}),
         }),
       });
       const json = (await res.json()) as {
@@ -215,6 +272,11 @@ export function CheckoutWizard() {
                   </li>
                 ))}
               </ul>
+              {appliedPromo ? (
+                <p className="text-sm text-emerald-700">
+                  Promo <span className="font-medium">{appliedPromo.code}</span> — {appliedPromo.label}
+                </p>
+              ) : null}
             </div>
           )}
 
@@ -242,14 +304,70 @@ export function CheckoutWizard() {
             Summary
           </p>
           <Separator />
+          <div className="space-y-2">
+            <Label htmlFor="promo" className="text-xs uppercase tracking-wider text-muted-foreground">
+              Promo code
+            </Label>
+            {appliedPromo ? (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm">
+                <div>
+                  <p className="font-medium">{appliedPromo.code}</p>
+                  <p className="text-xs text-muted-foreground">{appliedPromo.label}</p>
+                </div>
+                <Button type="button" variant="ghost" size="sm" className="h-8 shrink-0" onClick={removePromo}>
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  id="promo"
+                  value={promoInput}
+                  onChange={(e) => {
+                    setPromoInput(e.target.value);
+                    setPromoError(null);
+                  }}
+                  placeholder="Enter code"
+                  className="h-10 uppercase"
+                  autoCapitalize="characters"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void applyPromoCode();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 shrink-0"
+                  disabled={promoBusy}
+                  onClick={() => void applyPromoCode()}
+                >
+                  {promoBusy ? "..." : "Apply"}
+                </Button>
+              </div>
+            )}
+            {promoError ? <p className="text-xs text-destructive">{promoError}</p> : null}
+          </div>
+          <Separator />
           <div className="flex justify-between text-sm">
             <span>Subtotal</span>
             <Price amountGhs={subtotalGhs} />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Feature flags: reviews {flags.reviews ? "on" : "off"} · loyalty{" "}
-            {flags.loyalty ? "on" : "off"}
-          </p>
+          {appliedPromo && discountGhs > 0 ? (
+            <div className="flex justify-between text-sm text-emerald-800">
+              <span>Discount</span>
+              <Price amountGhs={discountGhs} className="text-emerald-800" />
+            </div>
+          ) : appliedPromo ? (
+            <p className="text-xs text-emerald-700">{appliedPromo.label}</p>
+          ) : null}
+          <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
+            <span>Total</span>
+            <Price amountGhs={totalGhs} />
+          </div>
+          <p className="text-xs text-muted-foreground">Shipping is included where applicable. Tax at GH₵ 0.</p>
         </aside>
       </div>
     </Container>

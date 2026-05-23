@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import {
+  incrementDiscountUsage,
+  resolveCheckoutDiscount,
+} from "@/lib/checkout/discount";
+import {
   aggregateVariantQuantities,
   findInsufficientStock,
 } from "@/lib/inventory/deduct-order-stock";
@@ -45,6 +49,7 @@ export async function POST(request: Request) {
     city?: unknown;
     region?: unknown;
     lines?: unknown;
+    discountCode?: unknown;
   };
 
   const email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
@@ -122,8 +127,24 @@ export async function POST(request: Request) {
 
   const shipping = 0;
   const tax = 0;
-  const discount = 0;
-  const total = subtotal + shipping + tax - discount;
+  let discount = 0;
+  let discountId: string | null = null;
+  const discountCode =
+    typeof b.discountCode === "string" ? b.discountCode.trim() : "";
+
+  if (discountCode) {
+    const discountResult = await resolveCheckoutDiscount(service, discountCode, subtotal, shipping);
+    if (!discountResult.ok) {
+      return NextResponse.json({ error: discountResult.error }, { status: 400 });
+    }
+    discount = discountResult.applied.discountGhs;
+    discountId = discountResult.applied.discountId;
+    if (discountResult.applied.kind === "free_shipping") {
+      // shipping stays 0 for now; discount_ghs records waived amount
+    }
+  }
+
+  const total = Math.max(0, Math.round((subtotal + shipping + tax - discount) * 100) / 100);
 
   const { data: order, error: orderErr } = await service
     .from("orders")
@@ -180,6 +201,10 @@ export async function POST(request: Request) {
   if (itemErr) {
     await service.from("orders").delete().eq("id", order.id);
     return NextResponse.json({ error: itemErr.message ?? "Could not add order items" }, { status: 500 });
+  }
+
+  if (discountId) {
+    await incrementDiscountUsage(service, discountId);
   }
 
   try {
