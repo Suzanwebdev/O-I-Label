@@ -129,6 +129,7 @@ export async function POST(request: Request) {
   const tax = 0;
   let discount = 0;
   let discountId: string | null = null;
+  let appliedDiscountCode: string | null = null;
   const discountCode =
     typeof b.discountCode === "string" ? b.discountCode.trim() : "";
 
@@ -139,6 +140,7 @@ export async function POST(request: Request) {
     }
     discount = discountResult.applied.discountGhs;
     discountId = discountResult.applied.discountId;
+    appliedDiscountCode = discountResult.applied.code;
     if (discountResult.applied.kind === "free_shipping") {
       // shipping stays 0 for now; discount_ghs records waived amount
     }
@@ -157,6 +159,7 @@ export async function POST(request: Request) {
       shipping_ghs: shipping,
       tax_ghs: tax,
       discount_ghs: discount,
+      ...(appliedDiscountCode ? { discount_code: appliedDiscountCode } : {}),
       total_ghs: total,
       currency: "GHS",
       shipping_address: {
@@ -205,6 +208,15 @@ export async function POST(request: Request) {
 
   if (discountId) {
     await incrementDiscountUsage(service, discountId);
+  }
+
+  if (appliedDiscountCode && discount > 0) {
+    await service.from("order_events").insert({
+      order_id: order.id,
+      event_type: "promo_applied",
+      message: `Promo ${appliedDiscountCode} applied (−GH₵ ${discount.toFixed(2)})`,
+      meta: { code: appliedDiscountCode, discount_ghs: discount, discount_id: discountId },
+    });
   }
 
   try {

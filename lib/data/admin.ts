@@ -222,6 +222,8 @@ export type AdminOrderRow = {
   payment_status: "pending" | "processing" | "paid" | "failed" | "refunded" | null;
   paid_at: string | null;
   total_ghs: number;
+  discount_ghs: number;
+  discount_code: string | null;
   notify_customer: boolean;
   created_at: string;
   tracking_number: string | null;
@@ -668,7 +670,7 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
     .from("orders")
     .select(
       `
-      id, order_number, email, phone, shipping_address, status, total_ghs, notify_customer, created_at, paid_at,
+      id, order_number, email, phone, shipping_address, status, total_ghs, discount_ghs, discount_code, notify_customer, created_at, paid_at,
       shipments ( tracking_number, carrier, status, created_at ),
       payments ( status, updated_at, created_at ),
       order_items (
@@ -705,6 +707,8 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
       payment_status: pickLatestPayment(payments),
       paid_at: row.paid_at ?? null,
       total_ghs: Number(row.total_ghs ?? 0),
+      discount_ghs: Number(row.discount_ghs ?? 0),
+      discount_code: row.discount_code ?? null,
       notify_customer: Boolean(row.notify_customer),
       created_at: row.created_at,
       tracking_number: shipment?.tracking_number ?? null,

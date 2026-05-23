@@ -103,6 +103,7 @@ export function emailOrderTotalsBlock(opts: {
   shippingGhs: number;
   taxGhs: number;
   discountGhs: number;
+  discountCode?: string | null;
   totalGhs: number;
 }): string {
   const row = (label: string, value: string, bold = false) => {
@@ -116,9 +117,15 @@ export function emailOrderTotalsBlock(opts: {
     </tr>`;
   };
 
+  const discountLabel =
+    opts.discountGhs > 0
+      ? opts.discountCode
+        ? `Promo (${opts.discountCode})`
+        : "Discount"
+      : "";
   const discountRow =
     opts.discountGhs > 0
-      ? row("Discount", `&minus; GH&#8373; ${opts.discountGhs.toFixed(2)}`)
+      ? row(discountLabel, `&minus; GH&#8373; ${opts.discountGhs.toFixed(2)}`)
       : "";
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:16px 0 0 0;padding:18px 20px;background-color:#faf8f5;border:1px solid ${colors.border};" class="email-summary email-border">

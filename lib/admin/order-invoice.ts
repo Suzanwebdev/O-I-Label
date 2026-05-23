@@ -17,6 +17,7 @@ export type OrderInvoiceOrder = {
   shipping_ghs: number | null;
   tax_ghs: number | null;
   discount_ghs: number | null;
+  discount_code?: string | null;
   total_ghs: number | null;
   created_at: string;
 };
@@ -97,7 +98,11 @@ export function buildOrderInvoiceSection(
     <p style="margin:4px 0;"><strong>Subtotal:</strong> GHc ${Number(order.subtotal_ghs ?? 0).toFixed(2)}</p>
     <p style="margin:4px 0;"><strong>Shipping:</strong> GHc ${Number(order.shipping_ghs ?? 0).toFixed(2)}</p>
     <p style="margin:4px 0;"><strong>Tax:</strong> GHc ${Number(order.tax_ghs ?? 0).toFixed(2)}</p>
-    <p style="margin:4px 0;"><strong>Discount:</strong> GHc ${Number(order.discount_ghs ?? 0).toFixed(2)}</p>
+    ${
+      Number(order.discount_ghs ?? 0) > 0
+        ? `<p style="margin:4px 0;"><strong>Discount${order.discount_code ? ` (${escapeHtml(order.discount_code)})` : ""}:</strong> &minus; GHc ${Number(order.discount_ghs).toFixed(2)}</p>`
+        : ""
+    }
     <p style="margin:12px 0 0 0;font-size:18px;"><strong>Total:</strong> GHc ${Number(order.total_ghs ?? 0).toFixed(2)}</p>
   </div>
 </section>`;

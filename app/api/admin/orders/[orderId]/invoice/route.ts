@@ -25,7 +25,7 @@ export async function GET(_request: Request, context: RouteContext) {
     service
       .from("orders")
       .select(
-        "id, order_number, email, phone, status, shipping_address, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, total_ghs, created_at"
+        "id, order_number, email, phone, status, shipping_address, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, discount_code, total_ghs, created_at"
       )
       .eq("id", orderId)
       .maybeSingle(),
@@ -53,6 +53,7 @@ export async function GET(_request: Request, context: RouteContext) {
     shipping_ghs: order.shipping_ghs != null ? Number(order.shipping_ghs) : null,
     tax_ghs: order.tax_ghs != null ? Number(order.tax_ghs) : null,
     discount_ghs: order.discount_ghs != null ? Number(order.discount_ghs) : null,
+    discount_code: order.discount_code ?? null,
     total_ghs: order.total_ghs != null ? Number(order.total_ghs) : null,
     created_at: String(order.created_at ?? new Date(0).toISOString()),
   };

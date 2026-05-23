@@ -37,6 +37,7 @@ export function renderOrderConfirmationEmail(
       shippingGhs: ctx.shippingGhs,
       taxGhs: ctx.taxGhs,
       discountGhs: ctx.discountGhs,
+      discountCode: ctx.discountCode,
       totalGhs: ctx.totalGhs,
     })}
     ${emailCtaButton(copy.ctaLabel, trackUrl)}

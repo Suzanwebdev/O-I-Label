@@ -21,6 +21,7 @@ export type OrderEmailContext = {
   shippingGhs: number;
   taxGhs: number;
   discountGhs: number;
+  discountCode: string | null;
   totalGhs: number;
   createdAt: string;
   items: OrderEmailLineItem[];
@@ -33,7 +34,7 @@ export async function fetchOrderEmailContext(
   const { data: order, error } = await service
     .from("orders")
     .select(
-      "id, order_number, email, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, total_ghs, created_at, shipping_address"
+      "id, order_number, email, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, discount_code, total_ghs, created_at, shipping_address"
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -90,6 +91,7 @@ export async function fetchOrderEmailContext(
     shippingGhs: Number(order.shipping_ghs ?? 0),
     taxGhs: Number(order.tax_ghs ?? 0),
     discountGhs: Number(order.discount_ghs ?? 0),
+    discountCode: order.discount_code ? String(order.discount_code) : null,
     totalGhs: Number(order.total_ghs ?? 0),
     createdAt: String(order.created_at ?? new Date().toISOString()),
     items,

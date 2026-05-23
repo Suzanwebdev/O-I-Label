@@ -114,6 +114,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
       shipping_ghs: number;
       tax_ghs: number;
       discount_ghs: number;
+      discount_code: string | null;
       total_ghs: number;
       created_at: string;
       updated_at: string;
@@ -642,7 +643,14 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                     ) : null}
                   </div>
                 </td>
-                <td className="px-3 py-3">GHc {order.total_ghs.toFixed(2)}</td>
+                <td className="px-3 py-3">
+                  <p>GHc {order.total_ghs.toFixed(2)}</p>
+                  {order.discount_code && order.discount_ghs > 0 ? (
+                    <p className="mt-0.5 text-xs text-emerald-700" title={`Promo −GHc ${order.discount_ghs.toFixed(2)}`}>
+                      {order.discount_code}
+                    </p>
+                  ) : null}
+                </td>
                 <td className="px-3 py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${paymentTone(order.payment_status)}`}
@@ -818,7 +826,22 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                       : ""}
                   </p>
                   <p>Fulfillment: {detail.order.status}</p>
-                  <p>Total: GHc {detail.order.total_ghs.toFixed(2)}</p>
+                  <p>Subtotal: GHc {detail.order.subtotal_ghs.toFixed(2)}</p>
+                  {detail.order.shipping_ghs > 0 ? (
+                    <p>Shipping: GHc {detail.order.shipping_ghs.toFixed(2)}</p>
+                  ) : null}
+                  {detail.order.tax_ghs > 0 ? (
+                    <p>Tax: GHc {detail.order.tax_ghs.toFixed(2)}</p>
+                  ) : null}
+                  {detail.order.discount_ghs > 0 ? (
+                    <p className="text-emerald-800">
+                      Promo{detail.order.discount_code ? ` ${detail.order.discount_code}` : ""}: −GHc{" "}
+                      {detail.order.discount_ghs.toFixed(2)}
+                    </p>
+                  ) : null}
+                  <p className="font-medium text-foreground">
+                    Total: GHc {detail.order.total_ghs.toFixed(2)}
+                  </p>
                 </div>
               </section>
               <section>
