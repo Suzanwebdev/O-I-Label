@@ -11,7 +11,7 @@ import { getHomeContentSections } from "@/lib/data/home-content";
 import { getHomepageCms } from "@/lib/data/homepage-cms";
 import { heroSlidesForUi } from "@/lib/home/homepage-cms";
 import { mergeShopOccasionItemsFromSections } from "@/lib/home/shop-by-occasion";
-import { filterProducts, sortProducts } from "@/lib/shop-utils";
+import { buildHomeBestSellersList } from "@/lib/shop-utils";
 import { BestSellersRow } from "@/components/home/best-sellers-row";
 import { HomeHero } from "@/components/home/home-hero";
 import { OccasionSection } from "@/components/home/occasion-section";
@@ -46,24 +46,7 @@ export default async function HomePage() {
   const heroSlides = heroSlidesForUi(cms.hero.slides);
   const labels = cms.homepage_sections;
 
-  let bestSellers = filterProducts(catalog, { tag: "best_seller" }).filter(
-    (p) => p.variants.length > 0
-  );
-  if (bestSellers.length < 6) {
-    const ranked = sortProducts(
-      catalog.filter((p) => p.variants.length > 0),
-      "best_sellers"
-    );
-    const seen = new Set(bestSellers.map((p) => p.id));
-    for (const p of ranked) {
-      if (bestSellers.length >= 12) break;
-      if (!seen.has(p.id)) {
-        bestSellers.push(p);
-        seen.add(p.id);
-      }
-    }
-  }
-  bestSellers = bestSellers.slice(0, 12);
+  const bestSellers = buildHomeBestSellersList(catalog);
 
   return (
     <>

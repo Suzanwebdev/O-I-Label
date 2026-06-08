@@ -8,21 +8,32 @@ import type { Product } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/store/price";
 import { useCart } from "@/components/providers/cart-provider";
+import { HOME_BEST_SELLERS_BATCH } from "@/lib/shop-utils";
 
 export function BestSellersRow({ products }: { products: Product[] }) {
   const { addItem, openCart } = useCart();
+  const [visibleCount, setVisibleCount] = React.useState(HOME_BEST_SELLERS_BATCH);
 
   const items = React.useMemo(
     () => products.filter((p) => p.variants[0]),
     [products]
   );
 
+  React.useEffect(() => {
+    setVisibleCount(HOME_BEST_SELLERS_BATCH);
+  }, [products]);
+
   if (items.length === 0) return null;
+
+  const visibleItems = items.slice(0, visibleCount);
+  const remaining = items.length - visibleCount;
+  const hasMore = remaining > 0;
+  const nextBatch = Math.min(HOME_BEST_SELLERS_BATCH, remaining);
 
   return (
     <div className="relative">
       <div className="grid grid-cols-2 gap-4 pb-1 pt-0.5 md:grid-cols-3 md:gap-5 lg:grid-cols-4 lg:pb-0">
-        {items.map((product) => {
+        {visibleItems.map((product) => {
           const image = product.images[0];
           const v = product.variants[0]!;
           const compare = v.compare_at_ghs;
@@ -96,6 +107,20 @@ export function BestSellersRow({ products }: { products: Product[] }) {
           );
         })}
       </div>
+      {hasMore ? (
+        <div className="mt-8 flex justify-center md:mt-10">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 min-h-11 rounded-full border-black/20 px-8 text-[13px] font-medium sm:h-10 sm:min-h-10"
+            onClick={() =>
+              setVisibleCount((n) => Math.min(n + HOME_BEST_SELLERS_BATCH, items.length))
+            }
+          >
+            Show {nextBatch} more
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

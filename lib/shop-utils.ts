@@ -109,3 +109,28 @@ export function sortProducts(
       });
   }
 }
+
+export const HOME_BEST_SELLERS_BATCH = 12;
+
+/** Tagged best sellers first, then popular products for homepage “Show more” batches. */
+export function buildHomeBestSellersList(products: Product[]): Product[] {
+  const withVariants = products.filter((p) => p.variants.length > 0);
+  const tagged = filterProducts(withVariants, { tag: "best_seller" });
+  const ranked = sortProducts(withVariants, "best_sellers");
+  const seen = new Set<string>();
+  const list: Product[] = [];
+
+  for (const p of tagged) {
+    if (!seen.has(p.id)) {
+      list.push(p);
+      seen.add(p.id);
+    }
+  }
+  for (const p of ranked) {
+    if (!seen.has(p.id)) {
+      list.push(p);
+      seen.add(p.id);
+    }
+  }
+  return list;
+}
