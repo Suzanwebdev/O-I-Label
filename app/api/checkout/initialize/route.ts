@@ -9,6 +9,7 @@ import {
 } from "@/lib/inventory/deduct-order-stock";
 import { initiatePayment } from "@/lib/payments";
 import { resolveMoolreCallbackUrl } from "@/lib/payments/providers/moolre";
+import { assertStorefrontOpen } from "@/lib/storefront-closed-server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
 type CheckoutLineInput = {
@@ -33,6 +34,14 @@ function orderNumber(): string {
 }
 
 export async function POST(request: Request) {
+  const storefront = await assertStorefrontOpen();
+  if (!storefront.ok) {
+    return NextResponse.json(
+      { error: storefront.error, code: storefront.code, preset: storefront.preset },
+      { status: storefront.status }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

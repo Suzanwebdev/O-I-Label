@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { StorefrontClosedControls } from "@/components/admin/storefront-closed-controls";
 import type { SuperadminSiteSettingsView } from "@/lib/data/site-settings-superadmin";
 import { SUPERADMIN_NAV } from "@/lib/superadmin/nav";
+import { parseStorefrontClosedCopy, STOREFRONT_CLOSED_PRESETS } from "@/lib/storefront-closed";
 
 type Props = {
   initialSettings: SuperadminSiteSettingsView;
@@ -68,7 +70,7 @@ export function ControlCenter({ initialSettings }: Props) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function patch(updates: Record<string, boolean>) {
+  async function patch(updates: Record<string, unknown>) {
     setError(null);
     setPending(Object.keys(updates).join(","));
     try {
@@ -84,6 +86,12 @@ export function ControlCenter({ initialSettings }: Props) {
       setSettings((prev) => ({
         ...prev,
         maintenance_mode: Boolean(json.maintenance_mode),
+        storefront_closed_preset:
+          typeof json.storefront_closed_preset === "string" &&
+          (STOREFRONT_CLOSED_PRESETS as readonly string[]).includes(json.storefront_closed_preset)
+            ? (json.storefront_closed_preset as SuperadminSiteSettingsView["storefront_closed_preset"])
+            : prev.storefront_closed_preset,
+        storefront_closed_copy: parseStorefrontClosedCopy(json.storefront_closed_copy),
         payment_moolre_enabled: Boolean(json.payment_moolre_enabled),
         payment_paystack_enabled: Boolean(json.payment_paystack_enabled),
         payment_flutterwave_enabled: Boolean(json.payment_flutterwave_enabled),
@@ -128,19 +136,15 @@ export function ControlCenter({ initialSettings }: Props) {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Panel
-          title="Store availability"
-          description="When maintenance is on, prepare a maintenance page or banner before enabling in production."
-        >
-          <ToggleRow
-            id="maintenance"
-            label="Maintenance mode"
-            hint="Visitors may still see cached pages until CDN or hosting cache clears."
-            checked={settings.maintenance_mode}
-            disabled={busy}
-            onCheckedChange={(v) => void patch({ maintenance_mode: v })}
-          />
-        </Panel>
+        <StorefrontClosedControls
+          variant="superadmin"
+          patchUrl="/api/superadmin/site-settings"
+          initial={{
+            maintenance_mode: settings.maintenance_mode,
+            storefront_closed_preset: settings.storefront_closed_preset,
+            storefront_closed_copy: settings.storefront_closed_copy,
+          }}
+        />
 
         <Panel
           title="Checkout & payments"

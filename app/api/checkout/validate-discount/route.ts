@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { resolveCheckoutDiscount } from "@/lib/checkout/discount";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { assertStorefrontOpen } from "@/lib/storefront-closed-server";
 
 export async function POST(request: Request) {
+  const storefront = await assertStorefrontOpen();
+  if (!storefront.ok) {
+    return NextResponse.json(
+      { error: storefront.error, code: storefront.code, preset: storefront.preset },
+      { status: storefront.status }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
