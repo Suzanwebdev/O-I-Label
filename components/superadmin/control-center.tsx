@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { StorefrontClosedControls } from "@/components/admin/storefront-closed-controls";
 import type { SuperadminSiteSettingsView } from "@/lib/data/site-settings-superadmin";
+import { STORE_STATUS_LABELS } from "@/lib/store-control/constants";
+import type { EffectiveStoreControl } from "@/lib/store-control/types";
 import { SUPERADMIN_NAV } from "@/lib/superadmin/nav";
-import { parseStorefrontClosedCopy, STOREFRONT_CLOSED_PRESETS } from "@/lib/storefront-closed";
 
 type Props = {
   initialSettings: SuperadminSiteSettingsView;
+  initialStoreControl: EffectiveStoreControl;
 };
 
 function Panel({
@@ -65,12 +66,13 @@ function ToggleRow({
   );
 }
 
-export function ControlCenter({ initialSettings }: Props) {
+export function ControlCenter({ initialSettings, initialStoreControl }: Props) {
   const [settings, setSettings] = useState(initialSettings);
+  const [storeControl, setStoreControl] = useState(initialStoreControl);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function patch(updates: Record<string, unknown>) {
+  async function patch(updates: Record<string, boolean>) {
     setError(null);
     setPending(Object.keys(updates).join(","));
     try {
@@ -86,12 +88,6 @@ export function ControlCenter({ initialSettings }: Props) {
       setSettings((prev) => ({
         ...prev,
         maintenance_mode: Boolean(json.maintenance_mode),
-        storefront_closed_preset:
-          typeof json.storefront_closed_preset === "string" &&
-          (STOREFRONT_CLOSED_PRESETS as readonly string[]).includes(json.storefront_closed_preset)
-            ? (json.storefront_closed_preset as SuperadminSiteSettingsView["storefront_closed_preset"])
-            : prev.storefront_closed_preset,
-        storefront_closed_copy: parseStorefrontClosedCopy(json.storefront_closed_copy),
         payment_moolre_enabled: Boolean(json.payment_moolre_enabled),
         payment_paystack_enabled: Boolean(json.payment_paystack_enabled),
         payment_flutterwave_enabled: Boolean(json.payment_flutterwave_enabled),
@@ -104,6 +100,15 @@ export function ControlCenter({ initialSettings }: Props) {
         rate_limit_per_min:
           typeof json.rate_limit_per_min === "number" ? json.rate_limit_per_min : prev.rate_limit_per_min,
       }));
+      if (typeof updates.maintenance_mode === "boolean") {
+        setStoreControl((prev) => ({
+          ...prev,
+          storeStatus: updates.maintenance_mode ? "maintenance" : "live",
+          browsingAllowed: !updates.maintenance_mode,
+          checkoutAllowed: !updates.maintenance_mode,
+          isLive: !updates.maintenance_mode,
+        }));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save settings");
     } finally {
@@ -136,15 +141,40 @@ export function ControlCenter({ initialSettings }: Props) {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <StorefrontClosedControls
-          variant="superadmin"
-          patchUrl="/api/superadmin/site-settings"
-          initial={{
-            maintenance_mode: settings.maintenance_mode,
-            storefront_closed_preset: settings.storefront_closed_preset,
-            storefront_closed_copy: settings.storefront_closed_copy,
-          }}
-        />
+        <Panel
+          title="Store control"
+          description="Current storefront mode and quick access to the full console."
+        >
+          <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.03] p-4">
+            <p className="text-sm text-white">
+              Status:{" "}
+              <span className="font-semibold">{STORE_STATUS_LABELS[storeControl.storeStatus]}</span>
+              {storeControl.isLive ? (
+                <span className="ml-2 text-emerald-400">Live</span>
+              ) : (
+                <span className="ml-2 text-amber-300">Restricted</span>
+              )}
+            </p>
+            <p className="text-xs text-white/55">
+              Browsing {storeControl.browsingAllowed ? "on" : "off"} · Checkout{" "}
+              {storeControl.checkoutAllowed ? "on" : "off"}
+            </p>
+            <Link
+              href="/superadmin/store-control"
+              className="inline-flex rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-medium text-white transition-colors hover:border-white/30 hover:bg-white/[0.1]"
+            >
+              Open store control
+            </Link>
+          </div>
+          <ToggleRow
+            id="maintenance"
+            label="Quick maintenance"
+            hint="Same as Maintenance mode in store control. Syncs with store_settings."
+            checked={settings.maintenance_mode}
+            disabled={busy}
+            onCheckedChange={(v) => void patch({ maintenance_mode: v })}
+          />
+        </Panel>
 
         <Panel
           title="Checkout & payments"

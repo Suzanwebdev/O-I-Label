@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
 import { createServiceRoleClient } from "@/lib/supabase/server";
-import {
-  isStorefrontClosedPreset,
-  parseStorefrontClosedCopy,
-} from "@/lib/storefront-closed";
-import {
-  parseStorefrontClosedPatch,
-} from "@/lib/storefront-closed-server";
+import { invalidateStoreControlEdgeCache } from "@/lib/store-control/edge";
+import { recommendedFlagsForStatus } from "@/lib/store-control/constants";
 
 const SELECT =
-  "store_name, maintenance_mode, storefront_closed_preset, storefront_closed_copy, feature_flags, payment_moolre_enabled, payment_paystack_enabled, payment_flutterwave_enabled, tax_enabled, rate_limit_per_min";
+  "store_name, maintenance_mode, feature_flags, payment_moolre_enabled, payment_paystack_enabled, payment_flutterwave_enabled, tax_enabled, rate_limit_per_min";
 
 function boolField(body: Record<string, unknown>, key: string): boolean | undefined {
   if (!(key in body)) return undefined;
@@ -35,11 +30,6 @@ export async function PATCH(request: Request) {
   }
 
   const b = body as Record<string, unknown>;
-  const storefrontPatch = parseStorefrontClosedPatch(body);
-  if (!storefrontPatch.ok && ("maintenance_mode" in b || "storefront_closed_preset" in b || "storefront_closed_copy" in b)) {
-    return NextResponse.json({ error: storefrontPatch.error }, { status: 400 });
-  }
-
   const service = createServiceRoleClient();
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
@@ -48,17 +38,19 @@ export async function PATCH(request: Request) {
   }
 
   const maintenanceMode = boolField(b, "maintenance_mode");
-  if (maintenanceMode !== undefined) update.maintenance_mode = maintenanceMode;
-
-  if ("storefront_closed_preset" in b) {
-    if (!isStorefrontClosedPreset(b.storefront_closed_preset)) {
-      return NextResponse.json({ error: "Invalid storefront_closed_preset" }, { status: 400 });
-    }
-    update.storefront_closed_preset = b.storefront_closed_preset;
-  }
-
-  if ("storefront_closed_copy" in b) {
-    update.storefront_closed_copy = parseStorefrontClosedCopy(b.storefront_closed_copy);
+  if (maintenanceMode !== undefined) {
+    update.maintenance_mode = maintenanceMode;
+    const flags = recommendedFlagsForStatus(maintenanceMode ? "maintenance" : "live");
+    await service
+      .from("store_settings")
+      .update({
+        store_status: maintenanceMode ? "maintenance" : "live",
+        browsing_enabled: flags.browsing_enabled,
+        checkout_enabled: flags.checkout_enabled,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", 1);
+    invalidateStoreControlEdgeCache();
   }
 
   for (const key of [
@@ -96,6 +88,5 @@ export async function PATCH(request: Request) {
       data.feature_flags && typeof data.feature_flags === "object" && !Array.isArray(data.feature_flags)
         ? data.feature_flags
         : {},
-    storefront_closed_copy: parseStorefrontClosedCopy(data.storefront_closed_copy),
   });
 }

@@ -6,10 +6,8 @@ import { motion } from "framer-motion";
 import type { Product } from "@/lib/types";
 import { BadgeSet } from "@/components/store/badge-set";
 import { Price } from "@/components/store/price";
-import { Button } from "@/components/ui/button";
+import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { cn } from "@/lib/utils";
-import { useCart } from "@/components/providers/cart-provider";
-import { ShoppingBag } from "lucide-react";
 import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function ProductCard({
@@ -21,7 +19,6 @@ export function ProductCard({
   className?: string;
   priority?: boolean;
 }) {
-  const { addItem, openCart } = useCart();
   const image = product.images[0];
   const preserveQuality = shouldBypassImageOptimization(image);
   const v = product.variants[0];
@@ -67,38 +64,21 @@ export function ProductCard({
           <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{product.description.trim()}</p>
         ) : null}
         <Price amountGhs={v.price_ghs} compareAtGhs={compare} />
-        <div className="mt-auto flex flex-col gap-2 pt-1">
-          <Button
-            type="button"
-            size="sm"
-            className="w-full gap-2 bg-black text-[11px] font-semibold text-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.55)] hover:bg-black/90 sm:text-sm"
-            onClick={() => {
-              addItem({
-                variantId: v.id,
-                productId: product.id,
-                productSlug: product.slug,
-                name: product.name,
-                image,
-                size: v.size,
-                color: v.color,
-                quantity: 1,
-                unitPriceGhs: v.price_ghs,
-              });
-              openCart();
-            }}
-          >
-            <ShoppingBag className="h-4 w-4 shrink-0" />
-            Add to cart
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="w-full border-black/20 text-[11px] font-medium sm:text-sm"
-          >
-            <Link href={`/product/${product.slug}`}>Buy now</Link>
-          </Button>
-        </div>
+        <PurchaseActions
+          productSlug={product.slug}
+          className="mt-auto pt-1"
+          cartPayload={{
+            variantId: v.id,
+            productId: product.id,
+            productSlug: product.slug,
+            name: product.name,
+            image,
+            size: v.size,
+            color: v.color,
+            quantity: 1,
+            unitPriceGhs: v.price_ghs,
+          }}
+        />
       </div>
     </motion.article>
   );

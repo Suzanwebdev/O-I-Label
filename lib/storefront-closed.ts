@@ -1,15 +1,20 @@
-export const STOREFRONT_CLOSED_PRESETS = ["maintenance", "sale_prep", "closed"] as const;
+/** @deprecated Use `@/lib/store-control` — kept for superadmin site-settings compatibility. */
+import {
+  defaultMessageForStatus,
+  recommendedFlagsForStatus,
+} from "@/lib/store-control/constants";
+import type { StoreStatus } from "@/lib/store-control/types";
 
-export type StorefrontClosedPreset = (typeof STOREFRONT_CLOSED_PRESETS)[number];
-
-export type StorefrontClosedCopyBlock = {
-  title?: string;
-  message?: string;
-};
-
-export type StorefrontClosedCopy = Partial<
-  Record<StorefrontClosedPreset, StorefrontClosedCopyBlock>
+export type StorefrontClosedPreset = Exclude<
+  StoreStatus,
+  "live" | "presale" | "private_access"
 >;
+
+export type StorefrontClosedCopy = {
+  headline?: string;
+  body?: string;
+  reopening_label?: string;
+};
 
 export type StorefrontClosedSettings = {
   maintenance_mode: boolean;
@@ -17,93 +22,39 @@ export type StorefrontClosedSettings = {
   storefront_closed_copy: StorefrontClosedCopy;
 };
 
-export const STOREFRONT_CLOSED_PRESET_LABELS: Record<StorefrontClosedPreset, string> = {
-  maintenance: "Maintenance",
-  sale_prep: "Sale preparation",
-  closed: "Not selling right now",
-};
-
-export const DEFAULT_STOREFRONT_CLOSED_COPY: Record<
-  StorefrontClosedPreset,
-  { title: string; message: string }
-> = {
-  maintenance: {
-    title: "We will be right back",
-    message:
-      "O & I Label is undergoing a brief update. Please check again shortly.",
-  },
-  sale_prep: {
-    title: "Something special is on the way",
-    message:
-      "We are preparing our next drop. The storefront is paused while we get everything ready.",
-  },
-  closed: {
-    title: "We are not taking orders right now",
-    message:
-      "Our shop is temporarily closed. Follow us on Instagram for updates, or check back soon.",
-  },
-};
+const PRESETS: StorefrontClosedPreset[] = [
+  "maintenance",
+  "pre_launch",
+  "holiday_break",
+  "inventory_update",
+];
 
 export function isStorefrontClosedPreset(value: unknown): value is StorefrontClosedPreset {
-  return (
-    typeof value === "string" &&
-    (STOREFRONT_CLOSED_PRESETS as readonly string[]).includes(value)
-  );
+  return typeof value === "string" && (PRESETS as string[]).includes(value);
 }
 
 export function parseStorefrontClosedCopy(value: unknown): StorefrontClosedCopy {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  const raw = value as Record<string, unknown>;
-  const copy: StorefrontClosedCopy = {};
-  for (const preset of STOREFRONT_CLOSED_PRESETS) {
-    const block = raw[preset];
-    if (!block || typeof block !== "object" || Array.isArray(block)) continue;
-    const b = block as Record<string, unknown>;
-    copy[preset] = {
-      ...(typeof b.title === "string" ? { title: b.title } : {}),
-      ...(typeof b.message === "string" ? { message: b.message } : {}),
-    };
-  }
-  return copy;
-}
-
-export function resolveStorefrontClosedDisplay(
-  settings: Pick<StorefrontClosedSettings, "storefront_closed_preset" | "storefront_closed_copy">
-): { preset: StorefrontClosedPreset; title: string; message: string } {
-  const preset = settings.storefront_closed_preset;
-  const defaults = DEFAULT_STOREFRONT_CLOSED_COPY[preset];
-  const override = settings.storefront_closed_copy[preset];
+  const o = value as Record<string, unknown>;
   return {
-    preset,
-    title: override?.title?.trim() || defaults.title,
-    message: override?.message?.trim() || defaults.message,
+    headline: typeof o.headline === "string" ? o.headline : undefined,
+    body: typeof o.body === "string" ? o.body : undefined,
+    reopening_label: typeof o.reopening_label === "string" ? o.reopening_label : undefined,
   };
 }
 
-/** Paths that stay reachable while the public storefront is closed. */
-export function isPathAllowedDuringStorefrontClosed(pathname: string): boolean {
-  const allowedPrefixes = [
-    "/maintenance",
-    "/admin",
-    "/superadmin",
-    "/login",
-    "/signup",
-    "/auth",
-    "/track-order",
-    "/api/admin",
-    "/api/superadmin",
-    "/api/webhooks",
-    "/api/track-order",
-    "/api/newsletter",
-  ];
-  return allowedPrefixes.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
+export function mapStatusToPreset(status: StoreStatus): StorefrontClosedPreset {
+  if (status === "pre_launch") return "pre_launch";
+  if (status === "holiday_break") return "holiday_break";
+  if (status === "inventory_update") return "inventory_update";
+  return "maintenance";
 }
 
-export function storefrontClosedApiMessage(preset: StorefrontClosedPreset): string {
-  return resolveStorefrontClosedDisplay({
-    storefront_closed_preset: preset,
-    storefront_closed_copy: {},
-  }).title;
+export function presetDefaultCopy(preset: StorefrontClosedPreset): StorefrontClosedCopy {
+  return {
+    headline: defaultMessageForStatus(preset === "pre_launch" ? "pre_launch" : preset),
+    body: defaultMessageForStatus(preset === "pre_launch" ? "pre_launch" : preset),
+  };
 }
+
+export { recommendedFlagsForStatus };

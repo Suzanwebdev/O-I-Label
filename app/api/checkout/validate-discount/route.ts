@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { resolveCheckoutDiscount } from "@/lib/checkout/discount";
+import { assertCheckoutAllowed } from "@/lib/store-control/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
-import { assertStorefrontOpen } from "@/lib/storefront-closed-server";
 
 export async function POST(request: Request) {
-  const storefront = await assertStorefrontOpen();
-  if (!storefront.ok) {
+  const checkoutGate = await assertCheckoutAllowed();
+  if (!checkoutGate.ok) {
     return NextResponse.json(
-      { error: storefront.error, code: storefront.code, preset: storefront.preset },
-      { status: storefront.status }
+      { error: checkoutGate.error, code: checkoutGate.code },
+      { status: checkoutGate.status, headers: { "Retry-After": "3600" } }
     );
   }
 

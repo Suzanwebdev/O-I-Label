@@ -13,6 +13,7 @@ import {
   Percent,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   ShoppingBag,
   ShoppingBasket,
   Store,
@@ -67,6 +68,7 @@ const groups: NavGroup[] = [
     title: "System",
     items: [
       { href: "/admin/team-roles", label: "Team & Roles", icon: ShieldCheck },
+      { href: "/admin/store-control", label: "Store Control", icon: SlidersHorizontal },
       { href: "/admin/settings", label: "Settings", icon: Settings },
       { href: "/admin/feature-flags", label: "Feature Flags", icon: Workflow },
     ],

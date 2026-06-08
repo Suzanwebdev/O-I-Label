@@ -27,6 +27,7 @@ const routeMeta: Record<string, RouteMeta> = {
   "/admin/marketing": { title: "Marketing" },
   "/admin/support-crm": { title: "Support CRM" },
   "/admin/team-roles": { title: "Team & Roles" },
+  "/admin/store-control": { title: "Store Control" },
   "/admin/settings": { title: "Settings" },
   "/admin/feature-flags": { title: "Feature Flags" },
 };

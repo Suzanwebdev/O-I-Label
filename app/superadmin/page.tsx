@@ -1,8 +1,12 @@
 import { ControlCenter } from "@/components/superadmin/control-center";
 import { getSiteSettingsForSuperadmin } from "@/lib/data/site-settings-superadmin";
+import { getEffectiveStoreControl } from "@/lib/store-control/server";
 
 export default async function SuperAdminHomePage() {
-  const settings = await getSiteSettingsForSuperadmin();
+  const [settings, storeControl] = await Promise.all([
+    getSiteSettingsForSuperadmin(),
+    getEffectiveStoreControl(),
+  ]);
 
   if (!settings) {
     return (
@@ -14,5 +18,5 @@ export default async function SuperAdminHomePage() {
     );
   }
 
-  return <ControlCenter initialSettings={settings} />;
+  return <ControlCenter initialSettings={settings} initialStoreControl={storeControl} />;
 }

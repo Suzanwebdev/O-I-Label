@@ -9,12 +9,15 @@ import { Label } from "@/components/ui/label";
 import { useCart } from "@/components/providers/cart-provider";
 import { useWishlist } from "@/components/providers/wishlist-provider";
 import { Price } from "@/components/store/price";
+import { PurchaseActions } from "@/components/store-control/purchase-actions";
+import { useStoreControl } from "@/components/store-control/store-control-provider";
 import { Check, Heart, Minus, Plus, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveSwatchColor } from "@/lib/color-swatch";
 
 export function ProductVariantForm({ product }: { product: Product }) {
   const router = useRouter();
+  const control = useStoreControl();
   const { addItem, openCart, beginBuyNowCheckout } = useCart();
   const { hasItem, toggleItem } = useWishlist();
   const sizes = Array.from(
@@ -211,29 +214,48 @@ export function ProductVariantForm({ product }: { product: Product }) {
           </div>
         </div>
 
-        <Button
-          type="button"
-          size="lg"
-          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] bg-black font-semibold text-white shadow-[0_14px_32px_-20px_rgba(0,0,0,0.72)] transition-transform hover:-translate-y-[1px] hover:bg-black/90"
-          disabled={oos}
-          onClick={() => {
-            addVariantToCart(safeQty);
-            openCart();
-          }}
-        >
-          <ShoppingBag className="h-4 w-4 shrink-0" />
-          Add to cart
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="w-full rounded-[var(--radius-lg)] border-black/25 bg-white font-medium transition-colors hover:bg-muted"
-          disabled={oos}
-          onClick={() => buyNow(safeQty)}
-        >
-          Buy now
-        </Button>
+        {!control.checkoutAllowed ? (
+          <PurchaseActions
+            productSlug={product.slug}
+            cartPayload={{
+              variantId: variant.id,
+              productId: product.id,
+              productSlug: product.slug,
+              name: product.name,
+              image: product.images[0] ?? "/file.svg",
+              size: variant.size,
+              color: variant.color,
+              quantity: safeQty,
+              unitPriceGhs: variant.price_ghs,
+            }}
+          />
+        ) : (
+          <>
+            <Button
+              type="button"
+              size="lg"
+              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] bg-black font-semibold text-white shadow-[0_14px_32px_-20px_rgba(0,0,0,0.72)] transition-transform hover:-translate-y-[1px] hover:bg-black/90"
+              disabled={oos}
+              onClick={() => {
+                addVariantToCart(safeQty);
+                openCart();
+              }}
+            >
+              <ShoppingBag className="h-4 w-4 shrink-0" />
+              Add to cart
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full rounded-[var(--radius-lg)] border-black/25 bg-white font-medium transition-colors hover:bg-muted"
+              disabled={oos}
+              onClick={() => buyNow(safeQty)}
+            >
+              Buy now
+            </Button>
+          </>
+        )}
       </div>
 
       {(product.love_it_points ?? []).filter(Boolean).length > 0 ? (
@@ -283,6 +305,8 @@ export function ProductVariantForm({ product }: { product: Product }) {
               <Heart className={cn("mr-1.5 h-3.5 w-3.5", isSaved && "fill-current")} />
               {isSaved ? "Saved" : "Love"}
             </Button>
+            {control.checkoutAllowed ? (
+              <>
             <Button
               type="button"
               size="sm"
@@ -306,6 +330,10 @@ export function ProductVariantForm({ product }: { product: Product }) {
             >
               Buy now
             </Button>
+              </>
+            ) : (
+              <span className="text-xs text-muted-foreground">{control.presaleCtaLabel}</span>
+            )}
           </div>
         </div>
         <span className="sr-only" aria-live="polite">

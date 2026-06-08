@@ -1,35 +1,67 @@
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  isPathAllowedDuringStorefrontClosed,
-  resolveStorefrontClosedDisplay,
-} from "@/lib/storefront-closed";
-import { fetchStorefrontClosedSettingsEdge } from "@/lib/storefront-closed-edge";
 import { updateSession } from "@/lib/supabase/middleware";
+import { STORE_ACCESS_COOKIE } from "@/lib/store-control/constants";
+import { ipAllowed } from "@/lib/store-control/access";
+import { getStoreControlEdgeCached } from "@/lib/store-control/edge";
+import {
+  isAlwaysAllowedPath,
+  isCheckoutApiPath,
+  isStorefrontPath,
+} from "@/lib/store-control/paths";
+
+function hasPrivateAccessCookie(request: NextRequest): boolean {
+  const v = request.cookies.get(STORE_ACCESS_COOKIE)?.value;
+  return Boolean(v && v.length >= 16);
+}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/maintenance")) {
+  if (isAlwaysAllowedPath(pathname)) {
     return updateSession(request);
   }
 
-  const storefront = await fetchStorefrontClosedSettingsEdge();
-  if (storefront?.maintenance_mode) {
-    if (pathname.startsWith("/api/checkout")) {
-      const display = resolveStorefrontClosedDisplay(storefront);
-      return NextResponse.json(
-        {
-          error: "The storefront is temporarily closed.",
-          code: "storefront_closed",
-          preset: display.preset,
-        },
-        { status: 503 }
-      );
-    }
+  const { control, settings } = await getStoreControlEdgeCached();
 
-    if (!isPathAllowedDuringStorefrontClosed(pathname)) {
-      return NextResponse.redirect(new URL("/maintenance", request.url));
-    }
+  if (isCheckoutApiPath(pathname) && !control.checkoutAllowed) {
+    return NextResponse.json(
+      { error: control.maintenanceMessage, code: "store_checkout_disabled" },
+      { status: 503, headers: { "Retry-After": "3600" } }
+    );
+  }
+
+  const clientIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip");
+  const ipWhitelisted = ipAllowed(clientIp, settings.private_access_ips);
+  const privateOk =
+    !control.requiresPrivateAccess || hasPrivateAccessCookie(request) || ipWhitelisted;
+
+  if (control.requiresPrivateAccess && isStorefrontPath(pathname) && !privateOk) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/closed/private-access";
+    const res = NextResponse.rewrite(url);
+    res.headers.set("Retry-After", "3600");
+    return res;
+  }
+
+  if (!control.browsingAllowed && isStorefrontPath(pathname)) {
+    const slug = control.closedPageSlug ?? "maintenance";
+    const url = request.nextUrl.clone();
+    url.pathname = `/closed/${slug}`;
+    const res = NextResponse.rewrite(url);
+    res.headers.set("Retry-After", "3600");
+    return res;
+  }
+
+  if (
+    !control.checkoutAllowed &&
+    (pathname === "/checkout" || pathname.startsWith("/checkout/"))
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname =
+      control.storeStatus === "presale" ? "/closed/presale" : `/closed/${control.closedPageSlug ?? "maintenance"}`;
+    return NextResponse.rewrite(url);
   }
 
   return updateSession(request);
@@ -40,4 +72,3 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
-

@@ -9,7 +9,7 @@ import {
 } from "@/lib/inventory/deduct-order-stock";
 import { initiatePayment } from "@/lib/payments";
 import { resolveMoolreCallbackUrl } from "@/lib/payments/providers/moolre";
-import { assertStorefrontOpen } from "@/lib/storefront-closed-server";
+import { assertCheckoutAllowed } from "@/lib/store-control/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
 type CheckoutLineInput = {
@@ -34,11 +34,11 @@ function orderNumber(): string {
 }
 
 export async function POST(request: Request) {
-  const storefront = await assertStorefrontOpen();
-  if (!storefront.ok) {
+  const checkoutGate = await assertCheckoutAllowed();
+  if (!checkoutGate.ok) {
     return NextResponse.json(
-      { error: storefront.error, code: storefront.code, preset: storefront.preset },
-      { status: storefront.status }
+      { error: checkoutGate.error, code: checkoutGate.code },
+      { status: checkoutGate.status, headers: { "Retry-After": "3600" } }
     );
   }
 
