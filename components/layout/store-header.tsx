@@ -32,6 +32,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { MobileStoreNav } from "@/components/layout/mobile-store-nav";
 
 const megaLinks = [
   { href: "/shop?tag=new", label: "New Arrivals" },
@@ -98,56 +99,14 @@ export function StoreHeader() {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[min(100%,320px)] p-0">
+          <SheetContent
+            side="left"
+            className="flex h-full w-[min(100%,340px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[340px]"
+          >
             <SheetHeader className="sr-only">
               <SheetTitle>Menu</SheetTitle>
             </SheetHeader>
-            <div className="border-b border-border p-6">
-              <Link
-                href="/"
-                className="font-serif-display text-2xl tracking-tight"
-              >
-                O & I Label
-              </Link>
-            </div>
-            <nav className="flex flex-col p-4">
-              <Link
-                href="/shop"
-                className="rounded-[var(--radius-md)] px-4 py-3 text-sm font-medium hover:bg-muted"
-              >
-                Shop all
-              </Link>
-              {megaLinks.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="rounded-[var(--radius-md)] px-4 py-3 text-sm hover:bg-muted"
-                >
-                  {l.label}
-                </Link>
-              ))}
-              {mockCategories.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/shop/${c.slug}`}
-                  className="rounded-[var(--radius-md)] px-4 py-3 text-sm hover:bg-muted"
-                >
-                  {c.name}
-                </Link>
-              ))}
-              <Link
-                href="/blog"
-                className="rounded-[var(--radius-md)] px-4 py-3 text-sm hover:bg-muted"
-              >
-                Style Journal
-              </Link>
-              <Link
-                href="/about"
-                className="rounded-[var(--radius-md)] px-4 py-3 text-sm hover:bg-muted"
-              >
-                Our story
-              </Link>
-            </nav>
+            <MobileStoreNav />
           </SheetContent>
         </Sheet>
 
