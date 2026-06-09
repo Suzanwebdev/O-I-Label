@@ -63,6 +63,14 @@ export async function listStoreBanners(): Promise<StoreBannerRow[]> {
   return (data ?? []) as StoreBannerRow[];
 }
 
+/** Turn off scheduled + legacy announcement strips when the boutique goes live. */
+async function clearAnnouncementBannersOnLive(
+  service: ReturnType<typeof createServiceRoleClient>
+): Promise<void> {
+  const now = new Date().toISOString();
+  await service.from("store_banners").update({ enabled: false, updated_at: now }).eq("enabled", true);
+}
+
 export async function getStoreSettingsRow(): Promise<StoreSettingsRow | null> {
   const service = createServiceRoleClient();
   const { data, error } = await service
@@ -79,6 +87,7 @@ export async function persistScheduledIfDue(settings: StoreSettingsRow): Promise
   if (!changed) return settings;
 
   const service = createServiceRoleClient();
+  const goingLive = next.store_status === "live";
   await service
     .from("store_settings")
     .update({
@@ -88,9 +97,14 @@ export async function persistScheduledIfDue(settings: StoreSettingsRow): Promise
       scheduled_activate_at: next.scheduled_activate_at,
       scheduled_deactivate_at: next.scheduled_deactivate_at,
       scheduled_status: next.scheduled_status,
+      ...(goingLive ? { banner_enabled: false } : {}),
       updated_at: next.updated_at,
     })
     .eq("id", 1);
+
+  if (goingLive) {
+    await clearAnnouncementBannersOnLive(service);
+  }
 
   await service
     .from("site_settings")
@@ -100,7 +114,7 @@ export async function persistScheduledIfDue(settings: StoreSettingsRow): Promise
     })
     .eq("id", 1);
 
-  return next;
+  return goingLive ? { ...next, banner_enabled: false } : next;
 }
 
 export async function getEffectiveStoreControl(): Promise<EffectiveStoreControl> {
@@ -315,6 +329,11 @@ export async function patchStoreSettings(
         : hashPrivateAccessPassword(patch.private_access_password);
   }
 
+  const goingLive = patch.store_status === "live";
+  if (goingLive) {
+    update.banner_enabled = false;
+  }
+
   const { data, error } = await service
     .from("store_settings")
     .update(update)
@@ -323,6 +342,10 @@ export async function patchStoreSettings(
     .single();
 
   if (error || !data) return null;
+
+  if (goingLive) {
+    await clearAnnouncementBannersOnLive(service);
+  }
 
   const settings = mapSettingsRow(data as Record<string, unknown>);
 

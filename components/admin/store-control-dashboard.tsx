@@ -113,8 +113,16 @@ export function StoreControlDashboard({ initial }: { initial: Snapshot }) {
 
   async function confirmStatusChange() {
     if (!pendingStatus) return;
-    setSettings((s) => ({ ...s, store_status: pendingStatus }));
-    await save({ store_status: pendingStatus, apply_recommended_flags: true });
+    const nextStatus = pendingStatus;
+    setSettings((s) => ({ ...s, store_status: nextStatus }));
+    await save({ store_status: nextStatus, apply_recommended_flags: true });
+    if (nextStatus === "live") {
+      setSnapshot((prev) => ({
+        ...prev,
+        banners: prev.banners.map((b) => ({ ...b, enabled: false })),
+      }));
+      setSettings((s) => ({ ...s, banner_enabled: false }));
+    }
     setPendingStatus(null);
   }
 
@@ -987,7 +995,9 @@ export function StoreControlDashboard({ initial }: { initial: Snapshot }) {
             <DialogTitle>Change store status?</DialogTitle>
             <DialogDescription>
               {pendingStatus
-                ? `Switch to ${STORE_STATUS_LABELS[pendingStatus]}? Recommended access flags will be applied immediately.`
+                ? pendingStatus === "live"
+                  ? `Switch to Live? Checkout reopens and all announcement banners are turned off immediately.`
+                  : `Switch to ${STORE_STATUS_LABELS[pendingStatus]}? Recommended access flags will be applied immediately.`
                 : ""}
             </DialogDescription>
           </DialogHeader>
