@@ -11,16 +11,19 @@ import type {
 } from "@/lib/store-control/types";
 import { isStoreStatus } from "@/lib/store-control/resolve";
 import { hashPrivateAccessPassword } from "@/lib/store-control/access";
+import { getStoreControlAnalytics } from "@/lib/store-control/analytics";
 import { recommendedFlagsForStatus } from "@/lib/store-control/constants";
+import { getWaitlistCount } from "@/lib/store-control/waitlist";
 
 const SETTINGS_SELECT =
-  "id, store_status, maintenance_message, reopening_date, presale_date, launch_date, banner_text, banner_enabled, checkout_enabled, browsing_enabled, countdown_enabled, presale_cta_label, instagram_url, whatsapp_url, private_access_password_hash, private_access_ips, scheduled_activate_at, scheduled_deactivate_at, scheduled_status, revert_status, updated_at";
+  "id, store_status, maintenance_message, supporting_message, reopening_date, presale_date, launch_date, banner_text, banner_enabled, checkout_enabled, browsing_enabled, countdown_enabled, presale_cta_label, presale_hero_image_url, maintenance_hero_image_url, launch_hero_image_url, instagram_url, whatsapp_url, private_access_password_hash, private_access_ips, scheduled_activate_at, scheduled_deactivate_at, scheduled_status, scheduled_timezone, revert_status, show_waitlist_count, maintenance_use_503, updated_at";
 
 function mapSettingsRow(row: Record<string, unknown>): StoreSettingsRow {
   return {
     id: Number(row.id ?? 1),
     store_status: isStoreStatus(row.store_status) ? row.store_status : "live",
     maintenance_message: (row.maintenance_message as string | null) ?? null,
+    supporting_message: (row.supporting_message as string | null) ?? null,
     reopening_date: (row.reopening_date as string | null) ?? null,
     presale_date: (row.presale_date as string | null) ?? null,
     launch_date: (row.launch_date as string | null) ?? null,
@@ -30,6 +33,9 @@ function mapSettingsRow(row: Record<string, unknown>): StoreSettingsRow {
     browsing_enabled: Boolean(row.browsing_enabled),
     countdown_enabled: Boolean(row.countdown_enabled),
     presale_cta_label: String(row.presale_cta_label ?? "Join waitlist"),
+    presale_hero_image_url: (row.presale_hero_image_url as string | null) ?? null,
+    maintenance_hero_image_url: (row.maintenance_hero_image_url as string | null) ?? null,
+    launch_hero_image_url: (row.launch_hero_image_url as string | null) ?? null,
     instagram_url: (row.instagram_url as string | null) ?? null,
     whatsapp_url: (row.whatsapp_url as string | null) ?? null,
     private_access_password_hash: (row.private_access_password_hash as string | null) ?? null,
@@ -39,7 +45,10 @@ function mapSettingsRow(row: Record<string, unknown>): StoreSettingsRow {
     scheduled_activate_at: (row.scheduled_activate_at as string | null) ?? null,
     scheduled_deactivate_at: (row.scheduled_deactivate_at as string | null) ?? null,
     scheduled_status: isStoreStatus(row.scheduled_status) ? row.scheduled_status : null,
+    scheduled_timezone: String(row.scheduled_timezone ?? "Africa/Accra"),
     revert_status: isStoreStatus(row.revert_status) ? row.revert_status : "live",
+    show_waitlist_count: row.show_waitlist_count !== false,
+    maintenance_use_503: Boolean(row.maintenance_use_503),
     updated_at: String(row.updated_at ?? new Date().toISOString()),
   };
 }
@@ -97,11 +106,11 @@ export async function persistScheduledIfDue(settings: StoreSettingsRow): Promise
 export async function getEffectiveStoreControl(): Promise<EffectiveStoreControl> {
   let settings = await getStoreSettingsRow();
   if (!settings) {
-    return resolveEffectiveStoreControl(defaultSettings(), []);
+    return resolveEffectiveStoreControl(defaultSettings(), [], { waitlistCount: 0 });
   }
   settings = await persistScheduledIfDue(settings);
-  const banners = await listStoreBanners();
-  return resolveEffectiveStoreControl(settings, banners);
+  const [banners, waitlistCount] = await Promise.all([listStoreBanners(), getWaitlistCount()]);
+  return resolveEffectiveStoreControl(settings, banners, { waitlistCount });
 }
 
 function defaultSettings(): StoreSettingsRow {
@@ -109,6 +118,7 @@ function defaultSettings(): StoreSettingsRow {
     id: 1,
     store_status: "live",
     maintenance_message: null,
+    supporting_message: null,
     reopening_date: null,
     presale_date: null,
     launch_date: null,
@@ -118,6 +128,9 @@ function defaultSettings(): StoreSettingsRow {
     browsing_enabled: true,
     countdown_enabled: false,
     presale_cta_label: "Join waitlist",
+    presale_hero_image_url: null,
+    maintenance_hero_image_url: null,
+    launch_hero_image_url: null,
     instagram_url: null,
     whatsapp_url: null,
     private_access_password_hash: null,
@@ -125,7 +138,10 @@ function defaultSettings(): StoreSettingsRow {
     scheduled_activate_at: null,
     scheduled_deactivate_at: null,
     scheduled_status: null,
+    scheduled_timezone: "Africa/Accra",
     revert_status: "live",
+    show_waitlist_count: true,
+    maintenance_use_503: false,
     updated_at: new Date().toISOString(),
   };
 }
@@ -149,6 +165,7 @@ export async function assertCheckoutAllowed(): Promise<
 export type StoreControlPatch = Partial<{
   store_status: StoreStatus;
   maintenance_message: string | null;
+  supporting_message: string | null;
   reopening_date: string | null;
   presale_date: string | null;
   launch_date: string | null;
@@ -158,6 +175,9 @@ export type StoreControlPatch = Partial<{
   browsing_enabled: boolean;
   countdown_enabled: boolean;
   presale_cta_label: string;
+  presale_hero_image_url: string | null;
+  maintenance_hero_image_url: string | null;
+  launch_hero_image_url: string | null;
   instagram_url: string | null;
   whatsapp_url: string | null;
   private_access_password: string | null;
@@ -165,7 +185,10 @@ export type StoreControlPatch = Partial<{
   scheduled_activate_at: string | null;
   scheduled_deactivate_at: string | null;
   scheduled_status: StoreStatus | null;
+  scheduled_timezone: string;
   revert_status: StoreStatus;
+  show_waitlist_count: boolean;
+  maintenance_use_503: boolean;
   apply_recommended_flags: boolean;
 }>;
 
@@ -196,7 +219,12 @@ export function parseStoreControlPatch(body: unknown): { ok: true; patch: StoreC
   };
 
   stringOrNull("maintenance_message");
+  stringOrNull("supporting_message");
   stringOrNull("reopening_date");
+  stringOrNull("presale_hero_image_url");
+  stringOrNull("maintenance_hero_image_url");
+  stringOrNull("launch_hero_image_url");
+  stringOrNull("scheduled_timezone");
   stringOrNull("presale_date");
   stringOrNull("launch_date");
   stringOrNull("banner_text");
@@ -216,7 +244,14 @@ export function parseStoreControlPatch(body: unknown): { ok: true; patch: StoreC
     patch.revert_status = b.revert_status;
   }
 
-  for (const key of ["banner_enabled", "checkout_enabled", "browsing_enabled", "countdown_enabled"] as const) {
+  for (const key of [
+    "banner_enabled",
+    "checkout_enabled",
+    "browsing_enabled",
+    "countdown_enabled",
+    "show_waitlist_count",
+    "maintenance_use_503",
+  ] as const) {
     if (key in b && typeof b[key] === "boolean") patch[key] = b[key];
   }
 
@@ -247,6 +282,7 @@ export async function patchStoreSettings(
 
   if (patch.store_status !== undefined) update.store_status = patch.store_status;
   if (patch.maintenance_message !== undefined) update.maintenance_message = patch.maintenance_message;
+  if (patch.supporting_message !== undefined) update.supporting_message = patch.supporting_message;
   if (patch.reopening_date !== undefined) update.reopening_date = patch.reopening_date;
   if (patch.presale_date !== undefined) update.presale_date = patch.presale_date;
   if (patch.launch_date !== undefined) update.launch_date = patch.launch_date;
@@ -256,6 +292,14 @@ export async function patchStoreSettings(
   if (patch.browsing_enabled !== undefined) update.browsing_enabled = patch.browsing_enabled;
   if (patch.countdown_enabled !== undefined) update.countdown_enabled = patch.countdown_enabled;
   if (patch.presale_cta_label !== undefined) update.presale_cta_label = patch.presale_cta_label.trim();
+  if (patch.presale_hero_image_url !== undefined) update.presale_hero_image_url = patch.presale_hero_image_url;
+  if (patch.maintenance_hero_image_url !== undefined) {
+    update.maintenance_hero_image_url = patch.maintenance_hero_image_url;
+  }
+  if (patch.launch_hero_image_url !== undefined) update.launch_hero_image_url = patch.launch_hero_image_url;
+  if (patch.scheduled_timezone !== undefined) update.scheduled_timezone = patch.scheduled_timezone.trim();
+  if (patch.show_waitlist_count !== undefined) update.show_waitlist_count = patch.show_waitlist_count;
+  if (patch.maintenance_use_503 !== undefined) update.maintenance_use_503 = patch.maintenance_use_503;
   if (patch.instagram_url !== undefined) update.instagram_url = patch.instagram_url;
   if (patch.whatsapp_url !== undefined) update.whatsapp_url = patch.whatsapp_url;
   if (patch.scheduled_activate_at !== undefined) update.scheduled_activate_at = patch.scheduled_activate_at;
@@ -290,8 +334,11 @@ export async function patchStoreSettings(
     })
     .eq("id", 1);
 
-  const banners = await listStoreBanners();
-  return { settings, control: resolveEffectiveStoreControl(settings, banners) };
+  const [banners, waitlistCount] = await Promise.all([listStoreBanners(), getWaitlistCount()]);
+  return {
+    settings,
+    control: resolveEffectiveStoreControl(settings, banners, { waitlistCount }),
+  };
 }
 
 export async function getStoreControlAdminSnapshot() {
@@ -304,10 +351,13 @@ export async function getStoreControlAdminSnapshot() {
     .order("created_at", { ascending: false });
 
   const row = settings ?? defaultSettings();
+  const [waitlistCount, analytics] = await Promise.all([getWaitlistCount(), getStoreControlAnalytics()]);
   return {
     settings: row,
-    control: resolveEffectiveStoreControl(row, banners),
+    control: resolveEffectiveStoreControl(row, banners, { waitlistCount }),
     banners,
     whitelist: (whitelist ?? []) as Array<{ id: string; email: string; note: string | null; created_at: string }>,
+    analytics,
+    waitlistCount,
   };
 }

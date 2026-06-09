@@ -4,9 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStoreControl } from "@/components/store-control/store-control-provider";
+import { VipWaitlistForm } from "@/components/store-control/vip-waitlist-form";
 
 type CartPayload = Parameters<ReturnType<typeof useCart>["addItem"]>[0];
 
@@ -21,39 +21,6 @@ export function PurchaseActions({
 }) {
   const control = useStoreControl();
   const { addItem, openCart } = useCart();
-  const [email, setEmail] = React.useState("");
-  const [sent, setSent] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  async function joinWaitlist() {
-    if (!email.trim()) {
-      setError("Enter your email to join the waitlist.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/newsletter/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          source: `presale:${productSlug}`.slice(0, 64),
-        }),
-      });
-      const json = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok) {
-        setError(typeof json.error === "string" ? json.error : "Could not join waitlist.");
-        return;
-      }
-      setSent(true);
-    } catch {
-      setError("Network error. Try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (control.checkoutAllowed) {
     return (
@@ -82,32 +49,23 @@ export function PurchaseActions({
     );
   }
 
-  if (sent) {
+  if (control.softCloseMode) {
     return (
-      <p className={`text-center text-xs text-emerald-800 ${className ?? ""}`}>
-        You&apos;re on the list — we&apos;ll notify you at launch.
+      <p className={`text-center text-xs leading-relaxed text-muted-foreground ${className ?? ""}`}>
+        {control.maintenanceMessage ||
+          "Purchasing is temporarily unavailable while we prepare our next edit."}
       </p>
     );
   }
 
   return (
-    <div className={`space-y-2 ${className ?? ""}`}>
-      <Input
-        type="email"
-        placeholder="Your email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="h-10 rounded-full border-border bg-background px-4 text-sm"
+    <div className={className}>
+      <VipWaitlistForm
+        source={`presale:${productSlug}`.slice(0, 64)}
+        productSlug={productSlug}
+        ctaLabel={control.presaleCtaLabel}
+        compact
       />
-      {error ? <p className="text-xs text-red-700">{error}</p> : null}
-      <Button
-        type="button"
-        disabled={busy}
-        className="h-10 w-full rounded-full bg-black text-[11px] font-semibold text-white"
-        onClick={() => void joinWaitlist()}
-      >
-        {busy ? "Joining…" : control.presaleCtaLabel}
-      </Button>
     </div>
   );
 }

@@ -34,13 +34,30 @@ export async function POST(request: Request) {
   const clientIp =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     request.headers.get("x-real-ip");
+
+  async function logAttempt(success: boolean, method: string | null) {
+    try {
+      const service = createServiceRoleClient();
+      await service.from("store_access_attempts").insert({
+        email: emailRaw || null,
+        ip: clientIp ?? null,
+        success,
+        method,
+      });
+    } catch {
+      /* non-fatal */
+    }
+  }
+
   if (ipAllowed(clientIp, settings.private_access_ips)) {
+    await logAttempt(true, "ip");
     const res = NextResponse.json({ ok: true, method: "ip" });
     res.headers.set("Set-Cookie", storeAccessCookieHeader(privateAccessCookieValue()));
     return res;
   }
 
   if (password && verifyPrivateAccessPassword(password, settings.private_access_password_hash)) {
+    await logAttempt(true, "password");
     const res = NextResponse.json({ ok: true, method: "password" });
     res.headers.set("Set-Cookie", storeAccessCookieHeader(privateAccessCookieValue()));
     return res;
@@ -64,11 +81,13 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (row) {
+      await logAttempt(true, sessionEmail ? "admin" : "whitelist");
       const res = NextResponse.json({ ok: true, method: "whitelist" });
       res.headers.set("Set-Cookie", storeAccessCookieHeader(privateAccessCookieValue()));
       return res;
     }
   }
 
+  await logAttempt(false, password ? "password" : emailRaw ? "whitelist" : null);
   return NextResponse.json({ error: "Access denied." }, { status: 403 });
 }

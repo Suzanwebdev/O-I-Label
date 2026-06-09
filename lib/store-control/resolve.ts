@@ -15,6 +15,7 @@ export function isStoreStatus(value: unknown): value is StoreStatus {
     value === "maintenance" ||
     value === "pre_launch" ||
     value === "presale" ||
+    value === "soft_close" ||
     value === "holiday_break" ||
     value === "inventory_update" ||
     value === "private_access"
@@ -55,7 +56,8 @@ export function pickCountdownTarget(settings: StoreSettingsRow): string | null {
 
 export function resolveEffectiveStoreControl(
   settings: StoreSettingsRow,
-  banners: StoreBannerRow[] = []
+  banners: StoreBannerRow[] = [],
+  opts?: { waitlistCount?: number }
 ): EffectiveStoreControl {
   const storeStatus = settings.store_status;
   const browsingAllowed = settings.browsing_enabled;
@@ -82,10 +84,14 @@ export function resolveEffectiveStoreControl(
     countdownEnabled: settings.countdown_enabled,
     countdownTarget: pickCountdownTarget(settings),
     maintenanceMessage,
+    supportingMessage: settings.supporting_message?.trim() || null,
     presaleCtaLabel: settings.presale_cta_label?.trim() || "Join waitlist",
     reopeningDate: parseIso(settings.reopening_date),
     launchDate: parseIso(settings.launch_date),
     presaleDate: parseIso(settings.presale_date),
+    presaleHeroImageUrl: settings.presale_hero_image_url?.trim() || null,
+    maintenanceHeroImageUrl: settings.maintenance_hero_image_url?.trim() || null,
+    launchHeroImageUrl: settings.launch_hero_image_url?.trim() || null,
     instagramUrl: settings.instagram_url?.trim() || null,
     whatsappUrl: settings.whatsapp_url?.trim() || null,
     bannerText: legacyBanner,
@@ -94,6 +100,9 @@ export function resolveEffectiveStoreControl(
     closedPageSlug,
     requiresPrivateAccess: storeStatus === "private_access",
     isLive: storeStatus === "live" && browsingAllowed && checkoutAllowed,
+    showWaitlistCount: settings.show_waitlist_count,
+    waitlistCount: opts?.waitlistCount ?? 0,
+    softCloseMode: storeStatus === "soft_close",
   };
 }
 
@@ -115,6 +124,7 @@ function recommendedFlagsPatch(status: StoreStatus) {
     case "live":
       return { browsing_enabled: true, checkout_enabled: true };
     case "presale":
+    case "soft_close":
       return { browsing_enabled: true, checkout_enabled: false };
     case "private_access":
       return { browsing_enabled: true, checkout_enabled: true };

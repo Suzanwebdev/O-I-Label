@@ -2,6 +2,8 @@ import { Resend } from "resend";
 import { getEmailFooterLinks } from "@/lib/email/brand";
 import { fetchOrderEmailContext } from "@/lib/email/fetch-order-email-context";
 import { renderNewsletterWelcomeEmail } from "@/lib/email/templates/newsletter-welcome";
+import { renderStoreCampaignEmail } from "@/lib/email/templates/store-campaigns";
+import { STORE_CAMPAIGN_SUBJECTS, type WaitlistCampaignType } from "@/lib/store-control/constants";
 import {
   renderOrderConfirmationEmail,
   renderOrderConfirmationEmailFallback,
@@ -102,6 +104,46 @@ export async function sendPasswordResetEmail(opts: { to: string; link: string })
     html: renderPasswordResetEmail(opts.link, footerLinks),
   });
 }
+
+export async function dispatchStoreCampaignEmail(payload: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<EmailSendResult> {
+  return dispatchEmail({
+    from: fromAddress(),
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.html,
+  });
+}
+
+export async function sendStoreWaitlistWelcomeEmail(opts: {
+  to: string;
+  firstName?: string | null;
+}): Promise<EmailSendResult> {
+  const footerLinks = await getEmailFooterLinks();
+  const { subject, html } = renderStoreCampaignEmail("waitlist_welcome", footerLinks, {
+    firstName: opts.firstName,
+  });
+  return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+}
+
+export async function sendStoreCampaignPreview(opts: {
+  to: string;
+  campaignType: WaitlistCampaignType;
+  customSubject?: string;
+  customHtml?: string;
+}): Promise<EmailSendResult> {
+  const footerLinks = await getEmailFooterLinks();
+  const { subject, html } = renderStoreCampaignEmail(opts.campaignType, footerLinks, {
+    customSubject: opts.customSubject,
+    customHtml: opts.customHtml,
+  });
+  return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+}
+
+export { STORE_CAMPAIGN_SUBJECTS };
 
 export async function sendNewsletterWelcomeEmail(opts: { to: string }): Promise<EmailSendResult> {
   const footerLinks = await getEmailFooterLinks();

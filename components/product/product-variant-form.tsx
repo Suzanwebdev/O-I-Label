@@ -331,6 +331,10 @@ export function ProductVariantForm({ product }: { product: Product }) {
               Buy now
             </Button>
               </>
+            ) : control.softCloseMode ? (
+              <span className="max-w-[140px] text-[10px] leading-snug text-muted-foreground">
+                Purchasing paused
+              </span>
             ) : (
               <span className="text-xs text-muted-foreground">{control.presaleCtaLabel}</span>
             )}

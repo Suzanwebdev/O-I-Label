@@ -16,7 +16,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const b = body as { text?: unknown; href?: unknown; enabled?: unknown; starts_at?: unknown; ends_at?: unknown };
+  const b = body as {
+    text?: unknown;
+    href?: unknown;
+    enabled?: unknown;
+    starts_at?: unknown;
+    ends_at?: unknown;
+    sort_order?: unknown;
+  };
   const text = typeof b.text === "string" ? b.text.trim() : "";
   if (!text) return NextResponse.json({ error: "Banner text is required" }, { status: 400 });
 
@@ -29,6 +36,7 @@ export async function POST(request: Request) {
       enabled: typeof b.enabled === "boolean" ? b.enabled : true,
       starts_at: typeof b.starts_at === "string" ? b.starts_at : null,
       ends_at: typeof b.ends_at === "string" ? b.ends_at : null,
+      sort_order: typeof b.sort_order === "number" ? b.sort_order : 0,
     })
     .select("*")
     .single();
@@ -61,6 +69,7 @@ export async function PATCH(request: Request) {
     enabled?: unknown;
     starts_at?: unknown;
     ends_at?: unknown;
+    sort_order?: unknown;
   };
   const id = typeof b.id === "string" ? b.id : "";
   if (!id) return NextResponse.json({ error: "Banner id is required" }, { status: 400 });
@@ -71,6 +80,9 @@ export async function PATCH(request: Request) {
   if (typeof b.enabled === "boolean") update.enabled = b.enabled;
   if ("starts_at" in b) update.starts_at = typeof b.starts_at === "string" ? b.starts_at : null;
   if ("ends_at" in b) update.ends_at = typeof b.ends_at === "string" ? b.ends_at : null;
+  if (typeof b.sort_order === "number" && Number.isFinite(b.sort_order)) {
+    update.sort_order = b.sort_order;
+  }
 
   const service = createServiceRoleClient();
   const { data, error } = await service

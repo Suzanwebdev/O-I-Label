@@ -1,16 +1,18 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CountdownDisplay } from "@/components/store-control/countdown-display";
-import { HomeNewsletter } from "@/components/home/newsletter-block";
+import { VipWaitlistForm } from "@/components/store-control/vip-waitlist-form";
 
 export type ClosedPageViewModel = {
   eyebrow: string;
   headline: string;
   body: string;
+  heroImageUrl?: string | null;
   countdownTarget: string | null;
   countdownLabel?: string;
   reopeningDate: string | null;
@@ -19,6 +21,9 @@ export type ClosedPageViewModel = {
   showNewsletter?: boolean;
   showPrivateForm?: boolean;
   presaleMode?: boolean;
+  waitlistCount?: number;
+  showWaitlistCount?: boolean;
+  presaleCtaLabel?: string;
 };
 
 export function ClosedPageShell({
@@ -87,6 +92,12 @@ export function ClosedPageShell({
           {model.body}
         </p>
 
+        {model.showWaitlistCount && (model.waitlistCount ?? 0) > 0 ? (
+          <p className="mt-5 text-xs uppercase tracking-[0.16em] text-foreground/80">
+            Join {(model.waitlistCount ?? 0).toLocaleString()} subscribers waiting for launch
+          </p>
+        ) : null}
+
         {reopeningLabel ? (
           <p className="mt-5 text-xs uppercase tracking-[0.16em] text-foreground/80">
             Returning {reopeningLabel}
@@ -99,6 +110,19 @@ export function ClosedPageShell({
             className="mx-auto mt-10 w-full max-w-md"
             label={model.countdownLabel ?? "Launching in"}
           />
+        ) : null}
+
+        {model.heroImageUrl ? (
+          <div className="relative mx-auto mt-10 aspect-[4/5] w-full max-w-sm overflow-hidden rounded-[var(--radius-lg)] border border-border bg-muted shadow-[var(--shadow-soft)]">
+            <Image
+              src={model.heroImageUrl}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, 384px"
+              loading="lazy"
+            />
+          </div>
         ) : null}
 
         {model.showPrivateForm ? (
@@ -128,10 +152,14 @@ export function ClosedPageShell({
           </form>
         ) : null}
 
-        {model.showNewsletter !== false ? (
+        {model.showNewsletter !== false && !model.showPrivateForm ? (
           <div className="mx-auto mt-10 w-full max-w-md rounded-[var(--radius-lg)] border border-border bg-white/70 p-5 shadow-[var(--shadow-soft)]">
-            <p className="mb-4 font-serif-display text-lg text-foreground">Stay in the know</p>
-            <HomeNewsletter compact refined />
+            <p className="mb-4 font-serif-display text-lg text-foreground">VIP waitlist</p>
+            <VipWaitlistForm
+              source="pre-launch"
+              ctaLabel={model.presaleCtaLabel ?? "Join the private list"}
+              compact
+            />
           </div>
         ) : null}
 

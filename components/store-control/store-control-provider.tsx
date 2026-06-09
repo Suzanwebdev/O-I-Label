@@ -27,10 +27,14 @@ export function useStoreControl(): EffectiveStoreControl {
       countdownEnabled: false,
       countdownTarget: null,
       maintenanceMessage: "",
+      supportingMessage: null,
       presaleCtaLabel: "Join waitlist",
       reopeningDate: null,
       launchDate: null,
       presaleDate: null,
+      presaleHeroImageUrl: null,
+      maintenanceHeroImageUrl: null,
+      launchHeroImageUrl: null,
       instagramUrl: null,
       whatsappUrl: null,
       bannerText: null,
@@ -39,6 +43,9 @@ export function useStoreControl(): EffectiveStoreControl {
       closedPageSlug: null,
       requiresPrivateAccess: false,
       isLive: true,
+      showWaitlistCount: true,
+      waitlistCount: 0,
+      softCloseMode: false,
     };
   }
   return ctx;

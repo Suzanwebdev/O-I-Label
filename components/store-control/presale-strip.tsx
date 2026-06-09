@@ -14,6 +14,11 @@ export function PresaleLaunchStrip() {
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Presale preview</p>
         <p className="mt-1 font-serif-display text-lg text-foreground">{control.maintenanceMessage}</p>
+        {control.showWaitlistCount && control.waitlistCount > 0 ? (
+          <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            Join {control.waitlistCount.toLocaleString()} subscribers waiting for launch
+          </p>
+        ) : null}
         <CountdownDisplay
           targetIso={control.countdownTarget}
           className="mx-auto mt-4 max-w-md"

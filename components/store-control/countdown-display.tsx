@@ -34,8 +34,8 @@ export function CountdownDisplay({
   const units = [
     { label: "Days", value: days },
     { label: "Hours", value: hours },
-    { label: "Min", value: minutes },
-    { label: "Sec", value: seconds },
+    { label: "Minutes", value: minutes },
+    { label: "Seconds", value: seconds },
   ];
 
   return (

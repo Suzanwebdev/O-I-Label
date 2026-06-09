@@ -50,6 +50,17 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = `/closed/${slug}`;
     const res = NextResponse.rewrite(url);
+    const use503 =
+      control.storeStatus === "maintenance" && Boolean(settings.maintenance_use_503);
+    if (use503) {
+      return new NextResponse(res.body, {
+        status: 503,
+        headers: {
+          ...Object.fromEntries(res.headers.entries()),
+          "Retry-After": "3600",
+        },
+      });
+    }
     res.headers.set("Retry-After", "3600");
     return res;
   }
@@ -59,9 +70,25 @@ export async function proxy(request: NextRequest) {
     (pathname === "/checkout" || pathname.startsWith("/checkout/"))
   ) {
     const url = request.nextUrl.clone();
+    if (control.storeStatus === "soft_close") {
+      url.pathname = "/";
+      const res = NextResponse.redirect(url);
+      return res;
+    }
     url.pathname =
-      control.storeStatus === "presale" ? "/closed/presale" : `/closed/${control.closedPageSlug ?? "maintenance"}`;
+      control.storeStatus === "presale"
+        ? "/closed/presale"
+        : `/closed/${control.closedPageSlug ?? "maintenance"}`;
     return NextResponse.rewrite(url);
+  }
+
+  if (
+    control.softCloseMode &&
+    (pathname === "/cart" || pathname.startsWith("/cart/"))
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
   }
 
   return updateSession(request);
