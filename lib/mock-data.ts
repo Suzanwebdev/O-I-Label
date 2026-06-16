@@ -531,6 +531,9 @@ export const mockProducts: Product[] = raw.map((p, i) => {
   };
 });
 
+/** Slugs seeded by scripts/seed.ts — safe to remove from production when going live. */
+export const SEED_PRODUCT_SLUGS: readonly string[] = raw.map((p) => p.slug);
+
 export function getProductBySlug(slug: string) {
   return mockProducts.find((p) => p.slug === slug);
 }

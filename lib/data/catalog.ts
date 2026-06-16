@@ -1,5 +1,4 @@
 import type { Product, ProductBadge, ProductVariant } from "@/lib/types";
-import { mockProducts } from "@/lib/mock-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type DbVariant = {
@@ -93,10 +92,10 @@ export async function listProducts(): Promise<Product[]> {
       .eq("is_active", true)
       .order("created_at", { ascending: false });
 
-    if (error || !data?.length) return mockProducts;
+    if (error || !data?.length) return [];
     return (data as unknown as DbProduct[]).map(mapRow);
   } catch {
-    return mockProducts;
+    return [];
   }
 }
 
@@ -126,11 +125,10 @@ export async function getProductBySlugFromDb(
       return mapRow(data as unknown as DbProduct);
     }
   } catch {
-    /* fallback below */
+    /* no mock fallback — only real catalog rows */
   }
 
-  const { getProductBySlug } = await import("@/lib/mock-data");
-  return getProductBySlug(normalized) ?? null;
+  return null;
 }
 
 export async function listCategoriesFromDb(): Promise<
