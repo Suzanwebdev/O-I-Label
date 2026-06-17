@@ -1,5 +1,16 @@
 {
   "projectId": "prj_zHiA0csAwJYZISjI55HOPzpASkF8",
   "orgId": "team_r2Yfvv8OB5WKAvD9TlWXXr2G",
-  "projectName": "o-i-label"
+  "projectName": "o-i-label",
+  "settings": {
+    "createdAt": 1776079627156,
+    "framework": "nextjs",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
 }

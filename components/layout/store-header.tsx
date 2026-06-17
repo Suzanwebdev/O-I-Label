@@ -44,13 +44,16 @@ const megaLinks = [
 /** Tighter mobile touch targets — icons stay in one right-side group */
 const mobileNavIconBtn = "max-lg:size-9 max-lg:shrink-0";
 
-export function StoreHeader() {
+type NavCategory = { slug: string; name: string };
+
+export function StoreHeader({ categories }: { categories: NavCategory[] }) {
   const router = useRouter();
   const { lines, toggleCart } = useCart();
   const { count: wishlistCount } = useWishlist();
   const [q, setQ] = React.useState("");
   const [isScrolled, setIsScrolled] = React.useState(false);
   const count = lines.reduce((n, l) => n + l.quantity, 0);
+  const shopCategories = categories.length > 0 ? categories : mockCategories;
 
   React.useEffect(() => {
     let raf = 0;
@@ -132,7 +135,7 @@ export function StoreHeader() {
                       Categories
                     </p>
                     <ul className="grid grid-cols-2 gap-2">
-                      {mockCategories.slice(0, 10).map((c) => (
+                      {shopCategories.slice(0, 10).map((c) => (
                         <li key={c.slug}>
                           <NavigationMenuLink asChild>
                             <Link

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus, ShoppingBag, X } from "lucide-react";
 import { useCart } from "@/components/providers/cart-provider";
+import { useStoreControl } from "@/components/store-control/store-control-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function CartDrawer() {
+  const control = useStoreControl();
   const {
     lines,
     selectedLines,
@@ -150,15 +152,24 @@ export function CartDrawer() {
           ) : null}
           <Separator className="mb-4" />
           <div className="flex flex-col gap-2">
-            <Button
-              asChild
-              className="w-full"
-              disabled={lines.length === 0 || selectedLines.length === 0}
-            >
-              <Link href="/checkout" onClick={closeCart}>
-                Checkout
-              </Link>
-            </Button>
+            {control.checkoutAllowed ? (
+              <Button
+                asChild
+                className="w-full"
+                disabled={lines.length === 0 || selectedLines.length === 0}
+              >
+                <Link href="/checkout" onClick={closeCart}>
+                  Checkout
+                </Link>
+              </Button>
+            ) : (
+              <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                {control.softCloseMode
+                  ? control.maintenanceMessage ||
+                    "Checkout is temporarily unavailable while we prepare our next edit."
+                  : "Checkout opens when the collection launches. Join the waitlist on any product page."}
+              </p>
+            )}
             <Button variant="outline" asChild className="w-full">
               <Link href="/cart" onClick={closeCart}>
                 View full bag

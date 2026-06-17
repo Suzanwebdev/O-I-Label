@@ -8,6 +8,7 @@ import { StoreAnnouncementBanner } from "@/components/store-control/store-banner
 import { PresaleLaunchStrip } from "@/components/store-control/presale-strip";
 import { SoftCloseBanner } from "@/components/store-control/soft-close-banner";
 import { getHomepageCms } from "@/lib/data/homepage-cms";
+import { listCategoriesFromDb } from "@/lib/data/catalog";
 import { getEffectiveStoreControl } from "@/lib/store-control/server";
 
 export default async function StoreLayout({
@@ -15,7 +16,11 @@ export default async function StoreLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [{ footer }, control] = await Promise.all([getHomepageCms(), getEffectiveStoreControl()]);
+  const [{ footer }, control, categories] = await Promise.all([
+    getHomepageCms(),
+    getEffectiveStoreControl(),
+    listCategoriesFromDb(),
+  ]);
 
   return (
     <StoreControlProvider control={control}>
@@ -24,7 +29,7 @@ export default async function StoreLayout({
       <StoreAnnouncementBanner />
       <SoftCloseBanner />
       <PresaleLaunchStrip />
-      <StoreHeader />
+      <StoreHeader categories={categories} />
       <main className="flex-1">{children}</main>
       <StoreFooter footer={footer} />
       <CartDrawer />

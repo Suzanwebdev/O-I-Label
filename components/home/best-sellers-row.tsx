@@ -3,15 +3,13 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/store/price";
-import { useCart } from "@/components/providers/cart-provider";
+import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { HOME_BEST_SELLERS_BATCH } from "@/lib/shop-utils";
 
 export function BestSellersRow({ products }: { products: Product[] }) {
-  const { addItem, openCart } = useCart();
   const [visibleCount, setVisibleCount] = React.useState(HOME_BEST_SELLERS_BATCH);
 
   const items = React.useMemo(
@@ -70,38 +68,21 @@ export function BestSellersRow({ products }: { products: Product[] }) {
                   compareAtGhs={compare}
                   className="[&_span:first-child]:text-[15px] [&_span:first-child]:font-semibold"
                 />
-                <div className="flex flex-col gap-2 pt-0.5 sm:flex-row">
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-10 min-h-10 flex-1 gap-2 bg-black text-[11px] font-semibold text-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.55)] hover:bg-black/90 sm:h-9 sm:min-h-9"
-                    onClick={() => {
-                      addItem({
-                        variantId: v.id,
-                        productId: product.id,
-                        productSlug: product.slug,
-                        name: product.name,
-                        image,
-                        size: v.size,
-                        color: v.color,
-                        quantity: 1,
-                        unitPriceGhs: v.price_ghs,
-                      });
-                      openCart();
-                    }}
-                  >
-                    <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
-                    Add to cart
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="h-10 min-h-10 flex-1 border-black/20 text-[11px] font-medium sm:h-9 sm:min-h-9"
-                  >
-                    <Link href={`/product/${product.slug}`}>Buy now</Link>
-                  </Button>
-                </div>
+                <PurchaseActions
+                  productSlug={product.slug}
+                  layout="row"
+                  cartPayload={{
+                    variantId: v.id,
+                    productId: product.id,
+                    productSlug: product.slug,
+                    name: product.name,
+                    image,
+                    size: v.size,
+                    color: v.color,
+                    quantity: 1,
+                    unitPriceGhs: v.price_ghs,
+                  }}
+                />
               </div>
             </article>
           );

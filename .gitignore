@@ -39,6 +39,7 @@ yarn-error.log*
 # vercel (commit project.json so CI can deploy; never commit tokens)
 .vercel/*
 !.vercel/project.json
+vercel-deploy-log*.txt
 
 # typescript
 *.tsbuildinfo

@@ -100,8 +100,9 @@ export async function getStoreControlEdgeCached(): Promise<{
     supabase.from("store_banners").select("*").order("sort_order"),
   ]);
 
-  let settings = mapRow((settingsData ?? { store_status: "live" }) as Record<string, unknown>);
-  applyScheduledTransitions(settings);
+  const settings = applyScheduledTransitions(
+    mapRow((settingsData ?? { store_status: "live" }) as Record<string, unknown>)
+  ).settings;
 
   const banners = (bannersData ?? []) as StoreBannerRow[];
   const control = resolveEffectiveStoreControl(settings, banners);

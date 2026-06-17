@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import type { Product } from "@/lib/types";
 import {
   Dialog,
@@ -11,9 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Price } from "@/components/store/price";
 import { BadgeSet } from "@/components/store/badge-set";
-import { Button } from "@/components/ui/button";
-import { useCart } from "@/components/providers/cart-provider";
-import { ShoppingBag } from "lucide-react";
+import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function QuickViewModal({
@@ -25,7 +22,6 @@ export function QuickViewModal({
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
-  const { addItem, openCart } = useCart();
   if (!product) return null;
   const v = product.variants[0];
   const preserveQuality = shouldBypassImageOptimization(product.images[0] ?? "");
@@ -56,34 +52,22 @@ export function QuickViewModal({
             <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground">
               {product.description}
             </p>
-            <div className="mt-auto flex flex-col gap-2 pt-4">
-              <Button
-                type="button"
-                className="w-full gap-2 bg-black font-semibold text-white shadow-[0_10px_28px_-14px_rgba(0,0,0,0.6)] hover:bg-black/90"
-                onClick={() => {
-                  addItem({
-                    variantId: v.id,
-                    productId: product.id,
-                    productSlug: product.slug,
-                    name: product.name,
-                    image: product.images[0],
-                    size: v.size,
-                    color: v.color,
-                    quantity: 1,
-                    unitPriceGhs: v.price_ghs,
-                  });
-                  openCart();
-                  onOpenChange(false);
+            <div className="mt-auto pt-4">
+              <PurchaseActions
+                productSlug={product.slug}
+                onAfterAdd={() => onOpenChange(false)}
+                cartPayload={{
+                  variantId: v.id,
+                  productId: product.id,
+                  productSlug: product.slug,
+                  name: product.name,
+                  image: product.images[0],
+                  size: v.size,
+                  color: v.color,
+                  quantity: 1,
+                  unitPriceGhs: v.price_ghs,
                 }}
-              >
-                <ShoppingBag className="h-4 w-4 shrink-0" />
-                Add to cart
-              </Button>
-              <Button asChild variant="outline" className="w-full border-black/20 font-medium">
-                <Link href={`/product/${product.slug}`} onClick={() => onOpenChange(false)}>
-                  Buy now
-                </Link>
-              </Button>
+              />
             </div>
           </div>
         </div>

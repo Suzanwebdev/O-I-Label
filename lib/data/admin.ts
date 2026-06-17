@@ -371,7 +371,10 @@ function sortAdminInventoryRows(
         new Date(a.variant_created_at).getTime() - new Date(b.variant_created_at).getTime()
       );
     })
-    .map(({ variant_created_at: _ignored, ...row }) => row);
+    .map(({ variant_created_at: _variantCreatedAt, ...row }) => {
+      void _variantCreatedAt;
+      return row;
+    });
 }
 
 export async function listAdminInventory(opts?: {
