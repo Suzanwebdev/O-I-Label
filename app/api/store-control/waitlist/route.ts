@@ -3,8 +3,12 @@ import { sendStoreWaitlistWelcomeEmail } from "@/lib/email/resend";
 import { resolveNewsletterPhone } from "@/lib/newsletter/subscribe-utils";
 import { joinStoreWaitlist, normalizeWaitlistEmail } from "@/lib/store-control/waitlist";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/http/rate-limit";
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit(request, "store-control:waitlist", 15);
+  if (limited) return limited;
+
   let body: unknown;
   try {
     body = await request.json();

@@ -3,13 +3,17 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { Product } from "@/lib/types";
+import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import {
+  isStorefrontProductInStock,
+  primaryStorefrontVariant,
+} from "@/lib/catalog/storefront-product";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/store/price";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { HOME_BEST_SELLERS_BATCH } from "@/lib/shop-utils";
 
-export function BestSellersRow({ products }: { products: Product[] }) {
+export function BestSellersRow({ products }: { products: StorefrontProduct[] }) {
   const [visibleCount, setVisibleCount] = React.useState(HOME_BEST_SELLERS_BATCH);
 
   const items = React.useMemo(
@@ -33,8 +37,9 @@ export function BestSellersRow({ products }: { products: Product[] }) {
       <div className="grid grid-cols-2 gap-4 pb-1 pt-0.5 md:grid-cols-3 md:gap-5 lg:grid-cols-4 lg:pb-0">
         {visibleItems.map((product) => {
           const image = product.images[0];
-          const v = product.variants[0]!;
+          const v = primaryStorefrontVariant(product);
           const compare = v.compare_at_ghs;
+          const inStock = isStorefrontProductInStock(product);
 
           return (
             <article key={product.id} className="w-auto min-w-0">
@@ -68,21 +73,25 @@ export function BestSellersRow({ products }: { products: Product[] }) {
                   compareAtGhs={compare}
                   className="[&_span:first-child]:text-[15px] [&_span:first-child]:font-semibold"
                 />
-                <PurchaseActions
-                  productSlug={product.slug}
-                  layout="row"
-                  cartPayload={{
-                    variantId: v.id,
-                    productId: product.id,
-                    productSlug: product.slug,
-                    name: product.name,
-                    image,
-                    size: v.size,
-                    color: v.color,
-                    quantity: 1,
-                    unitPriceGhs: v.price_ghs,
-                  }}
-                />
+                {inStock ? (
+                  <PurchaseActions
+                    productSlug={product.slug}
+                    layout="row"
+                    cartPayload={{
+                      variantId: v.id,
+                      productId: product.id,
+                      productSlug: product.slug,
+                      name: product.name,
+                      image,
+                      size: v.size,
+                      color: v.color,
+                      quantity: 1,
+                      unitPriceGhs: v.price_ghs,
+                    }}
+                  />
+                ) : (
+                  <p className="text-[11px] text-muted-foreground md:text-xs">Out of stock</p>
+                )}
               </div>
             </article>
           );

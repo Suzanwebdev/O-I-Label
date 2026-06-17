@@ -3,14 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import type { Product } from "@/lib/types";
+import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import {
+  isStorefrontProductInStock,
+  primaryStorefrontVariant,
+} from "@/lib/catalog/storefront-product";
 import { Container } from "@/components/store/container";
 import { Heading } from "@/components/store/heading";
 import { Price } from "@/components/store/price";
 import { BadgeSet } from "@/components/store/badge-set";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 
-export function TrendingStrip({ products }: { products: Product[] }) {
+export function TrendingStrip({ products }: { products: StorefrontProduct[] }) {
   const list = products.length ? products : [];
   return (
     <section className="border-y border-border bg-background py-12 md:py-16">
@@ -20,7 +24,8 @@ export function TrendingStrip({ products }: { products: Product[] }) {
         </Heading>
         <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 md:gap-6">
           {list.map((p, i) => {
-            const v = p.variants[0];
+            const v = primaryStorefrontVariant(p);
+            const inStock = isStorefrontProductInStock(p);
             return (
               <motion.div
                 key={p.id}
@@ -51,21 +56,25 @@ export function TrendingStrip({ products }: { products: Product[] }) {
                       <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{p.description.trim()}</p>
                     ) : null}
                     <Price amountGhs={v.price_ghs} compareAtGhs={v.compare_at_ghs} />
-                    <PurchaseActions
-                      productSlug={p.slug}
-                      layout="row"
-                      cartPayload={{
-                        variantId: v.id,
-                        productId: p.id,
-                        productSlug: p.slug,
-                        name: p.name,
-                        image: p.images[0],
-                        size: v.size,
-                        color: v.color,
-                        quantity: 1,
-                        unitPriceGhs: v.price_ghs,
-                      }}
-                    />
+                    {inStock ? (
+                      <PurchaseActions
+                        productSlug={p.slug}
+                        layout="row"
+                        cartPayload={{
+                          variantId: v.id,
+                          productId: p.id,
+                          productSlug: p.slug,
+                          name: p.name,
+                          image: p.images[0],
+                          size: v.size,
+                          color: v.color,
+                          quantity: 1,
+                          unitPriceGhs: v.price_ghs,
+                        }}
+                      />
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Out of stock</p>
+                    )}
                   </div>
                 </div>
               </motion.div>

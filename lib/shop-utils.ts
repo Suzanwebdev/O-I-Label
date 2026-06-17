@@ -1,3 +1,5 @@
+import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import { isVariantInStock } from "@/lib/catalog/storefront-product";
 import type { OccasionTag, Product, ProductBadge } from "@/lib/types";
 
 const OCCASION_TAGS: OccasionTag[] = [
@@ -13,8 +15,10 @@ export function occasionFromQueryParam(raw: string): OccasionTag | undefined {
   return OCCASION_TAGS.includes(k) ? k : undefined;
 }
 
-export function filterProducts(
-  products: Product[],
+type CatalogProduct = StorefrontProduct | Product;
+
+export function filterProducts<T extends CatalogProduct>(
+  products: T[],
   opts: {
     q?: string;
     category?: string;
@@ -73,15 +77,15 @@ export function filterProducts(
     );
   }
   if (opts.inStockOnly) {
-    list = list.filter((p) => p.variants.some((v) => v.stock > 0));
+    list = list.filter((p) => p.variants.some((v) => isVariantInStock(v)));
   }
   return list;
 }
 
-export function sortProducts(
-  products: Product[],
+export function sortProducts<T extends CatalogProduct>(
+  products: T[],
   sort: string
-): Product[] {
+): T[] {
   const list = [...products];
   switch (sort) {
     case "price_asc":

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { lookupOrderForTracking } from "@/lib/data/track-order";
+import { enforceRateLimit } from "@/lib/http/rate-limit";
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit(request, "track-order", 20);
+  if (limited) return limited;
+
   let body: unknown;
   try {
     body = await request.json();

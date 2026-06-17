@@ -3,7 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import type { Product } from "@/lib/types";
+import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import {
+  isStorefrontProductInStock,
+  primaryStorefrontVariant,
+} from "@/lib/catalog/storefront-product";
 import { BadgeSet } from "@/components/store/badge-set";
 import { Price } from "@/components/store/price";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
@@ -15,14 +19,15 @@ export function ProductCard({
   className,
   priority,
 }: {
-  product: Product;
+  product: StorefrontProduct;
   className?: string;
   priority?: boolean;
 }) {
   const image = product.images[0];
   const preserveQuality = shouldBypassImageOptimization(image);
-  const v = product.variants[0];
+  const v = primaryStorefrontVariant(product);
   const compare = v.compare_at_ghs;
+  const inStock = isStorefrontProductInStock(product);
 
   return (
     <motion.article
@@ -64,21 +69,25 @@ export function ProductCard({
           <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{product.description.trim()}</p>
         ) : null}
         <Price amountGhs={v.price_ghs} compareAtGhs={compare} />
-        <PurchaseActions
-          productSlug={product.slug}
-          className="mt-auto pt-1"
-          cartPayload={{
-            variantId: v.id,
-            productId: product.id,
-            productSlug: product.slug,
-            name: product.name,
-            image,
-            size: v.size,
-            color: v.color,
-            quantity: 1,
-            unitPriceGhs: v.price_ghs,
-          }}
-        />
+        {inStock ? (
+          <PurchaseActions
+            productSlug={product.slug}
+            className="mt-auto pt-1"
+            cartPayload={{
+              variantId: v.id,
+              productId: product.id,
+              productSlug: product.slug,
+              name: product.name,
+              image,
+              size: v.size,
+              color: v.color,
+              quantity: 1,
+              unitPriceGhs: v.price_ghs,
+            }}
+          />
+        ) : (
+          <p className="mt-auto pt-1 text-sm text-muted-foreground">Out of stock</p>
+        )}
       </div>
     </motion.article>
   );

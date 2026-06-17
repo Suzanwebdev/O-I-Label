@@ -1,11 +1,11 @@
-import type { Product } from "@/lib/types";
+import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
 import { ProductCard } from "@/components/store/product-card";
 import { cn } from "@/lib/utils";
 
 const MOBILE_VISIBLE = 10;
 const DESKTOP_VISIBLE = 8;
 
-export function ProductYouMayAlsoLike({ products }: { products: Product[] }) {
+export function ProductYouMayAlsoLike({ products }: { products: StorefrontProduct[] }) {
   const items = products.slice(0, MOBILE_VISIBLE);
   if (items.length === 0) return null;
 

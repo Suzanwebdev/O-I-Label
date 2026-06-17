@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShopCatalog } from "@/components/shop/shop-catalog";
+import { toStorefrontProducts } from "@/lib/catalog/storefront-product";
 import { listCategoriesFromDb, listProducts } from "@/lib/data/catalog";
 import { buildCategoryDescription, buildCategoryKeywords } from "@/lib/seo/descriptions";
 import { buildPageMetadata } from "@/lib/seo/metadata";
@@ -34,10 +35,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 export default async function CategoryShopPage({ params }: CategoryPageProps) {
   const { category } = await params;
-  const [products, categories] = await Promise.all([
+  const [catalog, categories] = await Promise.all([
     listProducts(),
     listCategoriesFromDb(),
   ]);
+  const products = toStorefrontProducts(catalog);
 
   const selected = categories.find((c) => c.slug === category);
   if (!selected) {

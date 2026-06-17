@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Product } from "@/lib/types";
+import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import { isVariantInStock } from "@/lib/catalog/storefront-product";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/components/providers/cart-provider";
@@ -15,7 +16,22 @@ import { Check, Heart, Minus, Plus, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveSwatchColor } from "@/lib/color-swatch";
 
-export function ProductVariantForm({ product }: { product: Product }) {
+const MAX_QTY = 10;
+
+function variantMatchesSelection(
+  variant: StorefrontProduct["variants"][number],
+  size: string,
+  color: string,
+  sizes: string[],
+  colors: string[]
+) {
+  return (
+    (sizes.length ? variant.size === size : true) &&
+    (colors.length ? variant.color === color : true)
+  );
+}
+
+export function ProductVariantForm({ product }: { product: StorefrontProduct }) {
   const router = useRouter();
   const control = useStoreControl();
   const { addItem, openCart, beginBuyNowCheckout } = useCart();
@@ -33,17 +49,19 @@ export function ProductVariantForm({ product }: { product: Product }) {
   const [announce, setAnnounce] = React.useState("");
 
   const variant = React.useMemo(() => {
-    const exact = product.variants.find(
-      (v) => (sizes.length ? v.size === size : true) && (colors.length ? v.color === color : true)
+    const exact = product.variants.find((v) =>
+      variantMatchesSelection(v, size, color, sizes, colors)
     );
     if (exact) return exact;
 
     if (sizes.length && colors.length) {
-      const bySize = product.variants.find((v) => v.size === size && v.stock > 0);
+      const bySize = product.variants.find(
+        (v) => v.size === size && isVariantInStock(v)
+      );
       if (bySize) return bySize;
     }
-    return product.variants[0];
-  }, [product.variants, size, color, sizes.length, colors.length]);
+    return product.variants.find((v) => isVariantInStock(v)) ?? product.variants[0];
+  }, [product.variants, size, color, sizes, colors]);
 
   React.useEffect(() => {
     if (sizes.length && variant.size && variant.size !== size) {
@@ -54,33 +72,31 @@ export function ProductVariantForm({ product }: { product: Product }) {
     }
   }, [variant.id, variant.size, variant.color, sizes.length, colors.length, size, color]);
 
-  const availableColors = React.useMemo(() => {
-    if (!sizes.length || !size) return colors;
-    return Array.from(
-      new Set(
-        product.variants
-          .filter((v) => v.size === size)
-          .map((v) => v.color)
-          .filter((c): c is string => Boolean(c))
-      )
-    );
-  }, [colors, product.variants, size, sizes.length]);
+  const sizeIsAvailable = React.useCallback(
+    (s: string) =>
+      product.variants.some(
+        (v) =>
+          v.size === s &&
+          (!colors.length || !color || v.color === color) &&
+          isVariantInStock(v)
+      ),
+    [color, colors.length, product.variants]
+  );
 
-  const availableSizes = React.useMemo(() => {
-    if (!colors.length || !color) return sizes;
-    return Array.from(
-      new Set(
-        product.variants
-          .filter((v) => v.color === color)
-          .map((v) => v.size)
-          .filter((s): s is string => Boolean(s))
-      )
-    );
-  }, [color, colors.length, product.variants, sizes]);
+  const colorIsAvailable = React.useCallback(
+    (c: string) =>
+      product.variants.some(
+        (v) =>
+          v.color === c &&
+          (!sizes.length || !size || v.size === size) &&
+          isVariantInStock(v)
+      ),
+    [product.variants, size, sizes.length]
+  );
 
-  const oos = variant.stock <= 0;
+  const oos = !isVariantInStock(variant);
   const isSaved = hasItem(product.id);
-  const quantityMax = Math.max(1, Math.min(variant.stock || 1, 10));
+  const quantityMax = oos ? 1 : MAX_QTY;
   const safeQty = Math.min(qty, quantityMax);
 
   React.useEffect(() => {
@@ -126,7 +142,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
           <div className="flex flex-wrap items-center gap-2">
             {sizes.map((s) => {
               const selected = s === size;
-              const enabled = availableSizes.includes(s);
+              const enabled = sizeIsAvailable(s);
               return (
                 <button
                   key={s}
@@ -155,7 +171,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
             <div className="flex flex-wrap items-center gap-2">
               {colors.map((c) => {
                 const active = c === color;
-                const enabled = availableColors.includes(c);
+                const enabled = colorIsAvailable(c);
                 const swatch = resolveSwatchColor(c);
                 return (
                   <button
@@ -196,7 +212,7 @@ export function ProductVariantForm({ product }: { product: Product }) {
               type="button"
               className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40"
               onClick={() => setQty((n) => Math.max(1, n - 1))}
-              disabled={safeQty <= 1}
+              disabled={safeQty <= 1 || oos}
               aria-label="Decrease quantity"
             >
               <Minus className="h-4 w-4" />
@@ -307,29 +323,29 @@ export function ProductVariantForm({ product }: { product: Product }) {
             </Button>
             {control.checkoutAllowed ? (
               <>
-            <Button
-              type="button"
-              size="sm"
-              className="gap-1.5 rounded-[var(--radius-lg)] bg-black px-3 font-semibold text-white shadow-[0_6px_18px_-8px_rgba(0,0,0,0.55)] hover:bg-black/90"
-              disabled={oos}
-              onClick={() => {
-                addVariantToCart(safeQty);
-                openCart();
-              }}
-            >
-              <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
-              Add to cart
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-[var(--radius-lg)] border-black/20 px-3 font-medium"
-              disabled={oos}
-              onClick={() => buyNow(safeQty)}
-            >
-              Buy now
-            </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="gap-1.5 rounded-[var(--radius-lg)] bg-black px-3 font-semibold text-white shadow-[0_6px_18px_-8px_rgba(0,0,0,0.55)] hover:bg-black/90"
+                  disabled={oos}
+                  onClick={() => {
+                    addVariantToCart(safeQty);
+                    openCart();
+                  }}
+                >
+                  <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
+                  Add to cart
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-[var(--radius-lg)] border-black/20 px-3 font-medium"
+                  disabled={oos}
+                  onClick={() => buyNow(safeQty)}
+                >
+                  Buy now
+                </Button>
               </>
             ) : control.softCloseMode ? (
               <span className="max-w-[140px] text-[10px] leading-snug text-muted-foreground">

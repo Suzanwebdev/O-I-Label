@@ -12,6 +12,7 @@ import { getHomepageCms } from "@/lib/data/homepage-cms";
 import { heroSlidesForUi } from "@/lib/home/homepage-cms";
 import { mergeShopOccasionItemsFromSections } from "@/lib/home/shop-by-occasion";
 import { buildHomeBestSellersList } from "@/lib/shop-utils";
+import { toStorefrontProducts } from "@/lib/catalog/storefront-product";
 import { BestSellersRow } from "@/components/home/best-sellers-row";
 import { HomeHero } from "@/components/home/home-hero";
 import { OccasionSection } from "@/components/home/occasion-section";
@@ -46,7 +47,7 @@ export default async function HomePage() {
   const heroSlides = heroSlidesForUi(cms.hero.slides);
   const labels = cms.homepage_sections;
 
-  const bestSellers = buildHomeBestSellersList(catalog);
+  const bestSellers = toStorefrontProducts(buildHomeBestSellersList(catalog));
 
   return (
     <>

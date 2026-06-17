@@ -3,6 +3,7 @@ import {
   incrementDiscountUsage,
   resolveCheckoutDiscount,
 } from "@/lib/checkout/discount";
+import { ensureCustomerRecord } from "@/lib/customers/ensure-customer";
 import {
   aggregateVariantQuantities,
   findInsufficientStock,
@@ -10,7 +11,8 @@ import {
 import { initiatePayment } from "@/lib/payments";
 import { resolveMoolreCallbackUrl } from "@/lib/payments/providers/moolre";
 import { assertCheckoutAllowed } from "@/lib/store-control/server";
-import { createServiceRoleClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/http/rate-limit";
 
 type CheckoutLineInput = {
   variantId?: unknown;
@@ -34,6 +36,9 @@ function orderNumber(): string {
 }
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit(request, "checkout:initialize", 30);
+  if (limited) return limited;
+
   const checkoutGate = await assertCheckoutAllowed();
   if (!checkoutGate.ok) {
     return NextResponse.json(
@@ -93,6 +98,29 @@ export async function POST(request: Request) {
   }
 
   const service = createServiceRoleClient();
+
+  let customerId: string | null = null;
+  try {
+    const authClient = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+    if (user?.id && user.email) {
+      const fullName = `${firstName} ${lastName}`.trim() || null;
+      const ensured = await ensureCustomerRecord(service, {
+        userId: user.id,
+        email: user.email,
+        fullName,
+        phone,
+      });
+      if (ensured.ok) {
+        customerId = ensured.customerId;
+      }
+    }
+  } catch {
+    /* guest checkout */
+  }
+
   const variantIds = [...new Set(parsedLines.map((l) => l.variantId))];
   const { data: variants, error: variantErr } = await service
     .from("variants")
@@ -115,15 +143,10 @@ export async function POST(request: Request) {
     variants.map((v) => ({ id: v.id, stock: Number(v.stock ?? 0), sku: v.sku }))
   );
   if (insufficient.length) {
-    const detail = insufficient
-      .map((s) => `${s.sku}: only ${s.available} left (${s.requested} requested)`)
-      .join("; ");
     return NextResponse.json(
       {
-        error: "Not enough stock for one or more items",
+        error: "Not enough stock for one or more items. Please adjust quantities and try again.",
         code: "insufficient_stock",
-        items: insufficient,
-        detail,
       },
       { status: 409 }
     );
@@ -161,6 +184,7 @@ export async function POST(request: Request) {
     .from("orders")
     .insert({
       order_number: orderNumber(),
+      ...(customerId ? { customer_id: customerId } : {}),
       email,
       phone,
       status: "pending",

@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Container } from "@/components/store/container";
@@ -15,7 +16,7 @@ export default function LoginClient() {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const next = searchParams.get("next") || "/";
+  const next = safeRedirectPath(searchParams.get("next") ?? undefined, "/account");
   const notice = searchParams.get("notice");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -78,6 +79,11 @@ export default function LoginClient() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          <p className="text-right text-xs">
+            <Link href="/forgot-password" className="text-navy underline-offset-4 hover:underline">
+              Forgot password?
+            </Link>
+          </p>
           <Button type="submit" disabled={busy || !email} className="w-full">
             {busy ? "Signing in..." : "Sign in"}
           </Button>

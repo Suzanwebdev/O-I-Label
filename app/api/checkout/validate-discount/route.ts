@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { resolveCheckoutDiscount } from "@/lib/checkout/discount";
 import { assertCheckoutAllowed } from "@/lib/store-control/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/http/rate-limit";
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit(request, "checkout:validate-discount", 40);
+  if (limited) return limited;
+
   const checkoutGate = await assertCheckoutAllowed();
   if (!checkoutGate.ok) {
     return NextResponse.json(

@@ -5,10 +5,14 @@ import {
   resolveNewsletterPhone,
 } from "@/lib/newsletter/subscribe-utils";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/http/rate-limit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit(request, "newsletter:subscribe", 15);
+  if (limited) return limited;
+
   let body: unknown;
   try {
     body = await request.json();

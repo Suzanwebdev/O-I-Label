@@ -1,7 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import type { Product } from "@/lib/types";
+import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import {
+  isStorefrontProductInStock,
+  primaryStorefrontVariant,
+} from "@/lib/catalog/storefront-product";
 import {
   Dialog,
   DialogContent,
@@ -18,12 +22,13 @@ export function QuickViewModal({
   open,
   onOpenChange,
 }: {
-  product: Product | null;
+  product: StorefrontProduct | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
   if (!product) return null;
-  const v = product.variants[0];
+  const v = primaryStorefrontVariant(product);
+  const inStock = isStorefrontProductInStock(product);
   const preserveQuality = shouldBypassImageOptimization(product.images[0] ?? "");
 
   return (
@@ -48,26 +53,31 @@ export function QuickViewModal({
                 {product.name}
               </DialogTitle>
             </DialogHeader>
-            <Price amountGhs={v.price_ghs} compareAtGhs={v.compare_at_ghs} />
+            <div className="flex items-center justify-between gap-3">
+              <Price amountGhs={v.price_ghs} compareAtGhs={v.compare_at_ghs} />
+              {!inStock ? <span className="text-sm text-muted-foreground">Out of stock</span> : null}
+            </div>
             <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground">
               {product.description}
             </p>
             <div className="mt-auto pt-4">
-              <PurchaseActions
-                productSlug={product.slug}
-                onAfterAdd={() => onOpenChange(false)}
-                cartPayload={{
-                  variantId: v.id,
-                  productId: product.id,
-                  productSlug: product.slug,
-                  name: product.name,
-                  image: product.images[0],
-                  size: v.size,
-                  color: v.color,
-                  quantity: 1,
-                  unitPriceGhs: v.price_ghs,
-                }}
-              />
+              {inStock ? (
+                <PurchaseActions
+                  productSlug={product.slug}
+                  onAfterAdd={() => onOpenChange(false)}
+                  cartPayload={{
+                    variantId: v.id,
+                    productId: product.id,
+                    productSlug: product.slug,
+                    name: product.name,
+                    image: product.images[0],
+                    size: v.size,
+                    color: v.color,
+                    quantity: 1,
+                    unitPriceGhs: v.price_ghs,
+                  }}
+                />
+              ) : null}
             </div>
           </div>
         </div>

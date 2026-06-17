@@ -115,10 +115,13 @@ function secretsMatch(provided: string, expected: string): boolean {
   return crypto.timingSafeEqual(a, b);
 }
 
+function isProductionRuntime(): boolean {
+  return process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+}
+
 /**
  * Moolre webhooks are unsigned JSON posts (see docs.moolre.com payment webhook).
- * Optional MOOLRE_WEBHOOK_SECRET may be sent via header, query, or body — if absent,
- * we still accept payloads that look like a successful PV05 payment notification.
+ * In production, MOOLRE_WEBHOOK_SECRET must be configured and supplied on each request.
  */
 export function verifyMoolreWebhookSignature(
   _payload: string,
@@ -127,7 +130,11 @@ export function verifyMoolreWebhookSignature(
 ): boolean {
   const expected =
     process.env.MOOLRE_WEBHOOK_SECRET?.trim() || process.env.MOOLRE_CALLBACK_SECRET?.trim();
-  if (!expected) return true;
+
+  if (!expected) {
+    if (isProductionRuntime()) return false;
+    return isTrustedMoolrePaymentPayload(body);
+  }
 
   if (providedSecret && secretsMatch(providedSecret, expected)) return true;
 
@@ -140,7 +147,7 @@ export function verifyMoolreWebhookSignature(
         : "";
   if (bodySecret && secretsMatch(bodySecret, expected)) return true;
 
-  return isTrustedMoolrePaymentPayload(body);
+  return false;
 }
 
 function isTrustedMoolrePaymentPayload(body: unknown): boolean {

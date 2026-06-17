@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Product, ProductBadge } from "@/lib/types";
+import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
 import { filterProducts, sortProducts } from "@/lib/shop-utils";
+import type { ProductBadge } from "@/lib/types";
 
 const TAG_PAGE_TITLES: Partial<Record<ProductBadge, string>> = {
   new: "New arrivals",
@@ -45,13 +46,13 @@ export function ShopCatalog({
   categorySlug,
   title,
 }: {
-  products: Product[];
+  products: StorefrontProduct[];
   categorySlug?: string;
   title?: string;
 }) {
   const router = useRouter();
   const sp = useSearchParams();
-  const [quickView, setQuickView] = React.useState<Product | null>(null);
+  const [quickView, setQuickView] = React.useState<StorefrontProduct | null>(null);
 
   const q = sp.get("q") ?? "";
   const tag = sp.get("tag") ?? "";

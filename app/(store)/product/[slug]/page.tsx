@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { getProductBySlugFromDb } from "@/lib/data/catalog";
+import { toStorefrontProduct, toStorefrontProducts } from "@/lib/catalog/storefront-product";
 import { Container } from "@/components/store/container";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductVariantForm } from "@/components/product/product-variant-form";
@@ -45,7 +46,8 @@ export default async function ProductPage({ params }: Props) {
     notFound();
   }
 
-  const relatedProducts = await getRelatedProducts(product, 10);
+  const relatedProducts = toStorefrontProducts(await getRelatedProducts(product, 10));
+  const storefrontProduct = toStorefrontProduct(product);
   const productPath = `/product/${product.slug}`;
 
   return (
@@ -107,7 +109,7 @@ export default async function ProductPage({ params }: Props) {
                 <BadgeSet badges={product.badges} />
               </div>
               <div className="mt-5 border-t border-border pt-5">
-                <ProductVariantForm product={product} />
+                <ProductVariantForm product={storefrontProduct} />
               </div>
             </div>
           </aside>
