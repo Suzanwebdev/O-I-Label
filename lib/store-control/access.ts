@@ -1,16 +1,23 @@
 import { createHash, timingSafeEqual } from "crypto";
+import { createStoreAccessToken } from "@/lib/auth/signed-token";
 import {
   STORE_ACCESS_COOKIE,
   STORE_ACCESS_COOKIE_MAX_AGE,
 } from "@/lib/store-control/constants";
 
-const PEPPER =
-  process.env.STORE_ACCESS_PEPPER?.trim() ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-32) ||
-  "oi-label-store-access";
+function storeAccessPepper(): string {
+  const pepper = process.env.STORE_ACCESS_PEPPER?.trim();
+  if (pepper) return pepper;
+  const serviceTail = process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-32);
+  if (serviceTail) return serviceTail;
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
+    throw new Error("STORE_ACCESS_PEPPER must be set in production");
+  }
+  return "oi-label-store-access-dev";
+}
 
 export function hashPrivateAccessPassword(password: string): string {
-  return createHash("sha256").update(`${PEPPER}:${password}`).digest("hex");
+  return createHash("sha256").update(`${storeAccessPepper()}:${password}`).digest("hex");
 }
 
 export function verifyPrivateAccessPassword(
@@ -31,10 +38,7 @@ export function normalizeAccessEmail(email: string): string {
 }
 
 export function privateAccessCookieValue(): string {
-  return createHash("sha256")
-    .update(`${PEPPER}:granted:${Date.now()}`)
-    .digest("hex")
-    .slice(0, 48);
+  return createStoreAccessToken(STORE_ACCESS_COOKIE_MAX_AGE);
 }
 
 export function storeAccessCookieHeader(value: string): string {
@@ -43,6 +47,8 @@ export function storeAccessCookieHeader(value: string): string {
 }
 
 export function clientIp(request: Request): string | null {
+  const vercel = request.headers.get("x-vercel-forwarded-for");
+  if (vercel) return vercel.split(",")[0]?.trim() ?? null;
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0]?.trim() ?? null;
   return request.headers.get("x-real-ip");

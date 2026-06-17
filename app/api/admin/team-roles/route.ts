@@ -26,6 +26,15 @@ export async function POST(request: Request) {
   }
 
   const service = createServiceRoleClient();
+
+  const { data: authUser, error: userErr } = await service.auth.admin.getUserById(userId);
+  if (userErr || !authUser?.user?.email) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+  if (authUser.user.email.trim().toLowerCase() !== email.trim().toLowerCase()) {
+    return NextResponse.json({ error: "userId does not match email" }, { status: 400 });
+  }
+
   if (role === "superadmin") {
     const { error } = await service
       .from("superadmins")

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRequestAuthz } from "@/lib/authz";
+import { getRequestAuthz, hasMinAdminRole } from "@/lib/authz";
 import { sendMoolreSms } from "@/lib/sms/moolre";
 
 /**
@@ -9,7 +9,7 @@ import { sendMoolreSms } from "@/lib/sms/moolre";
  */
 export async function POST(request: Request) {
   const authz = await getRequestAuthz();
-  if (!authz.isAdmin || !authz.user) {
+  if (!hasMinAdminRole(authz, "admin") || !authz.user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await sendMoolreSms({ senderid, messages });
-    return NextResponse.json({ ok: true, code: result.code, message: result.message, raw: result.raw });
+    return NextResponse.json({ ok: true, code: result.code, message: result.message });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "SMS send failed";
     return NextResponse.json({ error: msg }, { status: 502 });

@@ -72,30 +72,25 @@ export async function deductStockForPaidOrder(
   let linesAdjusted = 0;
 
   for (const [variantId, { quantity, label }] of byVariant) {
-    const { data: variant, error: varErr } = await supabase
-      .from("variants")
-      .select("stock")
-      .eq("id", variantId)
-      .maybeSingle();
+    const { data: deducted, error: rpcErr } = await supabase.rpc("deduct_variant_stock", {
+      p_variant_id: variantId,
+      p_quantity: quantity,
+    });
 
-    if (varErr || !variant) {
-      return { ok: false, reason: "variant_not_found" };
-    }
-
-    const before = Number(variant.stock ?? 0);
-    const next = before - quantity;
-
-    if (before < quantity) {
-      shortages.push({ variant_id: variantId, label, before, needed: quantity });
-    }
-
-    const { error: updErr } = await supabase
-      .from("variants")
-      .update({ stock: next })
-      .eq("id", variantId);
-
-    if (updErr) {
+    if (rpcErr) {
       return { ok: false, reason: "variant_update" };
+    }
+
+    const row = Array.isArray(deducted) ? deducted[0] : deducted;
+    if (!row) {
+      const { data: variant } = await supabase
+        .from("variants")
+        .select("stock")
+        .eq("id", variantId)
+        .maybeSingle();
+      const before = Number(variant?.stock ?? 0);
+      shortages.push({ variant_id: variantId, label, before, needed: quantity });
+      continue;
     }
 
     await supabase.from("inventory_movements").insert({

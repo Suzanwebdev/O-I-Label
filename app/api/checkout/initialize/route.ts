@@ -4,6 +4,7 @@ import {
   resolveCheckoutDiscount,
 } from "@/lib/checkout/discount";
 import { ensureCustomerRecord } from "@/lib/customers/ensure-customer";
+import { createOrderAccessToken } from "@/lib/auth/signed-token";
 import {
   aggregateVariantQuantities,
   findInsufficientStock,
@@ -254,12 +255,13 @@ export async function POST(request: Request) {
 
   try {
     const base = appBaseUrl();
+    const orderToken = createOrderAccessToken(order.id);
     const payment = await initiatePayment("moolre", {
       orderId: order.id,
       amountGhs: total,
       email,
       callbackUrl: resolveMoolreCallbackUrl(),
-      redirectUrl: `${base}/checkout/success?order=${order.id}`,
+      redirectUrl: `${base}/checkout/success?order=${order.id}&token=${encodeURIComponent(orderToken)}`,
       metadata: {
         order_number: order.order_number,
       },

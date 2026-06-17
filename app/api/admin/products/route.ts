@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { normalizeProductImagePaths } from "@/lib/catalog/product-image-url";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { ProductBadge } from "@/lib/types";
 
@@ -98,11 +99,7 @@ export async function POST(request: Request) {
   const imagePathsRaw = Array.isArray((body as { imagePaths?: unknown })?.imagePaths)
     ? ((body as { imagePaths: unknown[] }).imagePaths as unknown[])
     : [];
-  const imagePaths = imagePathsRaw
-    .filter((p): p is string => typeof p === "string")
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .slice(0, 20);
+  const imagePaths = normalizeProductImagePaths(imagePathsRaw);
   const occasionsRaw = Array.isArray((body as { occasions?: unknown })?.occasions)
     ? ((body as { occasions: unknown[] }).occasions as unknown[])
     : [];
@@ -295,11 +292,7 @@ export async function PUT(request: Request) {
   const imagePathsRaw = Array.isArray((body as { imagePaths?: unknown })?.imagePaths)
     ? ((body as { imagePaths: unknown[] }).imagePaths as unknown[])
     : [];
-  const imagePaths = imagePathsRaw
-    .filter((p): p is string => typeof p === "string")
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .slice(0, 20);
+  const imagePaths = normalizeProductImagePaths(imagePathsRaw);
   const occasionsRaw = Array.isArray((body as { occasions?: unknown })?.occasions)
     ? ((body as { occasions: unknown[] }).occasions as unknown[])
     : [];

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRequestAuthz } from "@/lib/authz";
+import { getRequestAuthz, hasMinAdminRole } from "@/lib/authz";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { markOrderPaidByReference } from "@/lib/payments/mark-order-paid";
 import { reconcileOrderPayment } from "@/lib/payments/reconcile-payment";
@@ -18,6 +18,13 @@ export async function POST(_request: Request, context: RouteContext) {
   const reconciled = await reconcileOrderPayment(orderId);
   if (reconciled.ok && reconciled.paid) {
     return NextResponse.json({ ok: true, source: "reconcile", idempotent: reconciled.idempotent });
+  }
+
+  if (!hasMinAdminRole(authz, "admin")) {
+    return NextResponse.json(
+      { error: "Only admins can manually confirm payment when provider sync fails." },
+      { status: 403 }
+    );
   }
 
   const service = createServiceRoleClient();
@@ -40,7 +47,8 @@ export async function POST(_request: Request, context: RouteContext) {
   const marked = await markOrderPaidByReference(
     payment.reference,
     (payment.provider as PaymentProviderId) ?? "moolre",
-    "admin"
+    "admin",
+    { skipAmountCheck: true }
   );
 
   if (!marked.ok) {

@@ -29,7 +29,9 @@ export async function handleProviderWebhook(
     };
   }
 
-  const marked = await markOrderPaidByReference(parsed.reference, provider, "webhook");
+  const marked = await markOrderPaidByReference(parsed.reference, provider, "webhook", {
+    amountGhs: parsed.amountGhs,
+  });
   if (!marked.ok) {
     await supabase.from("webhook_logs").insert({
       provider,

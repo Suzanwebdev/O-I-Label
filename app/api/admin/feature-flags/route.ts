@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getRequestAuthz } from "@/lib/authz";
+import { getRequestAuthz, hasMinAdminRole } from "@/lib/authz";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
 export async function PATCH(request: Request) {
   const authz = await getRequestAuthz();
-  if (!authz.isAdmin) {
+  if (!hasMinAdminRole(authz, "admin")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

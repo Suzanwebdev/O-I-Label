@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
-import { STORE_ACCESS_COOKIE } from "@/lib/store-control/constants";
+import { verifyStoreAccessToken } from "@/lib/auth/signed-token";
+import { STORE_ACCESS_COOKIE, STORE_ACCESS_COOKIE_MAX_AGE } from "@/lib/store-control/constants";
 import { ipAllowed } from "@/lib/store-control/access";
 import { getStoreControlEdgeCached } from "@/lib/store-control/edge";
 import {
@@ -11,7 +12,20 @@ import {
 
 function hasPrivateAccessCookie(request: NextRequest): boolean {
   const v = request.cookies.get(STORE_ACCESS_COOKIE)?.value;
-  return Boolean(v && v.length >= 16);
+  if (!v) return false;
+  try {
+    return verifyStoreAccessToken(v, STORE_ACCESS_COOKIE_MAX_AGE);
+  } catch {
+    return false;
+  }
+}
+
+function trustedClientIp(request: NextRequest): string | null {
+  const vercel = request.headers.get("x-vercel-forwarded-for");
+  if (vercel) return vercel.split(",")[0]?.trim() ?? null;
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0]?.trim() ?? null;
+  return request.headers.get("x-real-ip");
 }
 
 export async function proxy(request: NextRequest) {
@@ -30,9 +44,7 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  const clientIp =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip");
+  const clientIp = trustedClientIp(request);
   const ipWhitelisted = ipAllowed(clientIp, settings.private_access_ips);
   const privateOk =
     !control.requiresPrivateAccess || hasPrivateAccessCookie(request) || ipWhitelisted;

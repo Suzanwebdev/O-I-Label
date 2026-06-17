@@ -52,3 +52,16 @@ export async function getRequestAuthz(): Promise<RequestAuthz> {
   };
 }
 
+const ADMIN_ROLE_RANK = { staff: 1, admin: 2, superadmin: 3 } as const;
+
+/** Minimum role: staff < admin < superadmin */
+export function hasMinAdminRole(
+  authz: RequestAuthz,
+  min: keyof typeof ADMIN_ROLE_RANK
+): boolean {
+  if (authz.isSuperadmin) return true;
+  const role = authz.adminRole;
+  if (!role) return false;
+  return ADMIN_ROLE_RANK[role] >= ADMIN_ROLE_RANK[min];
+}
+

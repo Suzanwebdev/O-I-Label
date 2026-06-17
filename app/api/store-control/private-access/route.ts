@@ -6,10 +6,15 @@ import {
   privateAccessCookieValue,
   storeAccessCookieHeader,
   verifyPrivateAccessPassword,
+  clientIp,
 } from "@/lib/store-control/access";
 import { getStoreSettingsRow } from "@/lib/store-control/server";
+import { enforceRateLimit } from "@/lib/http/rate-limit";
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit(request, "store-control:private-access", 10);
+  if (limited) return limited;
+
   const settings = await getStoreSettingsRow();
   if (!settings || settings.store_status !== "private_access") {
     return NextResponse.json({ error: "Private access is not active." }, { status: 403 });
@@ -31,16 +36,14 @@ export async function POST(request: Request) {
       ? (body as { email: string }).email
       : "";
 
-  const clientIp =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip");
+  const clientIpAddr = clientIp(request);
 
   async function logAttempt(success: boolean, method: string | null) {
     try {
       const service = createServiceRoleClient();
       await service.from("store_access_attempts").insert({
         email: emailRaw || null,
-        ip: clientIp ?? null,
+        ip: clientIpAddr ?? null,
         success,
         method,
       });
@@ -49,7 +52,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (ipAllowed(clientIp, settings.private_access_ips)) {
+  if (ipAllowed(clientIpAddr, settings.private_access_ips)) {
     await logAttempt(true, "ip");
     const res = NextResponse.json({ ok: true, method: "ip" });
     res.headers.set("Set-Cookie", storeAccessCookieHeader(privateAccessCookieValue()));
@@ -70,18 +73,26 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const sessionEmail = user?.email ? normalizeAccessEmail(user.email) : null;
-    const checkEmail = sessionEmail ?? email;
+    if (!user?.email) {
+      await logAttempt(false, "whitelist");
+      return NextResponse.json({ error: "Access denied." }, { status: 403 });
+    }
+
+    const sessionEmail = normalizeAccessEmail(user.email);
+    if (sessionEmail !== email) {
+      await logAttempt(false, "whitelist");
+      return NextResponse.json({ error: "Access denied." }, { status: 403 });
+    }
 
     const service = createServiceRoleClient();
     const { data: row } = await service
       .from("store_access_whitelist")
       .select("id")
-      .ilike("email", checkEmail)
+      .ilike("email", sessionEmail)
       .maybeSingle();
 
     if (row) {
-      await logAttempt(true, sessionEmail ? "admin" : "whitelist");
+      await logAttempt(true, "whitelist");
       const res = NextResponse.json({ ok: true, method: "whitelist" });
       res.headers.set("Set-Cookie", storeAccessCookieHeader(privateAccessCookieValue()));
       return res;

@@ -16,13 +16,14 @@ export type MarkOrderPaidResult =
 export async function markOrderPaidByReference(
   reference: string,
   provider: PaymentProviderId,
-  source: "webhook" | "reconcile" | "admin"
+  source: "webhook" | "reconcile" | "admin",
+  opts?: { amountGhs?: number; skipAmountCheck?: boolean }
 ): Promise<MarkOrderPaidResult> {
   const supabase = createServiceRoleClient();
 
   const { data: payment } = await supabase
     .from("payments")
-    .select("id, order_id, status")
+    .select("id, order_id, status, amount_ghs")
     .eq("reference", reference)
     .maybeSingle();
 
@@ -52,6 +53,14 @@ export async function markOrderPaidByReference(
 
   if (!order) {
     return { ok: false, reason: "order_not_found" };
+  }
+
+  if (!opts?.skipAmountCheck) {
+    const expected = Number(order.total_ghs);
+    const paidAmount = opts?.amountGhs ?? Number(payment.amount_ghs);
+    if (!Number.isFinite(paidAmount) || Math.abs(paidAmount - expected) > 0.01) {
+      return { ok: false, reason: "amount_mismatch" };
+    }
   }
 
   const fromStatus = order.status ?? "pending";

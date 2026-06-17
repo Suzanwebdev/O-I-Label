@@ -2,9 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { safeRedirectPath } from "../lib/auth/safe-redirect.ts";
 import {
+  createOrderAccessToken,
+  createStoreAccessToken,
+  verifyOrderAccessToken,
+  verifyStoreAccessToken,
+} from "../lib/auth/signed-token.ts";
+import {
   aggregateVariantQuantities,
   findInsufficientStock,
 } from "../lib/inventory/deduct-order-stock.ts";
+import { isAllowedProductImagePath } from "../lib/catalog/product-image-url.ts";
 import {
   parseMoolreWebhook,
   verifyMoolreWebhookSignature,
@@ -18,6 +25,37 @@ describe("safeRedirectPath", () => {
   it("blocks open redirects", () => {
     assert.equal(safeRedirectPath("https://evil.test", "/"), "/");
     assert.equal(safeRedirectPath("//evil.test", "/"), "/");
+  });
+});
+
+describe("signed access tokens", () => {
+  it("issues and verifies store access cookies", () => {
+    const token = createStoreAccessToken(3600);
+    assert.equal(verifyStoreAccessToken(token, 3600), true);
+    assert.equal(verifyStoreAccessToken("forged.token", 3600), false);
+  });
+
+  it("issues and verifies checkout order access tokens", () => {
+    const orderId = "11111111-1111-1111-1111-111111111111";
+    const token = createOrderAccessToken(orderId);
+    assert.equal(verifyOrderAccessToken(orderId, token), true);
+    assert.equal(verifyOrderAccessToken(orderId, "bad.token"), false);
+  });
+});
+
+describe("product image paths", () => {
+  it("allows supabase https urls and storage paths", () => {
+    assert.equal(
+      isAllowedProductImagePath("https://example.supabase.co/storage/v1/object/public/product-images/catalog/a.jpg"),
+      true
+    );
+    assert.equal(isAllowedProductImagePath("catalog/a.jpg"), true);
+  });
+
+  it("rejects javascript and traversal paths", () => {
+    assert.equal(isAllowedProductImagePath("javascript:alert(1)"), false);
+    assert.equal(isAllowedProductImagePath("../secrets.env"), false);
+    assert.equal(isAllowedProductImagePath("data:image/png;base64,abc"), false);
   });
 });
 
@@ -50,6 +88,7 @@ describe("moolre webhook", () => {
     assert.equal(parsed.success, true);
     assert.equal(parsed.reference, "ref_123");
     assert.equal(parsed.orderId, "ord-1");
+    assert.equal(parsed.amountGhs, 120);
   });
 
   it("rejects webhooks without secret in production", () => {

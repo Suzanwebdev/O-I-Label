@@ -3,6 +3,7 @@ import { Container } from "@/components/store/container";
 import { Button } from "@/components/ui/button";
 import { CheckoutSuccessClient } from "@/components/checkout/checkout-success-client";
 import { CheckoutSuccessSummary } from "@/components/checkout/checkout-success-summary";
+import { verifyOrderAccessToken } from "@/lib/auth/signed-token";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { reconcileOrderPayment } from "@/lib/payments/reconcile-payment";
 import { buildPageMetadata } from "@/lib/seo/metadata";
@@ -14,10 +15,12 @@ export const metadata = buildPageMetadata({
   noIndex: true,
 });
 
-type Props = { searchParams: Promise<{ demo?: string; payment?: string; order?: string }> };
+type Props = {
+  searchParams: Promise<{ demo?: string; payment?: string; order?: string; token?: string }>;
+};
 
 export default async function CheckoutSuccessPage({ searchParams }: Props) {
-  const { demo, payment, order: orderId } = await searchParams;
+  const { demo, payment, order: orderId, token } = await searchParams;
   const isDemo = demo === "1";
   let paid = payment === "success";
   let state: "paid" | "failed" | "pending" = paid ? "paid" : "pending";
@@ -29,7 +32,11 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
   } | null = null;
 
   if (!isDemo && orderId) {
+    const accessOk = token ? verifyOrderAccessToken(orderId, token) : false;
     try {
+      if (!accessOk) {
+        state = paid ? "paid" : "pending";
+      } else {
       const reconciled = await reconcileOrderPayment(orderId);
       const service = createServiceRoleClient();
       const { data: paymentRow } = await service
@@ -74,6 +81,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
           email: String(order.email ?? ""),
           items,
         };
+      }
       }
     } catch {
       state = paid ? "paid" : "pending";
