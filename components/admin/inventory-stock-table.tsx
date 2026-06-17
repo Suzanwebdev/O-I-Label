@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -105,12 +106,25 @@ export function InventoryStockTable({
               className="grid gap-3 rounded-lg border border-border bg-background px-4 py-3 text-sm md:grid-cols-[1.2fr_1fr_150px_140px]"
             >
               <div>
-                <p className="font-medium">{r.product_name}</p>
-                <p className="text-xs text-muted-foreground">{r.product_slug}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Category:{" "}
-                  <span className="font-medium text-foreground">{r.category_name ?? "Uncategorized"}</span>
-                </p>
+                <div className="flex items-start gap-3">
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+                    <Image
+                      src={r.product_image_path || "/file.svg"}
+                      alt={r.product_name}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium">{r.product_name}</p>
+                    <p className="text-xs text-muted-foreground">{r.product_slug}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Category:{" "}
+                      <span className="font-medium text-foreground">{r.category_name ?? "Uncategorized"}</span>
+                    </p>
+                  </div>
+                </div>
               </div>
               <div>
                 <p className="font-medium">{r.sku}</p>

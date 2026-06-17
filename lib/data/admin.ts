@@ -37,6 +37,7 @@ export type AdminInventoryRow = {
   price_ghs: number;
   product_name: string;
   product_slug: string;
+  product_image_path: string | null;
   category_slug: string | null;
   category_name: string | null;
 };
@@ -384,7 +385,7 @@ export async function listAdminInventory(opts?: {
   let query = supabase
     .from("variants")
     .select(
-      "id, product_id, sku, stock, price_ghs, created_at, products!inner(name, slug, categories ( slug, name ))"
+      "id, product_id, sku, stock, price_ghs, created_at, products!inner(name, slug, product_images ( storage_path, sort_order ), categories ( slug, name ))"
     )
     .order("name", { foreignTable: "products", ascending: true })
     .order("created_at", { ascending: true })
@@ -411,6 +412,7 @@ export async function listAdminInventory(opts?: {
       price_ghs: Number(row.price_ghs),
       product_name: product?.name ?? "Unknown product",
       product_slug: product?.slug ?? "",
+      product_image_path: pickProductImageFromJoin(row.products),
       category_slug: typeof cat?.slug === "string" ? cat.slug : null,
       category_name: typeof cat?.name === "string" ? cat.name : null,
       variant_created_at:
