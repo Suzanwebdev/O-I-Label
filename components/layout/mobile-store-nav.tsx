@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -10,6 +11,9 @@ import { cn } from "@/lib/utils";
 
 const navLinkClass =
   "flex min-h-11 items-center rounded-[var(--radius-md)] px-4 py-2.5 text-[15px] font-medium leading-snug text-foreground transition-colors hover:bg-muted/50 active:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/30";
+
+const sectionTriggerClass =
+  "mb-3 w-full px-4 text-left text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/30";
 
 function MobileNavLink({ href, children }: { href: string; children: ReactNode }) {
   return (
@@ -22,6 +26,17 @@ function MobileNavLink({ href, children }: { href: string; children: ReactNode }
 }
 
 export function MobileStoreNav() {
+  const [openSections, setOpenSections] = React.useState<Set<string>>(() => new Set());
+
+  function toggleSection(id: string) {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="shrink-0 border-b border-border/70 px-6 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))]">
@@ -43,23 +58,36 @@ export function MobileStoreNav() {
           className="px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
           aria-label="Mobile storefront"
         >
-          {MOBILE_STORE_NAV.map((section, index) => (
+          {MOBILE_STORE_NAV.map((section, index) => {
+            const isOpen = openSections.has(section.id);
+            const panelId = `mobile-nav-${section.id}`;
+
+            return (
             <div
               key={section.id}
               className={cn(index > 0 && "mt-8 border-t border-border/50 pt-8")}
             >
-              <p className="mb-3 px-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              <button
+                type="button"
+                className={sectionTriggerClass}
+                aria-expanded={isOpen}
+                aria-controls={panelId}
+                onClick={() => toggleSection(section.id)}
+              >
                 {section.label}
-              </p>
-              <ul className="space-y-0.5">
-                {section.links.map((link) => (
-                  <li key={`${section.id}-${link.href}`}>
-                    <MobileNavLink href={link.href}>{link.label}</MobileNavLink>
-                  </li>
-                ))}
-              </ul>
+              </button>
+              {isOpen ? (
+                <ul id={panelId} className="space-y-0.5">
+                  {section.links.map((link) => (
+                    <li key={`${section.id}-${link.href}`}>
+                      <MobileNavLink href={link.href}>{link.label}</MobileNavLink>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
-          ))}
+            );
+          })}
 
           {MOBILE_NAV_EDITORIAL_CTA ? (
             <div className="mt-10 border-t border-border/50 pt-8">
