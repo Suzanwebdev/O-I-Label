@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/store/price";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
+import { SoldOutMessage } from "@/components/store/sold-out-message";
 import { HOME_BEST_SELLERS_BATCH } from "@/lib/shop-utils";
 
 export function BestSellersRow({ products }: { products: StorefrontProduct[] }) {
@@ -90,7 +91,7 @@ export function BestSellersRow({ products }: { products: StorefrontProduct[] }) 
                     }}
                   />
                 ) : (
-                  <p className="text-[11px] text-muted-foreground md:text-xs">Out of stock</p>
+                  <SoldOutMessage size="xs" />
                 )}
               </div>
             </article>

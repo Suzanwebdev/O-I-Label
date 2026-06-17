@@ -4,12 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
-import { isVariantInStock } from "@/lib/catalog/storefront-product";
+import {
+  isStorefrontProductInStock,
+  isVariantInStock,
+} from "@/lib/catalog/storefront-product";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/components/providers/cart-provider";
 import { useWishlist } from "@/components/providers/wishlist-provider";
 import { Price } from "@/components/store/price";
+import { SoldOutMessage, SoldOutNotice } from "@/components/store/sold-out-message";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { useStoreControl } from "@/components/store-control/store-control-provider";
 import { Check, Heart, Minus, Plus, ShoppingBag } from "lucide-react";
@@ -54,23 +58,22 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
     );
     if (exact) return exact;
 
-    if (sizes.length && colors.length) {
-      const bySize = product.variants.find(
-        (v) => v.size === size && isVariantInStock(v)
-      );
-      if (bySize) return bySize;
-    }
     return product.variants.find((v) => isVariantInStock(v)) ?? product.variants[0];
   }, [product.variants, size, color, sizes, colors]);
 
   React.useEffect(() => {
+    const exact = product.variants.find((v) =>
+      variantMatchesSelection(v, size, color, sizes, colors)
+    );
+    if (exact) return;
+
     if (sizes.length && variant.size && variant.size !== size) {
       setSize(variant.size);
     }
     if (colors.length && variant.color && variant.color !== color) {
       setColor(variant.color);
     }
-  }, [variant.id, variant.size, variant.color, sizes.length, colors.length, size, color]);
+  }, [product.variants, variant.id, variant.size, variant.color, sizes.length, colors.length, size, color]);
 
   const sizeIsAvailable = React.useCallback(
     (s: string) =>
@@ -95,6 +98,7 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
   );
 
   const oos = !isVariantInStock(variant);
+  const productSoldOut = !isStorefrontProductInStock(product);
   const isSaved = hasItem(product.id);
   const quantityMax = oos ? 1 : MAX_QTY;
   const safeQty = Math.min(qty, quantityMax);
@@ -131,6 +135,13 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
 
   return (
     <div className="space-y-5">
+      {oos ? (
+        <SoldOutNotice
+          productSoldOut={productSoldOut}
+          size={variant.size}
+          color={variant.color}
+        />
+      ) : null}
       {sizes.length > 0 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
@@ -142,22 +153,29 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
           <div className="flex flex-wrap items-center gap-2">
             {sizes.map((s) => {
               const selected = s === size;
-              const enabled = sizeIsAvailable(s);
+              const available = sizeIsAvailable(s);
               return (
                 <button
                   key={s}
                   type="button"
-                  onClick={() => enabled && setSize(s)}
+                  onClick={() => setSize(s)}
+                  title={available ? undefined : "Sold out"}
                   className={cn(
-                    "inline-flex min-w-11 items-center justify-center rounded-full border px-3 py-2 text-sm transition-colors",
+                    "inline-flex min-w-11 flex-col items-center justify-center rounded-full border px-3 py-2 text-sm transition-colors",
                     selected
                       ? "border-black bg-black text-white"
                       : "border-border bg-background text-foreground hover:border-black/30",
-                    !enabled && "cursor-not-allowed opacity-35"
+                    !available && !selected && "opacity-35",
+                    !available && selected && "border-muted-foreground bg-muted text-muted-foreground"
                   )}
-                  aria-label={`Select size ${s}`}
+                  aria-label={available ? `Select size ${s}` : `Size ${s}, sold out`}
                 >
-                  {s}
+                  <span>{s}</span>
+                  {!available ? (
+                    <span className="mt-0.5 text-[9px] font-normal uppercase tracking-wide opacity-80">
+                      Sold out
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
@@ -171,20 +189,22 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
             <div className="flex flex-wrap items-center gap-2">
               {colors.map((c) => {
                 const active = c === color;
-                const enabled = colorIsAvailable(c);
+                const available = colorIsAvailable(c);
                 const swatch = resolveSwatchColor(c);
                 return (
                   <button
                     key={c}
                     type="button"
-                    onClick={() => enabled && setColor(c)}
+                    onClick={() => setColor(c)}
+                    title={available ? undefined : "Sold out"}
                     className={cn(
                       "relative h-8 w-8 rounded-full border border-border/70 transition-transform duration-200",
                       "hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/60",
                       active && "ring-2 ring-black/70 ring-offset-2",
-                      !enabled && "cursor-not-allowed opacity-35"
+                      !available && !active && "opacity-35",
+                      !available && active && "ring-muted-foreground/50"
                     )}
-                    aria-label={`Select colour ${c}`}
+                    aria-label={available ? `Select colour ${c}` : `Colour ${c}, sold out`}
                   >
                     <span className="absolute inset-[3px] rounded-full border border-black/10" style={{ backgroundColor: swatch }} />
                   </button>
@@ -201,7 +221,7 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
           amountGhs={variant.price_ghs}
           compareAtGhs={variant.compare_at_ghs}
         />
-        {oos ? <span className="text-sm text-muted-foreground">Out of stock</span> : null}
+        {oos ? <SoldOutMessage /> : null}
       </div>
 
       <div className="space-y-3">

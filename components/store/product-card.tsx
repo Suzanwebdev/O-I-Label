@@ -11,6 +11,7 @@ import {
 import { BadgeSet } from "@/components/store/badge-set";
 import { Price } from "@/components/store/price";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
+import { SoldOutBadge, SoldOutMessage } from "@/components/store/sold-out-message";
 import { cn } from "@/lib/utils";
 import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
@@ -54,6 +55,11 @@ export function ProductCard({
           <div className="absolute left-3 top-3">
             <BadgeSet badges={product.badges} />
           </div>
+          {!inStock ? (
+            <div className="absolute right-3 top-3">
+              <SoldOutBadge />
+            </div>
+          ) : null}
         </div>
       </Link>
       <div className="mt-4 flex flex-1 flex-col gap-2">
@@ -86,7 +92,7 @@ export function ProductCard({
             }}
           />
         ) : (
-          <p className="mt-auto pt-1 text-sm text-muted-foreground">Out of stock</p>
+          <SoldOutMessage className="mt-auto pt-1" />
         )}
       </div>
     </motion.article>

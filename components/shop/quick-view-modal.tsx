@@ -15,6 +15,7 @@ import {
 import { Price } from "@/components/store/price";
 import { BadgeSet } from "@/components/store/badge-set";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
+import { SoldOutBadge, SoldOutMessage } from "@/components/store/sold-out-message";
 import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function QuickViewModal({
@@ -45,6 +46,11 @@ export function QuickViewModal({
               quality={100}
               unoptimized={preserveQuality}
             />
+            {!inStock ? (
+              <div className="absolute right-3 top-3">
+                <SoldOutBadge />
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-col gap-4 p-6 md:p-8">
             <DialogHeader className="space-y-2 text-left">
@@ -55,7 +61,7 @@ export function QuickViewModal({
             </DialogHeader>
             <div className="flex items-center justify-between gap-3">
               <Price amountGhs={v.price_ghs} compareAtGhs={v.compare_at_ghs} />
-              {!inStock ? <span className="text-sm text-muted-foreground">Out of stock</span> : null}
+              {!inStock ? <SoldOutMessage /> : null}
             </div>
             <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground">
               {product.description}
@@ -77,7 +83,9 @@ export function QuickViewModal({
                     unitPriceGhs: v.price_ghs,
                   }}
                 />
-              ) : null}
+              ) : (
+                <SoldOutMessage />
+              )}
             </div>
           </div>
         </div>
