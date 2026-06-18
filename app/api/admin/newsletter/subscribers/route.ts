@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
-import {
-  formatNewsletterPhone,
-  listNewsletterSubscribers,
-} from "@/lib/newsletter/subscribers";
+import { listNewsletterSubscribers } from "@/lib/newsletter/subscribers";
+import { formatNewsletterPhone } from "@/lib/newsletter/phone";
 
 export async function GET(request: Request) {
   const authz = await getRequestAuthz();

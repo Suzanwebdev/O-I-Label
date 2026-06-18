@@ -99,7 +99,9 @@ export async function POST(request: Request) {
   const imagePathsRaw = Array.isArray((body as { imagePaths?: unknown })?.imagePaths)
     ? ((body as { imagePaths: unknown[] }).imagePaths as unknown[])
     : [];
-  const imagePaths = normalizeProductImagePaths(imagePathsRaw);
+  const imagePaths = normalizeProductImagePaths(
+    imagePathsRaw.filter((p): p is string => typeof p === "string")
+  );
   const occasionsRaw = Array.isArray((body as { occasions?: unknown })?.occasions)
     ? ((body as { occasions: unknown[] }).occasions as unknown[])
     : [];
@@ -292,7 +294,9 @@ export async function PUT(request: Request) {
   const imagePathsRaw = Array.isArray((body as { imagePaths?: unknown })?.imagePaths)
     ? ((body as { imagePaths: unknown[] }).imagePaths as unknown[])
     : [];
-  const imagePaths = normalizeProductImagePaths(imagePathsRaw);
+  const imagePaths = normalizeProductImagePaths(
+    imagePathsRaw.filter((p): p is string => typeof p === "string")
+  );
   const occasionsRaw = Array.isArray((body as { occasions?: unknown })?.occasions)
     ? ((body as { occasions: unknown[] }).occasions as unknown[])
     : [];
