@@ -4,7 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { buildAuthCallbackUrl } from "@/lib/auth/auth-callback-url";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Container } from "@/components/store/container";
@@ -44,7 +46,7 @@ export default function SignupClient() {
     setBusy(true);
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      const redirectTo = buildAuthCallbackUrl(next);
       const displayName = `${firstName.trim()} ${lastName.trim()}`.trim();
 
       const { data, error: signupError } = await supabase.auth.signUp({
@@ -107,16 +109,14 @@ export default function SignupClient() {
             required
             autoComplete="email"
           />
-          <Input
-            type="password"
+          <PasswordInput
             placeholder="Password (min 8 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="new-password"
           />
-          <Input
-            type="password"
+          <PasswordInput
             placeholder="Confirm password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}

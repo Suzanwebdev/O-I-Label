@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { buildAuthCallbackUrl } from "@/lib/auth/auth-callback-url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Container } from "@/components/store/container";
@@ -19,7 +20,7 @@ export default function ForgotPasswordClient() {
     setError(null);
     try {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/reset-password")}`;
+      const redirectTo = buildAuthCallbackUrl("/reset-password");
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo,
       });

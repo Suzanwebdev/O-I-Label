@@ -34,7 +34,8 @@ Copy from `.env.example` into **Vercel → Project → Settings → Environment 
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server/admin (never expose to client) |
-| `NEXT_PUBLIC_APP_URL` / `APP_BASE_URL` | `https://www.oandilabel.com` |
+| `NEXT_PUBLIC_SITE_URL` / `APP_BASE_URL` | `https://www.oandilabel.com` (auth email links) |
+| `NEXT_PUBLIC_APP_URL` | Same as site URL |
 | `RESEND_API_KEY` / `RESEND_FROM` | Order & notification email |
 | `MOOLRE_*` | Live checkout payments |
 | `MOOLRE_SMS_*` / `SMS_SENDER_ID` | Order SMS notifications |
@@ -48,6 +49,17 @@ Redeploy after changing env vars.
 - Migrations applied on the production project
 - Storage buckets: `product-images`, `blog-covers` (public read where intended)
 - Moolre webhook URL: `https://www.oandilabel.com/api/webhooks/moolre`
+
+### Auth emails (signup & password reset)
+
+Without custom SMTP, mail is sent from **Supabase Auth** with generic branding.
+
+1. **Custom SMTP (Resend)** — Supabase → **Authentication → SMTP Settings**:
+   - Host `smtp.resend.com`, port `465`, user `resend`, password = `RESEND_API_KEY`
+   - Sender: `O & I Label <noreply@your-verified-domain.com>`
+2. **Email templates** — copy HTML from `supabase/templates/` and subjects from `supabase/templates/README.md`
+3. **URL configuration** — Site URL `https://www.oandilabel.com`; redirect URLs include `/auth/callback` on both `www` and apex domain
+4. **Vercel** — set `NEXT_PUBLIC_SITE_URL` and `APP_BASE_URL` to `https://www.oandilabel.com`
 
 ---
 
