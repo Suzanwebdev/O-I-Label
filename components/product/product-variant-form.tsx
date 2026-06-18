@@ -11,12 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/components/providers/cart-provider";
-import { useWishlist } from "@/components/providers/wishlist-provider";
 import { Price } from "@/components/store/price";
 import { SoldOutMessage, SoldOutNotice } from "@/components/store/sold-out-message";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { useStoreControl } from "@/components/store-control/store-control-provider";
-import { Check, Heart, Minus, Plus, ShoppingBag } from "lucide-react";
+import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveSwatchColor } from "@/lib/color-swatch";
 
@@ -39,7 +38,6 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
   const router = useRouter();
   const control = useStoreControl();
   const { addItem, openCart, beginBuyNowCheckout } = useCart();
-  const { hasItem, toggleItem } = useWishlist();
   const sizes = Array.from(
     new Set(product.variants.map((v) => v.size).filter(Boolean))
   ) as string[];
@@ -50,7 +48,6 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
   const [size, setSize] = React.useState(sizes[0] ?? "");
   const [color, setColor] = React.useState(colors[0] ?? "");
   const [qty, setQty] = React.useState(1);
-  const [announce, setAnnounce] = React.useState("");
 
   const variant = React.useMemo(() => {
     const exact = product.variants.find((v) =>
@@ -99,7 +96,6 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
 
   const oos = !isVariantInStock(variant);
   const productSoldOut = !isStorefrontProductInStock(product);
-  const isSaved = hasItem(product.id);
   const quantityMax = oos ? 1 : MAX_QTY;
   const safeQty = Math.min(qty, quantityMax);
 
@@ -310,76 +306,6 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
           </ul>
         </div>
       ) : null}
-
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 backdrop-blur md:hidden">
-        <div className="mx-auto flex w-full max-w-[640px] items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Total</p>
-            <p className="text-sm font-medium">GH₵{(variant.price_ghs * safeQty).toFixed(2)}</p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={cn(
-                "rounded-[var(--radius-lg)] border-black/20 px-3 font-medium",
-                isSaved && "border-rose-300 bg-rose-50 text-rose-700"
-              )}
-              onClick={() => {
-                const added = toggleItem({
-                  key: product.id,
-                  slug: product.slug,
-                  name: product.name,
-                  image: product.images[0] ?? "/file.svg",
-                });
-                setAnnounce(added ? "Added to wishlist" : "Removed from wishlist");
-              }}
-              aria-label={isSaved ? "Remove from wishlist" : "Add to wishlist"}
-              aria-pressed={isSaved}
-            >
-              <Heart className={cn("mr-1.5 h-3.5 w-3.5", isSaved && "fill-current")} />
-              {isSaved ? "Saved" : "Love"}
-            </Button>
-            {control.checkoutAllowed ? (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="gap-1.5 rounded-[var(--radius-lg)] bg-black px-3 font-semibold text-white shadow-[0_6px_18px_-8px_rgba(0,0,0,0.55)] hover:bg-black/90"
-                  disabled={oos}
-                  onClick={() => {
-                    addVariantToCart(safeQty);
-                    openCart();
-                  }}
-                >
-                  <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
-                  Add to cart
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-[var(--radius-lg)] border-black/20 px-3 font-medium"
-                  disabled={oos}
-                  onClick={() => buyNow(safeQty)}
-                >
-                  Buy now
-                </Button>
-              </>
-            ) : control.softCloseMode ? (
-              <span className="max-w-[140px] text-[10px] leading-snug text-muted-foreground">
-                Purchasing paused
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground">{control.presaleCtaLabel}</span>
-            )}
-          </div>
-        </div>
-        <span className="sr-only" aria-live="polite">
-          {announce}
-        </span>
-      </div>
     </div>
   );
 }

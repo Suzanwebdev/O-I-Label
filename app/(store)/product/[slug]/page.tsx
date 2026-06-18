@@ -51,7 +51,7 @@ export default async function ProductPage({ params }: Props) {
   const productPath = `/product/${product.slug}`;
 
   return (
-    <article className="border-border/60 border-b bg-background py-8 pb-24 md:py-12 md:pb-12">
+    <article className="border-border/60 border-b bg-background py-8 md:py-12">
       <JsonLd
         data={[
           productJsonLd(product, productPath),
