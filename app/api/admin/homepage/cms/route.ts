@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
 import {
@@ -94,6 +95,10 @@ export async function PATCH(request: Request) {
     data.sections && typeof data.sections === "object" && !Array.isArray(data.sections)
       ? (data.sections as Record<string, unknown>)
       : {};
+
+  if (b.hero) {
+    revalidatePath("/");
+  }
 
   return NextResponse.json({ cms: parseHomepageCms(merged) });
 }

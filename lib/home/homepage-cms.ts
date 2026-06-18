@@ -326,6 +326,13 @@ const overlayBySrc = new Map(
   ])
 );
 
+/** First hero slide used for link previews — matches carousel order on the storefront. */
+export function primaryHeroSlideSrc(stored: HomeHeroSlideStored[]): string {
+  const withSrc = stored.filter((s) => s.src.trim());
+  const list = (withSrc.length ? withSrc : defaultSlidesStored()).slice(0, HERO_SLIDES_MAX);
+  return list[0]?.src ?? HOME_HERO_SLIDES[0].src;
+}
+
 export function heroSlidesForUi(stored: HomeHeroSlideStored[]): HomeHeroSlide[] {
   const withSrc = stored.filter((s) => s.src.trim());
   const list = (withSrc.length ? withSrc : defaultSlidesStored()).slice(0, HERO_SLIDES_MAX);

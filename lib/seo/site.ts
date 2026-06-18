@@ -37,4 +37,11 @@ export function toAbsoluteImageUrl(src: string): string {
   return absoluteUrl(src.startsWith("/") ? src : `/${src}`);
 }
 
+/** Bust social preview caches when CMS content changes without altering the image path. */
+export function withOgCacheBuster(src: string, version: string | null | undefined): string {
+  if (!version?.trim()) return src;
+  const token = encodeURIComponent(version.trim());
+  return src.includes("?") ? `${src}&ogv=${token}` : `${src}?ogv=${token}`;
+}
+
 export const DEFAULT_OG_IMAGE = "/home/hero.png";

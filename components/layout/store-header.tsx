@@ -18,6 +18,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { mockCategories } from "@/lib/mock-data";
@@ -33,6 +35,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { MobileStoreNav } from "@/components/layout/mobile-store-nav";
+import { SignOutButton } from "@/components/account/sign-out-button";
 
 const megaLinks = [
   { href: "/shop?tag=new", label: "New Arrivals" },
@@ -46,7 +49,13 @@ const mobileNavIconBtn = "max-lg:size-9 max-lg:shrink-0";
 
 type NavCategory = { slug: string; name: string };
 
-export function StoreHeader({ categories }: { categories: NavCategory[] }) {
+export function StoreHeader({
+  categories,
+  accountEmail = null,
+}: {
+  categories: NavCategory[];
+  accountEmail?: string | null;
+}) {
   const router = useRouter();
   const { lines, toggleCart } = useCart();
   const { count: wishlistCount } = useWishlist();
@@ -256,19 +265,38 @@ export function StoreHeader({ categories }: { categories: NavCategory[] }) {
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link href="/account">Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/account/orders">Orders</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/track-order">Track order</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/login?next=/account">Sign in</Link>
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-56">
+              {accountEmail ? (
+                <>
+                  <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
+                    Signed in as {accountEmail}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/account">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/orders">Orders</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/track-order">Track order</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <SignOutButton variant="menu" />
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/login?next=/account">Sign in</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/signup?next=/account">Create account</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/track-order">Track order</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <Button

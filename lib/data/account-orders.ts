@@ -19,6 +19,12 @@ export async function getAccountSession() {
   return { supabase, user };
 }
 
+export async function getAccountUserEmail(): Promise<string | null> {
+  const { user } = await getAccountSession();
+  const email = user?.email?.trim().toLowerCase();
+  return email || null;
+}
+
 export async function listAccountOrders(): Promise<{
   user: { id: string; email: string; fullName: string | null } | null;
   orders: AccountOrderSummary[];

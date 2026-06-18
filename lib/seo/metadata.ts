@@ -58,20 +58,24 @@ export function buildPageMetadata(input: BuildPageMetadataInput): Metadata {
   };
 }
 
-export const homeMetadata: Metadata = buildPageMetadata({
-  title: { absolute: "O & I Label | Premium Women's Fashion" },
-  description:
-    "Shop premium women's fashion, dresses, two-piece sets, and statement looks at O & I Label.",
-  path: "/",
-  keywords: [
-    "premium women's fashion",
-    "women's fashion Ghana",
-    "luxury dresses online",
-    "two-piece sets",
-    "fashion e-commerce",
-  ],
-  ogImage: DEFAULT_OG_IMAGE,
-});
+export const homeMetadata: Metadata = buildHomeMetadata();
+
+export function buildHomeMetadata(ogImage?: string | null): Metadata {
+  return buildPageMetadata({
+    title: { absolute: "O & I Label | Premium Women's Fashion" },
+    description:
+      "Shop premium women's fashion, dresses, two-piece sets, and statement looks at O & I Label.",
+    path: "/",
+    keywords: [
+      "premium women's fashion",
+      "women's fashion Ghana",
+      "luxury dresses online",
+      "two-piece sets",
+      "fashion e-commerce",
+    ],
+    ogImage: ogImage ?? DEFAULT_OG_IMAGE,
+  });
+}
 
 export const shopMetadata: Metadata = buildPageMetadata({
   title: "Shop Women's Fashion",

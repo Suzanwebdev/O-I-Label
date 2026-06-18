@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Container } from "@/components/store/container";
+import { SignOutButton } from "@/components/account/sign-out-button";
 import { listAccountOrders } from "@/lib/data/account-orders";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
@@ -61,6 +62,13 @@ export default async function AccountPage() {
           >
             Continue shopping
           </Link>
+        </div>
+
+        <div className="border-t border-border pt-4">
+          <p className="mb-3 text-xs text-muted-foreground">
+            Not you? Sign out to use your own account on this device.
+          </p>
+          <SignOutButton className="w-full sm:w-auto" />
         </div>
       </div>
     </Container>

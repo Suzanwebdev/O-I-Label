@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import Image from "next/image";
@@ -7,18 +8,24 @@ import { PromoBanner } from "@/components/store/promo-banner";
 import { mockCategories } from "@/lib/mock-data";
 import { listProducts } from "@/lib/data/catalog";
 import { listCategoriesFromDb } from "@/lib/data/catalog";
-import { getHomeContentSections } from "@/lib/data/home-content";
+import { getHomeContentRow, getHomeContentSections } from "@/lib/data/home-content";
 import { getHomepageCms } from "@/lib/data/homepage-cms";
-import { heroSlidesForUi } from "@/lib/home/homepage-cms";
+import { heroSlidesForUi, parseHomepageCms, primaryHeroSlideSrc } from "@/lib/home/homepage-cms";
+import { buildHomeMetadata } from "@/lib/seo/metadata";
+import { withOgCacheBuster } from "@/lib/seo/site";
 import { mergeShopOccasionItemsFromSections } from "@/lib/home/shop-by-occasion";
 import { buildHomeBestSellersList } from "@/lib/shop-utils";
 import { toStorefrontProducts } from "@/lib/catalog/storefront-product";
 import { BestSellersRow } from "@/components/home/best-sellers-row";
 import { HomeHero } from "@/components/home/home-hero";
 import { OccasionSection } from "@/components/home/occasion-section";
-import { homeMetadata } from "@/lib/seo/metadata";
 
-export const metadata = homeMetadata;
+export async function generateMetadata(): Promise<Metadata> {
+  const { sections, updatedAt } = await getHomeContentRow();
+  const cms = parseHomepageCms(sections);
+  const ogImage = withOgCacheBuster(primaryHeroSlideSrc(cms.hero.slides), updatedAt);
+  return buildHomeMetadata(ogImage);
+}
 
 /** Local assets in /public/home — category thumbnails (order matches mockCategories). */
 const categoryImageBySlug: Record<string, string> = {
