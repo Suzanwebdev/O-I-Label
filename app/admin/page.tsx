@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDashboardSnapshot } from "@/lib/data/admin";
 
@@ -26,6 +27,24 @@ export default async function AdminDashboardPage() {
           </Card>
         ))}
       </div>
+      <Card className="rounded-[var(--radius-lg)]">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Newsletter subscribers
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-end justify-between gap-3">
+          <p className="text-2xl font-semibold tabular-nums">
+            {stats.newsletterTotal.toLocaleString()}
+          </p>
+          <Link
+            href="/admin/newsletter"
+            className="text-sm text-navy underline-offset-4 hover:underline"
+          >
+            View list
+          </Link>
+        </CardContent>
+      </Card>
       <p className="text-sm text-muted-foreground">
         Metrics are sourced from live Supabase data and update as orders and payments change.
       </p>

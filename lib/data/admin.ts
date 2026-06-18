@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { getNewsletterSubscriberCount } from "@/lib/newsletter/subscribers";
 import { mockCategories } from "@/lib/mock-data";
 import { pickProductImageFromJoin } from "@/lib/admin/order-item-image";
 import {
@@ -69,6 +70,7 @@ export type AdminDashboardSnapshot = {
   orders30d: number;
   aov30d: number;
   paidRatePct: number;
+  newsletterTotal: number;
 };
 
 export type AdminBlogPost = {
@@ -474,7 +476,8 @@ export async function getDashboardSnapshot(): Promise<AdminDashboardSnapshot> {
   since.setDate(since.getDate() - 30);
   const iso = since.toISOString();
 
-  const [{ count: totalOrders30d }, { count: paid30d }, { data: paidTotals }] = await Promise.all([
+  const [{ count: totalOrders30d }, { count: paid30d }, { data: paidTotals }, newsletterTotal] =
+    await Promise.all([
     supabase
       .from("orders")
       .select("id", { count: "exact", head: true })
@@ -487,6 +490,7 @@ export async function getDashboardSnapshot(): Promise<AdminDashboardSnapshot> {
       .from("orders")
       .select("total_ghs")
       .gte("paid_at", iso),
+    getNewsletterSubscriberCount(),
   ]);
 
   const revenue30d = (paidTotals ?? []).reduce((sum, row) => sum + Number(row.total_ghs ?? 0), 0);
@@ -498,6 +502,7 @@ export async function getDashboardSnapshot(): Promise<AdminDashboardSnapshot> {
     orders30d: paidCount,
     aov30d: paidCount > 0 ? revenue30d / paidCount : 0,
     paidRatePct: totalOrderCount > 0 ? (paidCount / totalOrderCount) * 100 : 0,
+    newsletterTotal,
   };
 }
 
