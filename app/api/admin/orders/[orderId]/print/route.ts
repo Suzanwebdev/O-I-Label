@@ -5,6 +5,7 @@ import {
   type OrderInvoiceOrder,
 } from "@/lib/admin/order-invoice";
 import { buildPairedOrdersPrintHtml } from "@/lib/admin/order-print-pair";
+import { pickOrderItemVariantAttrs } from "@/lib/admin/order-item-variant";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { OrderAddressJson } from "@/lib/orders/format-address";
 
@@ -30,7 +31,10 @@ export async function GET(_request: Request, context: RouteContext) {
         )
         .eq("id", orderId)
         .maybeSingle(),
-      service.from("order_items").select("id, name, sku, unit_price_ghs, quantity").eq("order_id", orderId),
+      service
+        .from("order_items")
+        .select("id, name, sku, unit_price_ghs, quantity, variants ( color, size )")
+        .eq("order_id", orderId),
       service
         .from("shipments")
         .select("tracking_number, carrier")
@@ -72,12 +76,19 @@ export async function GET(_request: Request, context: RouteContext) {
     payment_status,
   };
 
-  const invoiceItems: OrderInvoiceItem[] = (items ?? []).map((item) => ({
-    name: String(item.name ?? ""),
-    sku: item.sku == null ? null : String(item.sku),
-    unit_price_ghs: item.unit_price_ghs != null ? Number(item.unit_price_ghs) : null,
-    quantity: Number(item.quantity ?? 0),
-  }));
+  const invoiceItems: OrderInvoiceItem[] = (items ?? []).map((item) => {
+    const { color, size } = pickOrderItemVariantAttrs(
+      (item as { variants?: unknown }).variants
+    );
+    return {
+      name: String(item.name ?? ""),
+      sku: item.sku == null ? null : String(item.sku),
+      unit_price_ghs: item.unit_price_ghs != null ? Number(item.unit_price_ghs) : null,
+      quantity: Number(item.quantity ?? 0),
+      color,
+      size,
+    };
+  });
 
   const html = buildPairedOrdersPrintHtml({
     title: `Print order ${invoiceOrder.order_number}`,

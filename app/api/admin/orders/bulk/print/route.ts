@@ -12,6 +12,7 @@ import {
   shippingLabelBlockingIssues,
   type PairedPrintOrder,
 } from "@/lib/admin/order-print-pair";
+import { pickOrderItemVariantAttrs } from "@/lib/admin/order-item-variant";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { OrderAddressJson } from "@/lib/orders/format-address";
 
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
       .in("id", orderIds),
     service
       .from("order_items")
-      .select("order_id, name, sku, unit_price_ghs, quantity")
+      .select("order_id, name, sku, unit_price_ghs, quantity, variants ( color, size )")
       .in("order_id", orderIds),
     service
       .from("shipments")
@@ -112,11 +113,16 @@ export async function GET(request: Request) {
   for (const row of items ?? []) {
     const orderId = row.order_id as string;
     const list = itemsByOrder.get(orderId) ?? [];
+    const { color, size } = pickOrderItemVariantAttrs(
+      (row as { variants?: unknown }).variants
+    );
     list.push({
       name: String(row.name ?? ""),
       sku: row.sku == null ? null : String(row.sku),
       unit_price_ghs: row.unit_price_ghs != null ? Number(row.unit_price_ghs) : null,
       quantity: Number(row.quantity ?? 0),
+      color,
+      size,
     });
     itemsByOrder.set(orderId, list);
   }

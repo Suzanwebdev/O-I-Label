@@ -126,7 +126,8 @@ describe("buildOrderInvoiceSection", () => {
       null,
       { pageBreakAfter: false }
     );
-    assert.match(withVariant, /Black • Size S/);
+    assert.match(withVariant, /Black · S/);
+    assert.doesNotMatch(withVariant, /SKU/i);
 
     const without = buildOrderInvoiceSection(
       sampleOrder,
@@ -135,7 +136,33 @@ describe("buildOrderInvoiceSection", () => {
       { pageBreakAfter: false }
     );
     assert.doesNotMatch(without, /Black/);
-    assert.doesNotMatch(without, /Size S/);
+    assert.doesNotMatch(without, /mesh-dress-black-s/);
+  });
+
+  it("keeps separate lines for same product with different sizes", () => {
+    const html = buildOrderInvoiceSection(
+      sampleOrder,
+      [
+        item({ name: "Sleeveless Mesh Mini Fitted Dress", color: "Black", size: "S", quantity: 1 }),
+        item({ name: "Sleeveless Mesh Mini Fitted Dress", color: "Black", size: "M", quantity: 1 }),
+      ],
+      null,
+      { pageBreakAfter: false }
+    );
+    assert.match(html, /Black · S/);
+    assert.match(html, /Black · M/);
+    assert.equal((html.match(/Sleeveless Mesh Mini Fitted Dress/g) ?? []).length, 2);
+  });
+
+  it("keeps five items with variants on one label when content allows", () => {
+    const pages = paginateInvoiceItems([
+      item({ name: "Dress One", color: "Black", size: "S" }),
+      item({ name: "Dress Two", color: "Black", size: "M" }),
+      item({ name: "Dress Three", color: "Black", size: "L" }),
+      item({ name: "Dress Four", color: "Red", size: "M" }),
+      item({ name: "Two-Piece Set", color: "Multicolor", size: "M" }),
+    ]);
+    assert.equal(pages.length, 1);
   });
 
   it("omits empty email lines", () => {

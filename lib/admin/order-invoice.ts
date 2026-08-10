@@ -5,6 +5,7 @@ import {
   type OrderAddressJson,
 } from "@/lib/orders/format-address";
 import { isOrderPaid, paymentLabel } from "@/lib/admin/order-status";
+import { formatPackingSlipVariantLine } from "@/lib/admin/order-item-variant";
 
 export const MAX_BULK_INVOICE_ORDERS = 100;
 
@@ -74,15 +75,7 @@ const ITEM_VARIANT_MM = 3;
 const CHARS_PER_LINE = 32;
 
 function formatItemVariantLine(item: OrderInvoiceItem): string | null {
-  const explicit = item.variant_label?.trim();
-  if (explicit) return explicit;
-  const color = item.color?.trim();
-  const size = item.size?.trim();
-  const parts = [
-    color || null,
-    size ? (size.toLowerCase().startsWith("size") ? size : `Size ${size}`) : null,
-  ].filter(Boolean) as string[];
-  return parts.length ? parts.join(" • ") : null;
+  return formatPackingSlipVariantLine(item);
 }
 
 function estimateItemHeightMm(item: OrderInvoiceItem): number {
