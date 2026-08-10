@@ -1,0 +1,99 @@
+import { NextResponse } from "next/server";
+import { getRequestAuthz } from "@/lib/authz";
+import {
+  type OrderInvoiceItem,
+  type OrderInvoiceOrder,
+} from "@/lib/admin/order-invoice";
+import { buildPairedOrdersPrintHtml } from "@/lib/admin/order-print-pair";
+import { createServiceRoleClient } from "@/lib/supabase/server";
+import type { OrderAddressJson } from "@/lib/orders/format-address";
+
+type RouteContext = {
+  params: Promise<{ orderId: string }>;
+};
+
+/** Packing slip then shipping label for one order. */
+export async function GET(_request: Request, context: RouteContext) {
+  const authz = await getRequestAuthz();
+  if (!authz.isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { orderId } = await context.params;
+  const service = createServiceRoleClient();
+  const [{ data: order, error }, { data: items }, { data: shipment }, { data: payments }] =
+    await Promise.all([
+      service
+        .from("orders")
+        .select(
+          "id, order_number, email, phone, status, shipping_address, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, discount_code, total_ghs, created_at, paid_at"
+        )
+        .eq("id", orderId)
+        .maybeSingle(),
+      service.from("order_items").select("id, name, sku, unit_price_ghs, quantity").eq("order_id", orderId),
+      service
+        .from("shipments")
+        .select("tracking_number, carrier")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      service
+        .from("payments")
+        .select("status")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
+
+  if (error || !order) {
+    return NextResponse.json({ error: error?.message ?? "Order not found" }, { status: 404 });
+  }
+
+  const paymentStatuses = (payments ?? []).map((p) => String(p.status ?? ""));
+  const payment_status = (
+    paymentStatuses.includes("paid") ? "paid" : paymentStatuses[0] ?? null
+  ) as OrderInvoiceOrder["payment_status"];
+
+  const invoiceOrder: OrderInvoiceOrder = {
+    order_number: String(order.order_number ?? ""),
+    email: String(order.email ?? ""),
+    phone: order.phone == null ? null : String(order.phone),
+    status: String(order.status ?? ""),
+    shipping_address: order.shipping_address as OrderAddressJson,
+    subtotal_ghs: order.subtotal_ghs != null ? Number(order.subtotal_ghs) : null,
+    shipping_ghs: order.shipping_ghs != null ? Number(order.shipping_ghs) : null,
+    tax_ghs: order.tax_ghs != null ? Number(order.tax_ghs) : null,
+    discount_ghs: order.discount_ghs != null ? Number(order.discount_ghs) : null,
+    discount_code: order.discount_code ?? null,
+    total_ghs: order.total_ghs != null ? Number(order.total_ghs) : null,
+    created_at: String(order.created_at ?? new Date(0).toISOString()),
+    paid_at: order.paid_at == null ? null : String(order.paid_at),
+    payment_status,
+  };
+
+  const invoiceItems: OrderInvoiceItem[] = (items ?? []).map((item) => ({
+    name: String(item.name ?? ""),
+    sku: item.sku == null ? null : String(item.sku),
+    unit_price_ghs: item.unit_price_ghs != null ? Number(item.unit_price_ghs) : null,
+    quantity: Number(item.quantity ?? 0),
+  }));
+
+  const html = buildPairedOrdersPrintHtml({
+    title: `Print order ${invoiceOrder.order_number}`,
+    orders: [
+      {
+        invoice: invoiceOrder,
+        items: invoiceItems,
+        shipment: shipment ?? null,
+      },
+    ],
+  });
+
+  return new NextResponse(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}

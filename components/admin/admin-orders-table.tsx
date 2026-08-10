@@ -219,6 +219,35 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
+  /** Packing slip → shipping label per order, selection order preserved. */
+  function openPairedPrint(candidates: AdminOrderRow[]) {
+    setError(null);
+    setNotice(null);
+    if (!candidates.length) {
+      setError("No orders selected.");
+      return;
+    }
+    if (candidates.length > MAX_BULK_INVOICE_ORDERS) {
+      setError(
+        `Too many orders (${candidates.length}). Print at most ${MAX_BULK_INVOICE_ORDERS} at once.`
+      );
+      return;
+    }
+
+    const labelCount = candidates.length * 2;
+    const lines = candidates.map((o, i) => {
+      const who = o.customer_name?.trim() || o.email || "Customer";
+      return `${i + 1}. ${o.order_number} — ${who}\n   • Packing Slip\n   • Shipping Label`;
+    });
+    const ok = window.confirm(
+      `PRINT SELECTED ORDERS\n\n${candidates.length} order(s) selected\n${labelCount} labels will be printed\n\n${lines.join("\n\n")}\n\nPrint ${labelCount} labels?`
+    );
+    if (!ok) return;
+
+    const url = `/api/admin/orders/bulk/print?ids=${encodeURIComponent(candidates.map((o) => o.id).join(","))}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   const statusCounts = React.useMemo(
     () => countOrdersForStatusFilter(orders, resolveStatus),
     [orders, resolveStatus]
@@ -647,14 +676,25 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
             variant="outline"
             disabled={bulkBusy || bulkNotifyBusy}
             onClick={() => openBulkPrint(selectedOrders)}
-            title="Paid orders only; unpaid rows are skipped"
+            title="Paid orders only; packing slips only"
           >
             <Printer className="mr-1.5 size-3.5" aria-hidden />
-            Print selected
+            Print packing slips
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={bulkBusy || bulkNotifyBusy}
+            onClick={() => openPairedPrint(selectedOrders)}
+            title="Each order: packing slip then shipping label"
+          >
+            <Printer className="mr-1.5 size-3.5" aria-hidden />
+            Print selected orders
           </Button>
           <p className="w-full text-xs text-muted-foreground sm:w-auto sm:max-w-md">
             Each customer gets their own email and SMS for their order number and status. Orders
-            with Notify off are skipped. Print includes paid orders only (max {MAX_BULK_INVOICE_ORDERS}).
+            with Notify off are skipped. &quot;Print selected orders&quot; prints packing slip → shipping
+            label per order (max {MAX_BULK_INVOICE_ORDERS}).
           </p>
         </div>
       ) : null}
@@ -847,6 +887,23 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                   onClick={() => window.open(`/api/admin/orders/${detail.order.id}/invoice`, "_blank")}
                 >
                   Print packing slip
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    window.open(`/api/admin/orders/${detail.order.id}/shipping-label`, "_blank")
+                  }
+                >
+                  Print shipping label
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => window.open(`/api/admin/orders/${detail.order.id}/print`, "_blank")}
+                  title="Packing slip then shipping label"
+                >
+                  Print order
                 </Button>
                 {!detail.payments.some((p) => p.status === "paid") && !detail.order.paid_at ? (
                   <Button

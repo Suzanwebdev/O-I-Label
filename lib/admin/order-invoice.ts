@@ -603,6 +603,8 @@ export function buildInvoiceHtmlDocument(opts: {
   sections: string[];
   autoPrint?: boolean;
   footerNote?: string;
+  /** Extra CSS appended after packing-slip styles (shipping label / paired queue). */
+  extraCss?: string;
 }): string {
   const sections = opts.sections.join("\n");
   const printScript = opts.autoPrint !== false ? "<script>window.print()</script>" : "";
@@ -616,7 +618,7 @@ export function buildInvoiceHtmlDocument(opts: {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(opts.title)}</title>
-  <style>${THERMAL_CSS}</style>
+  <style>${THERMAL_CSS}${opts.extraCss ?? ""}</style>
 </head>
 <body>
   <div class="screen-stage">
