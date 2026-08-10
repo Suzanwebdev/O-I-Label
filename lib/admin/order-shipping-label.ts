@@ -97,7 +97,6 @@ export function buildShippingLabelSection(
   <header class="ship-label-header">
     <p class="ship-label-brand">O &amp; I LABEL</p>
     <p class="ship-label-doc">SHIPPING LABEL</p>
-    <p class="ship-label-role">OUTSIDE PACKAGE</p>
   </header>
   <p class="ship-label-error">Cannot print shipping label for ${escapeHtml(order.order_number || "this order")}.</p>
   <p class="ship-label-error-detail">Missing: ${escapeHtml(validation.missing.join(", "))}.</p>
@@ -108,7 +107,6 @@ export function buildShippingLabelSection(
   <header class="ship-label-header">
     <p class="ship-label-brand">O &amp; I LABEL</p>
     <p class="ship-label-doc">SHIPPING LABEL</p>
-    <p class="ship-label-role">OUTSIDE PACKAGE</p>
     ${batchHint}
   </header>
   <section class="ship-label-deliver">
@@ -120,8 +118,8 @@ export function buildShippingLabelSection(
     <p class="ship-label-order-no">${escapeHtml(order.order_number)}</p>
   </section>
   <footer class="ship-label-footer">
-    <p>O &amp; I LABEL</p>
-    <p>Premium Women&apos;s Fashion • oandilabel.com</p>
+    <p class="ship-label-footer-brand">O &amp; I LABEL</p>
+    <p class="ship-label-footer-sub">Premium Women&apos;s Fashion • oandilabel.com</p>
   </footer>
 </section>`;
 }
@@ -133,87 +131,103 @@ export const SHIPPING_LABEL_CSS = `
     min-height: ${THERMAL_LABEL.heightMm}mm;
     max-width: ${THERMAL_LABEL.widthMm}mm;
     margin: 0 auto 20px;
-    padding: 5mm 4.5mm 4mm;
+    padding: 4.5mm 4.2mm 4mm;
     background: #fff;
     border: 1px solid #ccc;
     box-shadow: 0 8px 24px rgba(0,0,0,0.08);
     display: flex;
     flex-direction: column;
-    gap: 4mm;
+    gap: 0;
     color: #000;
+  }
+  .ship-label-header {
+    padding-bottom: 2.5mm;
+    border-bottom: 1.5px solid #000;
+    margin-bottom: 3.5mm;
   }
   .ship-label-brand {
     margin: 0;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
-    letter-spacing: 0.06em;
-    line-height: 1.1;
+    letter-spacing: 0.05em;
+    line-height: 1.05;
   }
   .ship-label-doc {
-    margin: 1.5mm 0 0;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.16em;
-  }
-  .ship-label-role {
-    margin: 1mm 0 0;
-    font-size: 8px;
+    margin: 0.8mm 0 0;
+    font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.14em;
+    line-height: 1.2;
   }
   .ship-label-batch {
-    margin: 2mm 0 0;
-    font-size: 8px;
+    margin: 1.5mm 0 0;
+    font-size: 7.5px;
     font-weight: 700;
     letter-spacing: 0.08em;
   }
+  .ship-label-deliver {
+    margin-bottom: 4mm;
+  }
   .ship-label-section {
     margin: 0 0 2mm;
-    font-size: 8px;
+    font-size: 7.5px;
     font-weight: 800;
     letter-spacing: 0.14em;
-    border-bottom: 1.5px solid #000;
-    padding-bottom: 1mm;
+    line-height: 1.2;
   }
   .ship-label-name {
-    margin: 0 0 2mm;
-    font-size: 18px;
+    margin: 0 0 1.8mm;
+    font-size: 20px;
     font-weight: 800;
-    line-height: 1.15;
+    line-height: 1.12;
     text-transform: uppercase;
     word-break: break-word;
   }
   .ship-label-addr {
-    margin: 0 0 1.2mm;
-    font-size: 12px;
+    margin: 0 0 1mm;
+    font-size: 11px;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.35;
     word-break: break-word;
   }
   .ship-label-phone {
-    margin: 3mm 0 0;
+    margin: 2.8mm 0 0;
     font-size: 16px;
     font-weight: 800;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+  }
+  .ship-label-order {
+    padding-top: 3mm;
+    border-top: 1.5px solid #000;
+    margin-bottom: 0;
   }
   .ship-label-order-no {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
     letter-spacing: 0.02em;
+    line-height: 1.25;
     word-break: break-word;
   }
   .ship-label-footer {
     margin-top: auto;
-    padding-top: 3mm;
-    border-top: 1px solid #000;
+    padding-top: 3.5mm;
+    border-top: 0.75px solid #000;
     text-align: center;
   }
-  .ship-label-footer p {
+  .ship-label-footer-brand {
     margin: 0;
     font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+  }
+  .ship-label-footer-sub {
+    margin: 0.6mm 0 0;
+    font-size: 7px;
     font-weight: 600;
-    line-height: 1.35;
+    line-height: 1.3;
   }
   .ship-label-error {
     margin: 4mm 0 0;

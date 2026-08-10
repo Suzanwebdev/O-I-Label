@@ -44,7 +44,7 @@ describe("shipping label privacy", () => {
       { pageBreakAfter: false }
     );
     assert.match(html, /SHIPPING LABEL/);
-    assert.match(html, /OUTSIDE PACKAGE/);
+    assert.doesNotMatch(html, /OUTSIDE PACKAGE/);
     assert.match(html, /OI-TEST0001/);
     assert.match(html, /Ama Nuella/i);
     assert.match(html, /0559591823/);
