@@ -4,7 +4,6 @@ import {
   formatOrderShippingAddressLines,
   type OrderAddressJson,
 } from "@/lib/orders/format-address";
-import { isOrderPaid, paymentLabel } from "@/lib/admin/order-status";
 import { formatPackingSlipVariantLine } from "@/lib/admin/order-item-variant";
 
 export const MAX_BULK_INVOICE_ORDERS = 100;
@@ -118,19 +117,6 @@ export function paginateInvoiceItems(items: OrderInvoiceItem[]): OrderInvoiceIte
 
   if (current.length) pages.push(current);
   return pages.length ? pages : [[]];
-}
-
-function paymentBadgeHtml(order: OrderInvoiceOrder): string {
-  const label = paymentLabel({
-    payment_status: order.payment_status ?? null,
-    paid_at: order.paid_at ?? null,
-  });
-  const paid = isOrderPaid({
-    payment_status: order.payment_status ?? null,
-    paid_at: order.paid_at ?? null,
-  });
-  const mark = paid ? "✓ " : "";
-  return `<span class="pay-badge${paid ? " pay-badge--paid" : ""}">${mark}${escapeHtml(label)}</span>`;
 }
 
 function shipBlockHtml(order: OrderInvoiceOrder): string {
@@ -270,10 +256,6 @@ function buildLabelHtml(opts: {
             <p class="meta-label">DATE</p>
             <p class="meta-value">${escapeHtml(formatInvoiceDate(opts.order.created_at))}</p>
           </div>
-          <div>
-            <p class="meta-label">PAYMENT</p>
-            <p class="meta-value">${paymentBadgeHtml(opts.order)}</p>
-          </div>
         </div>
         ${trackingHtml(opts.shipment)}
       </header>
@@ -411,7 +393,7 @@ const THERMAL_CSS = `
   }
   .meta-grid {
     display: grid;
-    grid-template-columns: 1.2fr 0.9fr 0.9fr;
+    grid-template-columns: 1.35fr 1fr;
     gap: 2mm;
     margin-top: 2mm;
     padding-top: 2mm;
@@ -430,19 +412,6 @@ const THERMAL_CSS = `
     font-weight: 600;
     line-height: 1.25;
     word-break: break-word;
-  }
-  .pay-badge {
-    display: inline-block;
-    font-size: 8.5px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    border: 1.5px solid #000;
-    padding: 1px 4px;
-    line-height: 1.2;
-  }
-  .pay-badge--paid {
-    background: #000;
-    color: #fff;
   }
   .tracking {
     margin: 1.5mm 0 0;

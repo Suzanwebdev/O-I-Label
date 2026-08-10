@@ -86,7 +86,9 @@ describe("buildOrderInvoiceSection", () => {
     const html = buildOrderInvoiceSection(sampleOrder, [item()], null, { pageBreakAfter: false });
     assert.match(html, /page-break-after:auto/);
     assert.doesNotMatch(html, /page-break-after:always/);
-    assert.match(html, /✓ PAID|PAID/);
+    assert.doesNotMatch(html, /\bPAYMENT\b/);
+    assert.doesNotMatch(html, /\bPAID\b/);
+    assert.doesNotMatch(html, /pay-badge/);
     assert.match(html, /FREE/);
     assert.match(html, /PACKING SLIP/);
   });
