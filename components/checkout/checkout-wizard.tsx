@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Smartphone } from "lucide-react";
+
 const steps = ["Details", "Shipping", "Payment", "Review"] as const;
 
 type AppliedPromo = {
@@ -234,27 +235,46 @@ export function CheckoutWizard() {
           )}
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Pay securely on-site. Moolre is the default when enabled in
-                settings; Paystack and Flutterwave can be toggled by the store.
+              <div>
+                <p className="text-sm font-medium text-foreground">Payment method</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Choose how you&apos;d like to pay for this order.
+                </p>
+              </div>
+              <div
+                role="radiogroup"
+                aria-label="Payment method"
+                className="space-y-3"
+              >
+                <div
+                  role="radio"
+                  aria-checked="true"
+                  tabIndex={0}
+                  className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-foreground/20 bg-background p-4 shadow-[var(--shadow-soft)] ring-1 ring-foreground/5"
+                >
+                  <span
+                    className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted"
+                    aria-hidden
+                  >
+                    <Smartphone className="h-5 w-5 text-foreground" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold tracking-tight text-foreground">
+                      Mobile Money
+                    </span>
+                    <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                      Pay securely with your Mobile Money account.
+                    </span>
+                  </span>
+                  <span
+                    className="mt-1 h-4 w-4 shrink-0 rounded-full border border-foreground bg-foreground shadow-[inset_0_0_0_3px_hsl(var(--background))]"
+                    aria-hidden
+                  />
+                </div>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                On the next step you&apos;ll review your order, then continue to a secure payment page to complete checkout.
               </p>
-              <Tabs defaultValue="moolre">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="moolre">Moolre</TabsTrigger>
-                  <TabsTrigger value="paystack">Paystack</TabsTrigger>
-                  <TabsTrigger value="flutterwave">Flutterwave</TabsTrigger>
-                </TabsList>
-                <TabsContent value="moolre" className="mt-4 text-sm text-muted-foreground">
-                  You will be redirected to complete payment. Webhook confirms
-                  order automatically.
-                </TabsContent>
-                <TabsContent value="paystack" className="mt-4 text-sm text-muted-foreground">
-                  Card and mobile money where available.
-                </TabsContent>
-                <TabsContent value="flutterwave" className="mt-4 text-sm text-muted-foreground">
-                  Pan-African cards and wallets.
-                </TabsContent>
-              </Tabs>
             </div>
           )}
           {step === 3 && (
