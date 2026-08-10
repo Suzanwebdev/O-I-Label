@@ -145,6 +145,8 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
   const [detailBusy, setDetailBusy] = React.useState(false);
   const [notifyBusy, setNotifyBusy] = React.useState(false);
   const [confirmPayBusy, setConfirmPayBusy] = React.useState(false);
+  const [syncPayBusy, setSyncPayBusy] = React.useState(false);
+  const autoSyncedRef = React.useRef(false);
 
   const filtered = React.useMemo(() => {
     const key = q.trim().toLowerCase();
@@ -361,6 +363,19 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
     setDetail(null);
     setDetailBusy(true);
     try {
+      const orderRow = orders.find((o) => o.id === orderId);
+      if (orderRow && !isOrderPaid(orderRow)) {
+        try {
+          // Ask Moolre only — never mark paid without provider confirmation.
+          await fetch(`/api/admin/orders/${orderId}/confirm-payment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          });
+        } catch {
+          // Detail load continues even if Moolre sync fails.
+        }
+      }
       const res = await fetch(`/api/admin/orders/${orderId}`);
       const json = (await res.json()) as { error?: string } & typeof detail;
       if (!res.ok) {
@@ -368,6 +383,9 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
         return;
       }
       setDetail(json);
+      if (json?.order?.paid_at || json?.payments?.some((p) => p.status === "paid")) {
+        router.refresh();
+      }
     } catch {
       setError("Network error while loading order detail");
     } finally {
@@ -375,23 +393,85 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
     }
   }
 
+  async function syncUnpaidWithMoolre(opts?: { quiet?: boolean }) {
+    setSyncPayBusy(true);
+    if (!opts?.quiet) {
+      setError(null);
+      setNotice(null);
+    }
+    try {
+      const res = await fetch("/api/admin/orders/reconcile-payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 40 }),
+      });
+      const json = (await res.json()) as {
+        error?: string;
+        markedPaid?: number;
+        stillPending?: number;
+        checked?: number;
+        failed?: number;
+      };
+      if (!res.ok) {
+        if (!opts?.quiet) setError(json.error ?? "Could not sync payments with Moolre");
+        return;
+      }
+      const marked = json.markedPaid ?? 0;
+      if (marked > 0 || !opts?.quiet) {
+        setNotice(
+          marked > 0
+            ? `Synced ${marked} payment(s) from Moolre. ${json.stillPending ?? 0} still pending.`
+            : `Checked ${json.checked ?? 0} unpaid payment(s). None newly confirmed at Moolre.`
+        );
+      }
+      if (marked > 0) router.refresh();
+    } catch {
+      if (!opts?.quiet) setError("Network error while syncing payments");
+    } finally {
+      setSyncPayBusy(false);
+    }
+  }
+
+  React.useEffect(() => {
+    if (autoSyncedRef.current) return;
+    const hasUnpaid = orders.some((o) => !isOrderPaid(o));
+    if (!hasUnpaid) return;
+    autoSyncedRef.current = true;
+    void syncUnpaidWithMoolre({ quiet: true });
+    // Intentionally once on mount when unpaid orders exist.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only auto sync
+  }, []);
+
   async function confirmPayment() {
     if (!openOrderId) return;
     setConfirmPayBusy(true);
     setError(null);
     setNotice(null);
     try {
-      const res = await fetch(`/api/admin/orders/${openOrderId}/confirm-payment`, { method: "POST" });
-      const json = (await res.json()) as { error?: string; ok?: boolean; source?: string };
-      if (!res.ok) {
-        setError(json.error ?? "Could not confirm payment");
+      const res = await fetch(`/api/admin/orders/${openOrderId}/confirm-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const json = (await res.json()) as {
+        error?: string;
+        ok?: boolean;
+        source?: string;
+        reason?: string;
+      };
+      if (!res.ok || json.ok === false) {
+        setError(
+          json.error ??
+            "Moolre has not confirmed this payment. The order stays unpaid until payment succeeds."
+        );
+        await openDetail(openOrderId);
         return;
       }
-      setNotice("Payment confirmed. Order is now marked as paid.");
+      setNotice("Moolre confirmed payment. Order is now marked as paid.");
       await openDetail(openOrderId);
       router.refresh();
     } catch {
-      setError("Network error while confirming payment");
+      setError("Network error while checking payment with Moolre");
     } finally {
       setConfirmPayBusy(false);
     }
@@ -501,6 +581,15 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm text-muted-foreground">{filtered.length} orders</p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={syncPayBusy}
+            onClick={() => void syncUnpaidWithMoolre()}
+            title="Ask Moolre which pending payment references are paid, then update matching orders"
+          >
+            {syncPayBusy ? "Syncing…" : "Sync unpaid with Moolre"}
+          </Button>
           {paidOnFiltered.length > 0 ? (
             <Button
               size="sm"
@@ -764,9 +853,9 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                     size="sm"
                     variant="secondary"
                     onClick={() => void confirmPayment()}
-                    disabled={confirmPayBusy}
+                    disabled={confirmPayBusy || syncPayBusy}
                   >
-                    {confirmPayBusy ? "Confirming..." : "Confirm payment"}
+                    {confirmPayBusy ? "Checking Moolre…" : "Check payment with Moolre"}
                   </Button>
                 ) : null}
                 <Button size="sm" onClick={() => void sendUpdate()} disabled={notifyBusy}>
@@ -874,8 +963,15 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                 <ul className="mt-2 space-y-2">
                   {detail.payments.map((p) => (
                     <li key={p.id} className="rounded border p-2 text-muted-foreground">
-                      {p.provider} • {p.status} • GHc {p.amount_ghs.toFixed(2)} •{" "}
-                      {new Date(p.created_at).toLocaleString()}
+                      <p>
+                        {p.provider} • {p.status} • GHc {p.amount_ghs.toFixed(2)} •{" "}
+                        {new Date(p.created_at).toLocaleString()}
+                      </p>
+                      {p.reference ? (
+                        <p className="mt-1 break-all font-mono text-[11px] text-foreground/80">
+                          Ref: {p.reference}
+                        </p>
+                      ) : null}
                     </li>
                   ))}
                   {detail.payments.length === 0 ? <li className="text-muted-foreground">No payments recorded.</li> : null}

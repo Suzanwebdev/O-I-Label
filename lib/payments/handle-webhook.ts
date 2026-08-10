@@ -31,6 +31,7 @@ export async function handleProviderWebhook(
 
   const marked = await markOrderPaidByReference(parsed.reference, provider, "webhook", {
     amountGhs: parsed.amountGhs,
+    orderId: parsed.orderId,
   });
   if (!marked.ok) {
     await supabase.from("webhook_logs").insert({

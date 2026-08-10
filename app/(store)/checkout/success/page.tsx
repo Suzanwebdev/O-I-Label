@@ -3,6 +3,7 @@ import { Container } from "@/components/store/container";
 import { Button } from "@/components/ui/button";
 import { CheckoutSuccessClient } from "@/components/checkout/checkout-success-client";
 import { CheckoutSuccessSummary } from "@/components/checkout/checkout-success-summary";
+import { CheckoutPaymentPoller } from "@/components/checkout/checkout-payment-poller";
 import { verifyOrderAccessToken } from "@/lib/auth/signed-token";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { reconcileOrderPayment } from "@/lib/payments/reconcile-payment";
@@ -104,6 +105,9 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
           Thank you for your order
         </h1>
         <p className="mx-auto mt-4 max-w-md text-sm text-muted-foreground md:text-base">{message}</p>
+        {!isDemo && orderId && token && state === "pending" ? (
+          <CheckoutPaymentPoller orderId={orderId} token={token} enabled />
+        ) : null}
 
         {orderSummary ? <CheckoutSuccessSummary order={orderSummary} /> : null}
 

@@ -12,20 +12,54 @@ export type MarkOrderPaidResult =
   | { ok: true; orderId: string; idempotent?: boolean }
   | { ok: false; reason: string };
 
+const EXTERNAL_REF_ORDER_RE = /^oi_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_/i;
+
 /** Idempotently mark payment + order as paid and send customer notifications. */
 export async function markOrderPaidByReference(
   reference: string,
   provider: PaymentProviderId,
   source: "webhook" | "reconcile" | "admin",
-  opts?: { amountGhs?: number; skipAmountCheck?: boolean }
+  opts?: { amountGhs?: number; skipAmountCheck?: boolean; orderId?: string }
 ): Promise<MarkOrderPaidResult> {
   const supabase = createServiceRoleClient();
+  const ref = reference.trim();
+  if (!ref) {
+    return { ok: false, reason: "payment_not_found" };
+  }
 
-  const { data: payment } = await supabase
+  let payment: {
+    id: string;
+    order_id: string;
+    status: string;
+    amount_ghs: number | string | null;
+  } | null = null;
+
+  const { data: byRef } = await supabase
     .from("payments")
     .select("id, order_id, status, amount_ghs")
-    .eq("reference", reference)
+    .eq("reference", ref)
     .maybeSingle();
+
+  if (byRef?.order_id) {
+    payment = byRef;
+  }
+
+  // Fallback: webhook/metadata order id, or oi_<orderUuid>_… externalref shape.
+  if (!payment) {
+    const fromMeta = opts?.orderId?.trim();
+    const fromRef = EXTERNAL_REF_ORDER_RE.exec(ref)?.[1];
+    const orderId = fromMeta || fromRef;
+    if (orderId) {
+      const { data: byOrder } = await supabase
+        .from("payments")
+        .select("id, order_id, status, amount_ghs")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (byOrder?.order_id) payment = byOrder;
+    }
+  }
 
   if (!payment?.order_id) {
     return { ok: false, reason: "payment_not_found" };
@@ -33,16 +67,6 @@ export async function markOrderPaidByReference(
 
   if (payment.status === "paid") {
     return { ok: true, orderId: payment.order_id, idempotent: true };
-  }
-
-  const paidAt = new Date().toISOString();
-  const { error: payErr } = await supabase
-    .from("payments")
-    .update({ status: "paid", updated_at: paidAt })
-    .eq("id", payment.id);
-
-  if (payErr) {
-    return { ok: false, reason: "payment_update" };
   }
 
   const { data: order } = await supabase
@@ -61,6 +85,16 @@ export async function markOrderPaidByReference(
     if (!Number.isFinite(paidAmount) || Math.abs(paidAmount - expected) > 0.01) {
       return { ok: false, reason: "amount_mismatch" };
     }
+  }
+
+  const paidAt = new Date().toISOString();
+  const { error: payErr } = await supabase
+    .from("payments")
+    .update({ status: "paid", updated_at: paidAt })
+    .eq("id", payment.id);
+
+  if (payErr) {
+    return { ok: false, reason: "payment_update" };
   }
 
   const fromStatus = order.status ?? "pending";
@@ -94,7 +128,7 @@ export async function markOrderPaidByReference(
     event_type: "payment_received",
     actor_id: null,
     message: "Payment confirmed — order marked as paid",
-    meta: { reference, provider, source },
+    meta: { reference: ref, provider, source },
   });
 
   const stockResult = await deductStockForPaidOrder(supabase, order.id, {
@@ -107,7 +141,7 @@ export async function markOrderPaidByReference(
       event_type: "inventory_error",
       actor_id: null,
       message: `Stock deduction failed: ${stockResult.reason}`,
-      meta: { reference, provider, source },
+      meta: { reference: ref, provider, source },
     });
   }
 

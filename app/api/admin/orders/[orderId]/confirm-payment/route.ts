@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { getRequestAuthz, hasMinAdminRole } from "@/lib/authz";
-import { createServiceRoleClient } from "@/lib/supabase/server";
-import { markOrderPaidByReference } from "@/lib/payments/mark-order-paid";
+import { getRequestAuthz } from "@/lib/authz";
 import { reconcileOrderPayment } from "@/lib/payments/reconcile-payment";
-import type { PaymentProviderId } from "@/lib/payments/types";
 
 type RouteContext = { params: Promise<{ orderId: string }> };
 
-/** Sync payment with Moolre or force-mark paid when webhook was missed. */
+/**
+ * Ask Moolre whether this order's payment reference was paid.
+ * Never marks paid unless Moolre confirms success.
+ */
 export async function POST(_request: Request, context: RouteContext) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
@@ -16,44 +16,29 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const { orderId } = await context.params;
   const reconciled = await reconcileOrderPayment(orderId);
+
   if (reconciled.ok && reconciled.paid) {
     return NextResponse.json({ ok: true, source: "reconcile", idempotent: reconciled.idempotent });
   }
 
-  if (!hasMinAdminRole(authz, "admin")) {
-    return NextResponse.json(
-      { error: "Only admins can manually confirm payment when provider sync fails." },
-      { status: 403 }
-    );
-  }
+  const reason = reconciled.ok ? reconciled.reason : reconciled.reason;
+  const message =
+    reason === "moolre_not_paid"
+      ? "Moolre has not confirmed this payment yet. The order stays unpaid."
+      : reason === "no_payment"
+        ? "No payment record found for this order."
+        : reason === "provider_not_moolre"
+          ? "This payment is not a Moolre payment."
+          : `Could not confirm with Moolre (${reason}). Order stays unpaid.`;
 
-  const service = createServiceRoleClient();
-  const { data: payment } = await service
-    .from("payments")
-    .select("reference, status, provider")
-    .eq("order_id", orderId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!payment?.reference) {
-    return NextResponse.json({ error: "No payment record for this order" }, { status: 404 });
-  }
-
-  if (payment.status === "paid") {
-    return NextResponse.json({ ok: true, source: "already_paid", idempotent: true });
-  }
-
-  const marked = await markOrderPaidByReference(
-    payment.reference,
-    (payment.provider as PaymentProviderId) ?? "moolre",
-    "admin",
-    { skipAmountCheck: true }
+  return NextResponse.json(
+    {
+      ok: false,
+      source: "reconcile",
+      paid: false,
+      reason,
+      error: message,
+    },
+    { status: 409 }
   );
-
-  if (!marked.ok) {
-    return NextResponse.json({ error: marked.reason }, { status: 400 });
-  }
-
-  return NextResponse.json({ ok: true, source: "admin" });
 }
