@@ -2,12 +2,14 @@
 
 ## 1. GitHub → Vercel (required for auto-deploy)
 
-Every push to `main` runs **CI** (lint + build). **Production deploy** runs only when a secret is set.
+Every push to `main` runs **CI** (lint + build) and **Deploy to Vercel (Production)**.
+
+The deploy job needs **one** of these GitHub Actions secrets:
 
 ### Option A — Deploy Hook (recommended)
 
 1. Vercel → project **o-i-label** → **Settings** → **Git** → **Deploy Hooks**
-2. Create hook: name `github-main`, branch **Production** `main`
+2. Create hook: name `github-main`, branch **Production** / **main**
 3. GitHub → **Suzanwebdev/O-I-Label** → **Settings** → **Secrets and variables** → **Actions**
 4. New secret: **`VERCEL_DEPLOY_HOOK`** = paste the hook URL
 
@@ -17,11 +19,13 @@ Every push to `main` runs **CI** (lint + build). **Production deploy** runs only
 2. GitHub secret: **`VERCEL_TOKEN`**
 3. Repo already includes `.vercel/project.json`
 
-### Option C — Vercel Git integration
+### Option C — Vercel Git integration (also recommended)
 
 Vercel → **Settings** → **Git** → connect **Suzanwebdev/O-I-Label**, production branch **`main`**.
 
-This can deploy even when GitHub Actions deploy is skipped.
+This deploys directly from Git pushes even without Actions secrets.
+
+> **Note:** Do not put `secrets.*` checks in a job-level `if:` — GitHub Actions cannot evaluate that and the deploy workflow fails with zero jobs.
 
 ---
 

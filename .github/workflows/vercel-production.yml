@@ -12,27 +12,38 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ secrets.VERCEL_DEPLOY_HOOK != '' || secrets.VERCEL_TOKEN != '' }}
     runs-on: ubuntu-latest
+    # Do NOT gate on secrets.* in job-level if — GitHub rejects/skips that and
+    # the workflow fails with zero jobs (which broke auto-deploy).
+    env:
+      VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      # From committed .vercel/project.json (needed for CLI deploy).
+      VERCEL_ORG_ID: team_r2Yfvv8OB5WKAvD9TlWXXr2G
+      VERCEL_PROJECT_ID: prj_zHiA0csAwJYZISjI55HOPzpASkF8
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Deploy to Vercel (production)
-        env:
-          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
+
           if [ -n "${VERCEL_DEPLOY_HOOK:-}" ]; then
             echo "Triggering production deploy via Deploy Hook…"
             curl -fsS -X POST "$VERCEL_DEPLOY_HOOK"
+            echo
+            echo "Deploy hook accepted."
             exit 0
           fi
+
           if [ -n "${VERCEL_TOKEN:-}" ]; then
             echo "Deploying with Vercel CLI…"
             npx --yes vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN"
             exit 0
           fi
-          echo "::error::Deploy secrets missing at runtime."
+
+          echo "::error::No deploy credentials. Add GitHub Actions secret VERCEL_DEPLOY_HOOK (recommended) or VERCEL_TOKEN."
+          echo "Vercel → Project → Settings → Git → Deploy Hooks → create for main → paste URL as VERCEL_DEPLOY_HOOK."
+          echo "Also ensure Vercel Git is connected to Suzanwebdev/O-I-Label (production branch: main)."
           exit 1
