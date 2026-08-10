@@ -493,7 +493,6 @@ const THERMAL_CSS = `
     font-weight: 800;
   }
   .summary {
-    margin-top: auto;
     padding-top: 1.5mm;
     border-top: 1.5px solid #000;
     break-inside: avoid;
@@ -515,9 +514,10 @@ const THERMAL_CSS = `
     font-weight: 800;
   }
   .label-footer {
+    margin-top: auto;
     break-inside: avoid;
     page-break-inside: avoid;
-    padding-top: 1mm;
+    padding-top: 2mm;
     border-top: 0.5px solid #999;
   }
   .label-footer p {
@@ -549,11 +549,11 @@ const THERMAL_CSS = `
     }
     .thermal-label {
       width: ${THERMAL_LABEL.widthMm}mm !important;
-      min-height: 0 !important;
+      /* Keep full label height so thank-you footer can sit low via flex; do not set max-height. */
+      min-height: ${THERMAL_LABEL.heightMm}mm !important;
       margin: 0 !important;
       border: none !important;
       box-shadow: none !important;
-      /* Do not set max-height — clipping is forbidden; pagination handles overflow. */
       page-break-inside: avoid;
       break-inside: avoid;
     }
