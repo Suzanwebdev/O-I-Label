@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useCart } from "@/components/providers/cart-provider";
 
 /**
  * While payment is still pending after MoMo approval, keep asking the server
  * to reconcile this order's unique payment reference with Moolre.
+ * Clears purchased bag items as soon as payment is confirmed.
  */
 export function CheckoutPaymentPoller({
   orderId,
@@ -17,7 +19,9 @@ export function CheckoutPaymentPoller({
   enabled: boolean;
 }) {
   const router = useRouter();
+  const { clearPurchasedAfterPayment } = useCart();
   const [attempts, setAttempts] = React.useState(0);
+  const clearedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (!enabled || !orderId || !token) return;
@@ -30,6 +34,10 @@ export function CheckoutPaymentPoller({
         if (res.ok) {
           const json = (await res.json()) as { paid?: boolean };
           if (json.paid) {
+            if (!clearedRef.current) {
+              clearedRef.current = true;
+              clearPurchasedAfterPayment();
+            }
             router.refresh();
             return;
           }
@@ -41,7 +49,7 @@ export function CheckoutPaymentPoller({
     }, attempts === 0 ? 2500 : 5000);
 
     return () => window.clearTimeout(timer);
-  }, [enabled, orderId, token, attempts, router]);
+  }, [enabled, orderId, token, attempts, router, clearPurchasedAfterPayment]);
 
   if (!enabled) return null;
 

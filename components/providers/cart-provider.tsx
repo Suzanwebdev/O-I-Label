@@ -31,6 +31,8 @@ const CartContext = React.createContext<{
   deselectAllLines: () => void;
   /** After checkout: remove purchased (selected) lines; keep unchecked items in the bag. */
   removePurchasedLines: () => void;
+  /** Clear Buy Now session and remove selected bag lines after payment is confirmed. */
+  clearPurchasedAfterPayment: () => void;
   /** Express checkout: only these lines at checkout; saved bag is unchanged. */
   isExpressCheckout: boolean;
   beginBuyNowCheckout: (lines: CartLine[]) => void;
@@ -152,15 +154,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setLines((prev) => prev.filter((l) => l.selected === false));
   }, []);
 
+  const clearExpressCheckout = React.useCallback(() => {
+    clearBuyNowLines();
+    setBuyNowLines(null);
+  }, []);
+
+  const clearPurchasedAfterPayment = React.useCallback(() => {
+    clearBuyNowLines();
+    setBuyNowLines(null);
+    setLines((prev) => prev.filter((l) => l.selected === false));
+  }, []);
+
   const beginBuyNowCheckout = React.useCallback((next: CartLine[]) => {
     const rows = next.map((l) => coerceCartLine({ ...l, selected: true }));
     writeBuyNowLines(rows);
     setBuyNowLines(rows);
-  }, []);
-
-  const clearExpressCheckout = React.useCallback(() => {
-    clearBuyNowLines();
-    setBuyNowLines(null);
   }, []);
 
   const value = React.useMemo(
@@ -179,6 +187,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       selectAllLines,
       deselectAllLines,
       removePurchasedLines,
+      clearPurchasedAfterPayment,
       isExpressCheckout,
       beginBuyNowCheckout,
       clearExpressCheckout,
@@ -197,6 +206,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       selectAllLines,
       deselectAllLines,
       removePurchasedLines,
+      clearPurchasedAfterPayment,
       isExpressCheckout,
       beginBuyNowCheckout,
       clearExpressCheckout,
