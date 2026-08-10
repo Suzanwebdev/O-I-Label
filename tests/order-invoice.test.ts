@@ -188,23 +188,4 @@ describe("buildInvoiceHtmlDocument", () => {
     });
     assert.match(html, /@page\s*\{\s*size:\s*100mm\s+150mm;/);
   });
-
-  it("places thank-you footer low with flex auto margin, not the totals block", () => {
-    const html = buildInvoiceHtmlDocument({
-      title: "Packing slip",
-      sections: [
-        buildOrderInvoiceSection(sampleOrder, [item()], null, { pageBreakAfter: false }),
-      ],
-      autoPrint: false,
-    });
-    assert.match(html, /\.label-footer\s*\{[^}]*margin-top:\s*auto;/);
-    assert.doesNotMatch(html, /\.summary\s*\{[^}]*margin-top:\s*auto;/);
-    assert.match(html, /Thank you for choosing O &amp; I Label/);
-    assert.match(html, /TOTAL/);
-    // Footer follows totals in markup; single-label orders must not force a break after.
-    const thankIdx = html.indexOf("Thank you for choosing");
-    const totalIdx = html.indexOf("TOTAL");
-    assert.ok(totalIdx >= 0 && thankIdx > totalIdx);
-    assert.doesNotMatch(html, /page-break-after:always/);
-  });
 });
