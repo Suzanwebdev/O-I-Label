@@ -93,6 +93,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = React.useCallback((line: CartLine) => {
     const normalized = coerceCartLine(line);
+    // Leaving Buy Now / express mode — bag checkout should use the saved cart.
+    clearBuyNowLines();
+    setBuyNowLines(null);
     setLines((prev) => {
       const i = prev.findIndex((l) => l.variantId === normalized.variantId);
       if (i >= 0) {
@@ -124,6 +127,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clear = React.useCallback(() => setLines([]), []);
 
   const toggleLineSelected = React.useCallback((variantId: string) => {
+    clearBuyNowLines();
+    setBuyNowLines(null);
     setLines((prev) =>
       prev.map((l) =>
         l.variantId === variantId ? { ...l, selected: !(l.selected !== false) } : l
@@ -132,10 +137,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const selectAllLines = React.useCallback(() => {
+    clearBuyNowLines();
+    setBuyNowLines(null);
     setLines((prev) => prev.map((l) => ({ ...l, selected: true })));
   }, []);
 
   const deselectAllLines = React.useCallback(() => {
+    clearBuyNowLines();
+    setBuyNowLines(null);
     setLines((prev) => prev.map((l) => ({ ...l, selected: false })));
   }, []);
 

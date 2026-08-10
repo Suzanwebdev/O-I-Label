@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
@@ -19,9 +20,16 @@ export function CartPageClient() {
     toggleLineSelected,
     selectAllLines,
     deselectAllLines,
+    clearExpressCheckout,
+    isExpressCheckout,
     subtotalGhs,
     bagSubtotalGhs,
   } = useCart();
+
+  // Bag page should always use the saved cart, not a leftover Buy Now session.
+  React.useEffect(() => {
+    if (isExpressCheckout) clearExpressCheckout();
+  }, [isExpressCheckout, clearExpressCheckout]);
 
   if (!lines.length) {
     return (
@@ -142,7 +150,14 @@ export function CartPageClient() {
         ) : null}
         <p className="mt-2 text-xs text-muted-foreground">Taxes and shipping are calculated at checkout.</p>
         <Button asChild className="mt-4 w-full" disabled={selectedLines.length === 0}>
-          <Link href="/checkout">Proceed to checkout</Link>
+          <Link
+            href="/checkout"
+            onClick={() => {
+              clearExpressCheckout();
+            }}
+          >
+            Proceed to checkout
+          </Link>
         </Button>
       </aside>
     </div>

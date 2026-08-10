@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -30,10 +31,20 @@ export function CartDrawer() {
     updateQty,
     removeLine,
     toggleLineSelected,
+    clearExpressCheckout,
+    isExpressCheckout,
     subtotalGhs,
     bagSubtotalGhs,
   } = useCart();
 
+  React.useEffect(() => {
+    if (isOpen && isExpressCheckout) clearExpressCheckout();
+  }, [isOpen, isExpressCheckout, clearExpressCheckout]);
+
+  function goToBagCheckout() {
+    clearExpressCheckout();
+    closeCart();
+  }
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && closeCart()}>
       <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-md">
@@ -158,7 +169,7 @@ export function CartDrawer() {
                 className="w-full"
                 disabled={lines.length === 0 || selectedLines.length === 0}
               >
-                <Link href="/checkout" onClick={closeCart}>
+                <Link href="/checkout" onClick={goToBagCheckout}>
                   Checkout
                 </Link>
               </Button>
