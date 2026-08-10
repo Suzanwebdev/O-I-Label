@@ -140,7 +140,13 @@ export async function GET(request: Request) {
     });
   }
 
-  const sections = sorted.map((order) => {
+  const sections = sorted.map((order, index) => {
+    const orderPayments = paymentsByOrder.get(order.id as string) ?? [];
+    const statuses = orderPayments.map((p) => p.status);
+    const payment_status = (
+      statuses.includes("paid") ? "paid" : statuses[0] ?? null
+    ) as OrderInvoiceOrder["payment_status"];
+
     const o: OrderInvoiceOrder = {
       order_number: String(order.order_number ?? ""),
       email: String(order.email ?? ""),
@@ -154,22 +160,29 @@ export async function GET(request: Request) {
       discount_code: order.discount_code ?? null,
       total_ghs: order.total_ghs != null ? Number(order.total_ghs) : null,
       created_at: String(order.created_at ?? new Date(0).toISOString()),
+      paid_at: order.paid_at == null ? null : String(order.paid_at),
+      payment_status,
     };
+    const isLastOrder = index === sorted.length - 1;
     return buildOrderInvoiceSection(
       o,
       itemsByOrder.get(order.id as string) ?? [],
-      shipmentByOrder.get(order.id as string) ?? null
+      shipmentByOrder.get(order.id as string) ?? null,
+      { pageBreakAfter: !isLastOrder }
     );
   });
 
   const skippedUnpaid = orderIds.length - paid.length;
   const footerNote =
     skippedUnpaid > 0
-      ? `Printed ${sections.length} paid order(s). ${skippedUnpaid} unpaid skipped. Use your browser print dialog to save as PDF.`
+      ? `Printed ${sections.length} paid order(s). ${skippedUnpaid} unpaid skipped. Print tip: 100mm × 150mm · Margins None · Scale 100%.`
       : undefined;
 
   const html = buildInvoiceHtmlDocument({
-    title: sections.length === 1 ? `Invoice ${sorted[0]?.order_number ?? ""}` : `Invoices (${sections.length})`,
+    title:
+      sections.length === 1
+        ? `Packing slip ${sorted[0]?.order_number ?? ""}`
+        : `Packing slips (${sections.length})`,
     sections,
     footerNote,
   });

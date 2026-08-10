@@ -506,10 +506,10 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
               size="sm"
               variant="outline"
               onClick={() => openBulkPrint(paidOnFiltered)}
-              title={`Print up to ${MAX_BULK_INVOICE_ORDERS} paid invoices from the current view`}
+              title={`Print up to ${MAX_BULK_INVOICE_ORDERS} paid packing slips from the current view`}
             >
               <Printer className="mr-1.5 size-3.5" aria-hidden />
-              Print paid on screen
+              Print paid packing slips
               {paidOnFiltered.length > MAX_BULK_INVOICE_ORDERS
                 ? ` (${MAX_BULK_INVOICE_ORDERS} max)`
                 : ` (${Math.min(paidOnFiltered.length, MAX_BULK_INVOICE_ORDERS)})`}
@@ -757,7 +757,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                   variant="outline"
                   onClick={() => window.open(`/api/admin/orders/${detail.order.id}/invoice`, "_blank")}
                 >
-                  Print invoice
+                  Print packing slip
                 </Button>
                 {!detail.payments.some((p) => p.status === "paid") && !detail.order.paid_at ? (
                   <Button

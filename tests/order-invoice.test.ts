@@ -1,0 +1,118 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import {
+  buildInvoiceHtmlDocument,
+  buildOrderInvoiceSection,
+  paginateInvoiceItems,
+  type OrderInvoiceItem,
+  type OrderInvoiceOrder,
+} from "../lib/admin/order-invoice.ts";
+
+function item(overrides: Partial<OrderInvoiceItem> = {}): OrderInvoiceItem {
+  return {
+    name: "Fitted Dress",
+    sku: "FD-BLK-S",
+    unit_price_ghs: 180,
+    quantity: 1,
+    ...overrides,
+  };
+}
+
+const sampleOrder: OrderInvoiceOrder = {
+  order_number: "OI-TEST0001",
+  email: "guest@example.com",
+  phone: "0559591823",
+  status: "paid",
+  shipping_address: {
+    first_name: "Susana",
+    last_name: "Ankrah",
+    address: "Aviance",
+    city: "Accra",
+    region: "Greater Accra",
+    phone: "0559591823",
+  },
+  subtotal_ghs: 180,
+  shipping_ghs: 0,
+  tax_ghs: 0,
+  discount_ghs: 0,
+  total_ghs: 180,
+  created_at: "2026-08-10T12:00:00.000Z",
+  paid_at: "2026-08-10T12:05:00.000Z",
+  payment_status: "paid",
+};
+
+describe("paginateInvoiceItems", () => {
+  it("keeps a one-item order on a single label", () => {
+    const pages = paginateInvoiceItems([item()]);
+    assert.equal(pages.length, 1);
+    assert.equal(pages[0]?.length, 1);
+  });
+
+  it("keeps a few normal items on one label", () => {
+    const pages = paginateInvoiceItems([item(), item({ name: "Mesh Top" }), item({ name: "Skirt" })]);
+    assert.equal(pages.length, 1);
+    assert.equal(pages[0]?.length, 3);
+  });
+
+  it("splits unusually large orders across labels without orphaning totals-only pages", () => {
+    const many = Array.from({ length: 20 }, (_, i) =>
+      item({
+        name: `Very Long Product Name That Will Wrap Across Multiple Lines Item ${i + 1}`,
+        sku: `SKU-VERY-LONG-IDENTIFIER-${i + 1}-ABCDEFGHIJKLMNOP`,
+      })
+    );
+    const pages = paginateInvoiceItems(many);
+    assert.ok(pages.length > 1);
+    assert.ok(pages.every((p) => p.length > 0));
+    const totalItems = pages.reduce((n, p) => n + p.length, 0);
+    assert.equal(totalItems, 20);
+  });
+});
+
+describe("buildOrderInvoiceSection", () => {
+  it("does not force a blank second page for a single-label order", () => {
+    const html = buildOrderInvoiceSection(sampleOrder, [item()], null, { pageBreakAfter: false });
+    assert.match(html, /page-break-after:auto/);
+    assert.doesNotMatch(html, /page-break-after:always/);
+    assert.match(html, /✓ PAID|PAID/);
+    assert.match(html, /FREE/);
+    assert.match(html, /PACKING SLIP/);
+  });
+
+  it("marks continuation between labels of a large order", () => {
+    const many = Array.from({ length: 18 }, (_, i) =>
+      item({ name: `Long Wrap Name Product Number ${i} Extra Words Here` })
+    );
+    const html = buildOrderInvoiceSection(sampleOrder, many, null, { pageBreakAfter: false });
+    assert.match(html, /LABEL 1 OF/);
+    assert.match(html, /Continued on next label/);
+    assert.match(html, /page-break-after:always/);
+    // Final label should not break after when pageBreakAfter is false
+    const labels = html.match(/class="thermal-label"/g) ?? [];
+    assert.ok(labels.length > 1);
+    assert.match(html, /page-break-after:auto/);
+  });
+
+  it("omits empty SKU and email lines", () => {
+    const html = buildOrderInvoiceSection(
+      { ...sampleOrder, email: "" },
+      [item({ sku: null, name: "No Sku Dress" })],
+      null,
+      { pageBreakAfter: false }
+    );
+    assert.doesNotMatch(html, /SKU:/);
+    assert.doesNotMatch(html, /undefined/);
+    assert.doesNotMatch(html, />Email</i);
+  });
+});
+
+describe("buildInvoiceHtmlDocument", () => {
+  it("declares 100mm × 150mm @page size", () => {
+    const html = buildInvoiceHtmlDocument({
+      title: "Packing slip",
+      sections: ['<section class="thermal-label" style="page-break-after:auto;"></section>'],
+      autoPrint: false,
+    });
+    assert.match(html, /@page\s*\{\s*size:\s*100mm\s+150mm;/);
+  });
+});

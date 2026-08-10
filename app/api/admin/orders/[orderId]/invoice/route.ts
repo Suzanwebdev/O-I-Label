@@ -21,27 +21,41 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const { orderId } = await context.params;
   const service = createServiceRoleClient();
-  const [{ data: order, error }, { data: items }, { data: shipment }] = await Promise.all([
-    service
-      .from("orders")
-      .select(
-        "id, order_number, email, phone, status, shipping_address, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, discount_code, total_ghs, created_at"
-      )
-      .eq("id", orderId)
-      .maybeSingle(),
-    service.from("order_items").select("id, name, sku, unit_price_ghs, quantity").eq("order_id", orderId),
-    service
-      .from("shipments")
-      .select("tracking_number, carrier")
-      .eq("order_id", orderId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const [{ data: order, error }, { data: items }, { data: shipment }, { data: payments }] =
+    await Promise.all([
+      service
+        .from("orders")
+        .select(
+          "id, order_number, email, phone, status, shipping_address, subtotal_ghs, shipping_ghs, tax_ghs, discount_ghs, discount_code, total_ghs, created_at, paid_at"
+        )
+        .eq("id", orderId)
+        .maybeSingle(),
+      service.from("order_items").select("id, name, sku, unit_price_ghs, quantity").eq("order_id", orderId),
+      service
+        .from("shipments")
+        .select("tracking_number, carrier")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      service
+        .from("payments")
+        .select("status")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
 
   if (error || !order) {
     return NextResponse.json({ error: error?.message ?? "Order not found" }, { status: 404 });
   }
+
+  const paymentStatuses = (payments ?? []).map((p) => String(p.status ?? ""));
+  const payment_status = (
+    paymentStatuses.includes("paid")
+      ? "paid"
+      : paymentStatuses[0] ?? null
+  ) as OrderInvoiceOrder["payment_status"];
 
   const invoiceOrder: OrderInvoiceOrder = {
     order_number: String(order.order_number ?? ""),
@@ -56,6 +70,8 @@ export async function GET(_request: Request, context: RouteContext) {
     discount_code: order.discount_code ?? null,
     total_ghs: order.total_ghs != null ? Number(order.total_ghs) : null,
     created_at: String(order.created_at ?? new Date(0).toISOString()),
+    paid_at: order.paid_at == null ? null : String(order.paid_at),
+    payment_status,
   };
 
   const invoiceItems: OrderInvoiceItem[] = (items ?? []).map((item) => ({
@@ -69,7 +85,7 @@ export async function GET(_request: Request, context: RouteContext) {
     pageBreakAfter: false,
   });
   const html = buildInvoiceHtmlDocument({
-    title: `Invoice ${invoiceOrder.order_number}`,
+    title: `Packing slip ${invoiceOrder.order_number}`,
     sections: [section],
   });
 
