@@ -54,6 +54,18 @@ describe("paginateInvoiceItems", () => {
     assert.equal(pages[0]?.length, 3);
   });
 
+  it("keeps five normal items on one label without SKU lines", () => {
+    const pages = paginateInvoiceItems([
+      item({ name: "Sleeveless Mesh Mini Fitted Dress" }),
+      item({ name: "Sleeveless Lace Patchwork Short Dress" }),
+      item({ name: "Striped Multicolored Two-Piece Set" }),
+      item({ name: "Silk Halter Neck Top" }),
+      item({ name: "Another Dress Style Name" }),
+    ]);
+    assert.equal(pages.length, 1);
+    assert.equal(pages[0]?.length, 5);
+  });
+
   it("splits unusually large orders across labels without orphaning totals-only pages", () => {
     const many = Array.from({ length: 20 }, (_, i) =>
       item({
@@ -93,14 +105,46 @@ describe("buildOrderInvoiceSection", () => {
     assert.match(html, /page-break-after:auto/);
   });
 
-  it("omits empty SKU and email lines", () => {
+  it("never prints SKU on the packing slip", () => {
+    const html = buildOrderInvoiceSection(
+      sampleOrder,
+      [item({ sku: "sleeveless-mesh-mini-fitted-dress-black-s", name: "Sleeveless Mesh Mini Fitted Dress" })],
+      null,
+      { pageBreakAfter: false }
+    );
+    assert.doesNotMatch(html, /SKU/i);
+    assert.doesNotMatch(html, /sleeveless-mesh-mini-fitted-dress-black-s/);
+    assert.match(html, /Sleeveless Mesh Mini Fitted Dress/);
+    assert.match(html, /×1/);
+    assert.match(html, /Thank you for choosing O &amp; I Label/);
+  });
+
+  it("prints variant line only when color/size already exist on the item", () => {
+    const withVariant = buildOrderInvoiceSection(
+      sampleOrder,
+      [item({ color: "Black", size: "S", name: "Mesh Dress" })],
+      null,
+      { pageBreakAfter: false }
+    );
+    assert.match(withVariant, /Black • Size S/);
+
+    const without = buildOrderInvoiceSection(
+      sampleOrder,
+      [item({ name: "Mesh Dress", sku: "mesh-dress-black-s" })],
+      null,
+      { pageBreakAfter: false }
+    );
+    assert.doesNotMatch(without, /Black/);
+    assert.doesNotMatch(without, /Size S/);
+  });
+
+  it("omits empty email lines", () => {
     const html = buildOrderInvoiceSection(
       { ...sampleOrder, email: "" },
       [item({ sku: null, name: "No Sku Dress" })],
       null,
       { pageBreakAfter: false }
     );
-    assert.doesNotMatch(html, /SKU:/);
     assert.doesNotMatch(html, /undefined/);
     assert.doesNotMatch(html, />Email</i);
   });

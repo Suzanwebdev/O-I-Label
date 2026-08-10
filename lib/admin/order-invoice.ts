@@ -36,6 +36,10 @@ export type OrderInvoiceItem = {
   sku: string | null;
   unit_price_ghs: number | null;
   quantity: number;
+  /** Optional; only rendered when already present on the item payload. */
+  color?: string | null;
+  size?: string | null;
+  variant_label?: string | null;
 };
 
 export type OrderInvoiceShipment = {
@@ -64,16 +68,28 @@ const FIRST_HEADER_MM = 42;
 const CONT_HEADER_MM = 22;
 /** Summary + thank-you footer on last label. */
 const FOOTER_MM = 30;
-const ITEM_BASE_MM = 7.2;
-const ITEM_WRAP_MM = 3.1;
-const ITEM_SKU_MM = 2.6;
-const CHARS_PER_LINE = 34;
+const ITEM_BASE_MM = 8;
+const ITEM_WRAP_MM = 3.2;
+const ITEM_VARIANT_MM = 3;
+const CHARS_PER_LINE = 32;
+
+function formatItemVariantLine(item: OrderInvoiceItem): string | null {
+  const explicit = item.variant_label?.trim();
+  if (explicit) return explicit;
+  const color = item.color?.trim();
+  const size = item.size?.trim();
+  const parts = [
+    color || null,
+    size ? (size.toLowerCase().startsWith("size") ? size : `Size ${size}`) : null,
+  ].filter(Boolean) as string[];
+  return parts.length ? parts.join(" • ") : null;
+}
 
 function estimateItemHeightMm(item: OrderInvoiceItem): number {
   const name = item.name.trim() || "Item";
   const nameLines = Math.max(1, Math.ceil(name.length / CHARS_PER_LINE));
   let h = ITEM_BASE_MM + (nameLines - 1) * ITEM_WRAP_MM;
-  if (item.sku?.trim()) h += ITEM_SKU_MM;
+  if (formatItemVariantLine(item)) h += ITEM_VARIANT_MM;
   return Math.min(h, 22);
 }
 
@@ -142,10 +158,20 @@ function shipBlockHtml(order: OrderInvoiceOrder): string {
     return `<p class="muted">No delivery address recorded</p>`;
   }
 
+  // Compact print: join address fragments into one delivery line when short enough.
+  const location =
+    addressLines.length > 1 && addressLines.join(", ").length <= 72
+      ? addressLines.join(", ")
+      : null;
+
   const parts: string[] = [];
   if (name) parts.push(`<p class="ship-name">${escapeHtml(name)}</p>`);
-  for (const line of addressLines) {
-    parts.push(`<p class="ship-line">${escapeHtml(line)}</p>`);
+  if (location) {
+    parts.push(`<p class="ship-line">${escapeHtml(location)}</p>`);
+  } else {
+    for (const line of addressLines) {
+      parts.push(`<p class="ship-line">${escapeHtml(line)}</p>`);
+    }
   }
   if (phone) parts.push(`<p class="ship-phone">${escapeHtml(phone)}</p>`);
   return parts.join("");
@@ -153,17 +179,15 @@ function shipBlockHtml(order: OrderInvoiceOrder): string {
 
 function itemRowHtml(item: OrderInvoiceItem, index: number): string {
   const name = item.name.trim() || "Item";
-  const sku = item.sku?.trim();
   const qty = Number(item.quantity ?? 0);
-  const unit = Number(item.unit_price_ghs ?? 0);
+  const variant = formatItemVariantLine(item);
   return `<div class="item">
     <div class="item-main">
       <p class="item-name"><span class="item-idx">${index}.</span> ${escapeHtml(name)}</p>
-      ${sku ? `<p class="item-sku">SKU: ${escapeHtml(sku)}</p>` : ""}
+      ${variant ? `<p class="item-variant">${escapeHtml(variant)}</p>` : ""}
     </div>
     <div class="item-meta">
       <p class="item-qty">×${qty}</p>
-      <p class="item-price">${escapeHtml(formatMoney(unit))}</p>
     </div>
   </div>`;
 }
@@ -272,8 +296,8 @@ function buildLabelHtml(opts: {
   const footer = opts.isLast
     ? `${summaryHtml(opts.order)}
       <footer class="label-footer">
-        <p>Thank you for shopping with O &amp; I Label.</p>
-        <p class="footer-sub">Premium Women&apos;s Fashion · oandilabel.com</p>
+        <p>Thank you for choosing O &amp; I Label.</p>
+        <p class="footer-sub">Premium Women&apos;s Fashion • oandilabel.com</p>
       </footer>`
     : `<p class="continued">Continued on next label →</p>`;
 
@@ -471,8 +495,9 @@ const THERMAL_CSS = `
   .item {
     display: flex;
     justify-content: space-between;
-    gap: 2mm;
-    padding: 1.2mm 0;
+    align-items: flex-start;
+    gap: 2.5mm;
+    padding: 1.8mm 0;
     border-bottom: 0.5px solid #bbb;
     break-inside: avoid;
     page-break-inside: avoid;
@@ -481,30 +506,29 @@ const THERMAL_CSS = `
   .item-main { min-width: 0; flex: 1; }
   .item-name {
     margin: 0;
-    font-size: 9px;
+    font-size: 9.5px;
     font-weight: 700;
-    line-height: 1.25;
+    line-height: 1.3;
     word-break: break-word;
+    padding-right: 1mm;
   }
   .item-idx { font-weight: 800; }
-  .item-sku {
-    margin: 0.4mm 0 0;
-    font-size: 7.5px;
-    line-height: 1.2;
-    word-break: break-all;
+  .item-variant {
+    margin: 0.7mm 0 0;
+    font-size: 8px;
+    line-height: 1.25;
+    word-break: break-word;
   }
   .item-meta {
     text-align: right;
     flex-shrink: 0;
+    min-width: 8mm;
+    padding-top: 0.2mm;
   }
   .item-qty {
     margin: 0;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 800;
-  }
-  .item-price {
-    margin: 0.3mm 0 0;
-    font-size: 7.5px;
   }
   .summary {
     margin-top: auto;
