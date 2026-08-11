@@ -79,7 +79,7 @@ export default async function ProductPage({ params }: Props) {
   const displayName =
     (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name) ||
     (typeof user?.user_metadata?.name === "string" && user.user_metadata.name) ||
-    "O & I Customer";
+    "O & I Clientele";
 
   const publicRating =
     reviewsEnabled && aggregates.count > 0 && aggregates.average != null

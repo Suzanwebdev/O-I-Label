@@ -46,7 +46,7 @@ export async function submitReview(input: SubmitReviewInput): Promise<
   }
 
   const item = eligible.item;
-  const displayName = sanitizeDisplayName(input.displayName, "O & I Customer");
+  const displayName = sanitizeDisplayName(input.displayName, "O & I Clientele");
   const media = (input.media ?? []).slice(0, 5);
 
   const service = createServiceRoleClient();

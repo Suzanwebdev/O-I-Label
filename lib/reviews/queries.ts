@@ -121,7 +121,7 @@ export async function listPublishedReviews(
     rating: Number(row.rating),
     title: row.title ? String(row.title) : null,
     body: row.body ? String(row.body) : null,
-    display_name: sanitizeDisplayName(row.display_name, "O & I Customer"),
+    display_name: sanitizeDisplayName(row.display_name, "O & I Clientele"),
     verified_purchase: Boolean(row.verified_purchase),
     purchased_color: row.purchased_color ? String(row.purchased_color) : null,
     purchased_size: row.purchased_size ? String(row.purchased_size) : null,
@@ -214,7 +214,7 @@ function mapFeatured(
       body: row.body ? String(row.body) : null,
       display_name: sanitizeDisplayName(
         row.display_name as string | null,
-        "O & I Customer"
+        "O & I Clientele"
       ),
       verified_purchase: Boolean(row.verified_purchase),
       purchased_color: row.purchased_color ? String(row.purchased_color) : null,
