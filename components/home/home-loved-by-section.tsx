@@ -5,6 +5,7 @@ import { Section } from "@/components/store/section";
 import { StarRating } from "@/components/reviews/star-rating";
 import { listFeaturedPublishedReviews } from "@/lib/reviews/queries";
 import { isReviewsFeatureEnabled } from "@/lib/reviews/feature";
+import { cn } from "@/lib/utils";
 
 export async function HomeLovedBySection() {
   if (!(await isReviewsFeatureEnabled())) return null;
@@ -12,57 +13,87 @@ export async function HomeLovedBySection() {
   const reviews = await listFeaturedPublishedReviews(6);
   if (!reviews.length) return null;
 
+  const single = reviews.length === 1;
+
   return (
-    <Section className="border-t border-border/60 bg-background pt-10 pb-12 md:pt-12 md:pb-16">
+    <Section className="border-t border-border/60 bg-background pt-10 pb-11 md:pt-12 md:pb-14">
       <Container>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
           Loved by our customers
         </p>
-        <h2 className="mt-2 font-serif-display text-[28px] leading-tight md:text-[34px]">
+        <h2 className="mt-2 font-serif-display text-[28px] leading-tight tracking-tight md:text-[34px]">
           What clients say
         </h2>
 
-        <div className="mt-8 flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
-          {reviews.map((r) => (
-            <article
-              key={r.id}
-              className="min-w-[78%] shrink-0 rounded-[var(--radius-lg)] border border-border bg-card p-5 shadow-[var(--shadow-soft)] sm:min-w-[320px] md:min-w-0"
-            >
-              <StarRating value={r.rating} size="sm" />
-              <p className="mt-3 text-sm leading-relaxed text-foreground/90">
-                “{(r.body || r.title || "Beautiful piece.").slice(0, 160)}
-                {(r.body || r.title || "").length > 160 ? "…" : ""}”
-              </p>
-              <div className="mt-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium">{r.display_name}</p>
+        <div
+          className={cn(
+            "mt-7 flex gap-3.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            single
+              ? "md:overflow-visible"
+              : "md:grid md:grid-cols-2 md:gap-5 md:overflow-visible md:pb-0 lg:grid-cols-3"
+          )}
+        >
+          {reviews.map((r) => {
+            const text = (r.body || r.title || "").trim();
+            const excerpt =
+              text.length > 180 ? `${text.slice(0, 180).trimEnd()}…` : text;
+
+            return (
+              <article
+                key={r.id}
+                className={cn(
+                  "flex min-w-[82%] shrink-0 flex-col border border-border/80 bg-background px-5 py-5 sm:min-w-[300px]",
+                  "rounded-[var(--radius-md)]",
+                  single ? "md:min-w-0 md:max-w-md" : "md:min-w-0"
+                )}
+              >
+                <StarRating value={r.rating} size="sm" />
+
+                {excerpt ? (
+                  <p className="mt-3.5 text-[15px] leading-[1.65] text-foreground/90">
+                    {excerpt}
+                  </p>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{r.display_name}</span>
                   {r.verified_purchase ? (
-                    <p className="text-[11px] text-emerald-800">✓ Verified Purchase</p>
+                    <>
+                      <span aria-hidden className="text-border">
+                        ·
+                      </span>
+                      <span className="text-foreground/70">✓ Verified Purchase</span>
+                    </>
                   ) : null}
                 </div>
+
                 {r.product_slug ? (
                   <Link
                     href={`/product/${r.product_slug}`}
-                    className="text-[11px] uppercase tracking-[0.14em] text-navy hover:underline"
+                    className="mt-4 inline-flex w-fit items-center text-sm text-navy transition-colors hover:text-foreground"
                   >
-                    Shop
+                    Shop this piece
+                    <span aria-hidden className="ml-1.5">
+                      →
+                    </span>
                   </Link>
                 ) : null}
-              </div>
-              {r.media[0] ? (
-                <div className="relative mt-4 aspect-[4/5] w-full overflow-hidden rounded-md border border-border bg-muted">
-                  <Image
-                    src={r.media[0].public_url}
-                    alt="Customer photo"
-                    fill
-                    className="object-cover"
-                    sizes="320px"
-                    unoptimized
-                  />
-                </div>
-              ) : null}
-            </article>
-          ))}
+
+                {r.media[0] ? (
+                  <div className="relative mt-4 aspect-[4/5] max-h-48 w-full max-w-[9.5rem] overflow-hidden rounded-[var(--radius-sm)] border border-border/70 bg-muted">
+                    <Image
+                      src={r.media[0].public_url}
+                      alt="Customer photo"
+                      fill
+                      className="object-cover"
+                      sizes="160px"
+                      unoptimized
+                    />
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
         </div>
       </Container>
     </Section>
