@@ -336,7 +336,7 @@ export function CheckoutWizard() {
           <Separator />
 
           <section className="space-y-4">
-            {sectionTitle("Payment", "Choose how you’d like to pay for this order.")}
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">Payment</h2>
             <div role="radiogroup" aria-label="Payment method" className="space-y-3">
               <div
                 role="radio"
