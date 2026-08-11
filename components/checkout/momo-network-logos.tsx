@@ -22,10 +22,16 @@ const LOGOS = [
 ] as const;
 
 /**
- * Visual-only Ghana Mobile Money network marks for checkout.
- * Not selectable payment methods — indicators next to the single MoMo option.
+ * Visual-only Ghana Mobile Money network marks.
+ * Not selectable payment methods.
  */
-export function MomoNetworkLogos({ className }: { className?: string }) {
+export function MomoNetworkLogos({
+  className,
+  imageClassName,
+}: {
+  className?: string;
+  imageClassName?: string;
+}) {
   return (
     <span
       className={
@@ -40,7 +46,10 @@ export function MomoNetworkLogos({ className }: { className?: string }) {
           alt={logo.alt}
           width={logo.width}
           height={logo.height}
-          className="h-[28px] w-auto max-w-[78px] shrink-0 rounded-[3px] object-contain"
+          className={
+            imageClassName ??
+            "h-[28px] w-auto max-w-[78px] shrink-0 rounded-[3px] object-contain"
+          }
         />
       ))}
     </span>

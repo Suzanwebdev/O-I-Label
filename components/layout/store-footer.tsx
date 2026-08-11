@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/components/store/container";
 import { HomeNewsletter } from "@/components/home/newsletter-block";
+import { MomoNetworkLogos } from "@/components/checkout/momo-network-logos";
 import type { HomeFooterCms } from "@/lib/home/homepage-cms";
 import { DEFAULT_FOOTER } from "@/lib/home/homepage-cms";
 
@@ -138,9 +139,15 @@ export function StoreFooter({ footer = DEFAULT_FOOTER }: { footer?: HomeFooterCm
         </div>
 
         <div className="mt-16 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-8 md:mt-[4.5rem] md:pt-10">
-          <p className="text-[11px] tracking-[0.06em] text-white/50">
-            © {year} {brand}
-          </p>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="text-[11px] tracking-[0.06em] text-white/50">
+              © {year} {brand}
+            </p>
+            <MomoNetworkLogos
+              className="inline-flex max-w-full flex-wrap items-center gap-1.5"
+              imageClassName="h-[22px] w-auto max-w-[64px] shrink-0 rounded-[2px] object-contain"
+            />
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             {social.map((item) => {
               const Icon = pickSocialIcon(item.label, item.href);
