@@ -1,9 +1,14 @@
 import { JsonSettingsEditor } from "@/components/admin/json-settings-editor";
+import { ReviewsVisibilityToggle } from "@/components/admin/reviews-visibility-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getFeatureFlagsSnapshot } from "@/lib/data/admin";
+import { isReviewsFeatureEnabled } from "@/lib/reviews/feature";
 
 export default async function AdminFeatureFlagsPage() {
-  const { featureFlags, maintenanceMode } = await getFeatureFlagsSnapshot();
+  const [{ featureFlags, maintenanceMode }, reviewsEnabled] = await Promise.all([
+    getFeatureFlagsSnapshot(),
+    isReviewsFeatureEnabled(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -11,6 +16,9 @@ export default async function AdminFeatureFlagsPage() {
       <p className="text-sm text-muted-foreground">
         Maintenance mode is currently: <span className="font-medium">{maintenanceMode ? "ON" : "OFF"}</span>
       </p>
+
+      <ReviewsVisibilityToggle initialEnabled={reviewsEnabled} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Feature flags JSON</CardTitle>

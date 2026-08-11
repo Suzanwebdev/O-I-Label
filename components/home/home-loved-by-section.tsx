@@ -4,8 +4,11 @@ import { Container } from "@/components/store/container";
 import { Section } from "@/components/store/section";
 import { StarRating } from "@/components/reviews/star-rating";
 import { listFeaturedPublishedReviews } from "@/lib/reviews/queries";
+import { isReviewsFeatureEnabled } from "@/lib/reviews/feature";
 
 export async function HomeLovedBySection() {
+  if (!(await isReviewsFeatureEnabled())) return null;
+
   const reviews = await listFeaturedPublishedReviews(6);
   if (!reviews.length) return null;
 

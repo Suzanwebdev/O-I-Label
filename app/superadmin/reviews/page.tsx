@@ -2,12 +2,15 @@ import Link from "next/link";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { getRequestAuthz } from "@/lib/authz";
 import { redirect } from "next/navigation";
+import { ReviewsVisibilityToggle } from "@/components/admin/reviews-visibility-toggle";
+import { isReviewsFeatureEnabled } from "@/lib/reviews/feature";
 
 export default async function SuperadminReviewsPage() {
   const authz = await getRequestAuthz();
   if (!authz.isSuperadmin) redirect("/admin");
 
   const service = createServiceRoleClient();
+  const enabled = await isReviewsFeatureEnabled();
   const statuses = ["pending", "published", "rejected", "hidden"] as const;
   const counts: Record<string, number> = {};
   for (const status of statuses) {
@@ -23,9 +26,13 @@ export default async function SuperadminReviewsPage() {
       <div>
         <h1 className="font-serif-display text-2xl font-semibold">Reviews oversight</h1>
         <p className="mt-1 text-sm text-white/60">
-          Counts only. Day-to-day moderation lives in Admin → Reviews.
+          Control storefront visibility and review volumes. Day-to-day moderation lives in Admin →
+          Reviews.
         </p>
       </div>
+
+      <ReviewsVisibilityToggle initialEnabled={enabled} appearance="dark" />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statuses.map((status) => (
           <div key={status} className="rounded-xl border border-white/10 bg-white/[0.04] p-4">

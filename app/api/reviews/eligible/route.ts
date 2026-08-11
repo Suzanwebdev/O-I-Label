@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getEligibleItemsForCustomer } from "@/lib/reviews/eligibility";
+import { isReviewsFeatureEnabled } from "@/lib/reviews/feature";
 
 export async function GET(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -9,6 +10,10 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
   if (!user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await isReviewsFeatureEnabled())) {
+    return NextResponse.json({ ok: true, items: [], disabled: true });
   }
 
   const url = new URL(request.url);

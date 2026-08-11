@@ -21,6 +21,7 @@ import {
   getPublishedReviewAggregates,
   listPublishedReviews,
 } from "@/lib/reviews/queries";
+import { isReviewsFeatureEnabled } from "@/lib/reviews/feature";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -59,9 +60,18 @@ export default async function ProductPage({ params }: Props) {
   const productPath = `/product/${product.slug}`;
 
   const supabase = await createServerSupabaseClient();
+  const reviewsEnabled = await isReviewsFeatureEnabled();
   const [aggregates, listed, userResult] = await Promise.all([
-    getPublishedReviewAggregates(product.id),
-    listPublishedReviews({ productId: product.id, page: 1, pageSize: 8, sort: "newest" }),
+    reviewsEnabled
+      ? getPublishedReviewAggregates(product.id)
+      : Promise.resolve({
+          average: null as number | null,
+          count: 0,
+          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        }),
+    reviewsEnabled
+      ? listPublishedReviews({ productId: product.id, page: 1, pageSize: 8, sort: "newest" })
+      : Promise.resolve({ reviews: [], total: 0, page: 1, pageSize: 8 }),
     supabase.auth.getUser(),
   ]);
 
@@ -72,7 +82,7 @@ export default async function ProductPage({ params }: Props) {
     "O & I Customer";
 
   const publicRating =
-    aggregates.count > 0 && aggregates.average != null
+    reviewsEnabled && aggregates.count > 0 && aggregates.average != null
       ? { rating: aggregates.average, review_count: aggregates.count }
       : { rating: null as number | null, review_count: 0 };
 
@@ -86,7 +96,11 @@ export default async function ProductPage({ params }: Props) {
     <article className="border-border/60 border-b bg-background py-8 md:py-12">
       <JsonLd
         data={[
-          productJsonLd(productForSeo, productPath, listed.reviews),
+          productJsonLd(
+            productForSeo,
+            productPath,
+            reviewsEnabled ? listed.reviews : undefined
+          ),
           breadcrumbJsonLd([
             { name: "Home", path: "/" },
             { name: "Shop", path: "/shop" },
@@ -131,7 +145,7 @@ export default async function ProductPage({ params }: Props) {
               <h1 className="mt-2 font-serif-display text-3xl font-semibold tracking-tight text-foreground md:text-[2.125rem]">
                 {product.name}
               </h1>
-              {publicRating.rating != null && publicRating.review_count > 0 ? (
+              {reviewsEnabled && publicRating.rating != null && publicRating.review_count > 0 ? (
                 <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <StarRating value={publicRating.rating} size="sm" />
                   <span>
@@ -139,9 +153,9 @@ export default async function ProductPage({ params }: Props) {
                     {publicRating.review_count === 1 ? "" : "s"}
                   </span>
                 </p>
-              ) : (
+              ) : reviewsEnabled ? (
                 <p className="mt-2 text-sm text-muted-foreground">Be the first to review this piece.</p>
-              )}
+              ) : null}
               <div className="mt-4">
                 <BadgeSet badges={product.badges} />
               </div>
@@ -152,19 +166,23 @@ export default async function ProductPage({ params }: Props) {
           </aside>
         </div>
 
-        <ProductReviewsSection
-          productId={product.id}
-          initialAggregates={aggregates}
-          initialReviews={listed.reviews}
-          initialTotal={listed.total}
-        />
+        {reviewsEnabled ? (
+          <>
+            <ProductReviewsSection
+              productId={product.id}
+              initialAggregates={aggregates}
+              initialReviews={listed.reviews}
+              initialTotal={listed.total}
+            />
 
-        <ProductReviewComposer
-          productId={product.id}
-          productSlug={product.slug}
-          isSignedIn={Boolean(user)}
-          defaultDisplayName={displayName}
-        />
+            <ProductReviewComposer
+              productId={product.id}
+              productSlug={product.slug}
+              isSignedIn={Boolean(user)}
+              defaultDisplayName={displayName}
+            />
+          </>
+        ) : null}
 
         <ProductYouMayAlsoLike products={relatedProducts} />
       </Container>

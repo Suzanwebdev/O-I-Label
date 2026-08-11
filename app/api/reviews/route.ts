@@ -4,10 +4,23 @@ import { enforceRateLimit } from "@/lib/http/rate-limit";
 import { listPublishedReviews, getPublishedReviewAggregates } from "@/lib/reviews/queries";
 import { submitReview } from "@/lib/reviews/submit";
 import { ensureCustomerRecord } from "@/lib/customers/ensure-customer";
+import { isReviewsFeatureEnabled } from "@/lib/reviews/feature";
 
 export async function GET(request: Request) {
   const limited = await enforceRateLimit(request, "reviews:list", 60);
   if (limited) return limited;
+
+  if (!(await isReviewsFeatureEnabled())) {
+    return NextResponse.json({
+      ok: true,
+      reviews: [],
+      total: 0,
+      page: 1,
+      pageSize: 8,
+      aggregates: { average: null, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } },
+      disabled: true,
+    });
+  }
 
   const url = new URL(request.url);
   const productId = url.searchParams.get("productId")?.trim();
@@ -51,6 +64,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const limited = await enforceRateLimit(request, "reviews:submit", 8);
   if (limited) return limited;
+
+  if (!(await isReviewsFeatureEnabled())) {
+    return NextResponse.json(
+      { error: "Reviews are temporarily unavailable." },
+      { status: 403 }
+    );
+  }
 
   const supabase = await createServerSupabaseClient();
   const {
