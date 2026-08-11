@@ -42,20 +42,22 @@ export async function HomeLovedBySection() {
               <article
                 key={r.id}
                 className={cn(
-                  "flex min-w-[82%] shrink-0 flex-col border border-border/80 bg-background px-5 py-5 sm:min-w-[300px]",
+                  "flex shrink-0 flex-col border border-border/80 bg-background px-4 py-4",
                   "rounded-[var(--radius-md)]",
-                  single ? "md:min-w-0 md:max-w-md" : "md:min-w-0"
+                  single
+                    ? "w-full max-w-[22rem] md:max-w-sm"
+                    : "min-w-[min(100%,18.75rem)] sm:min-w-[17.5rem] md:min-w-0"
                 )}
               >
                 <StarRating value={r.rating} size="sm" />
 
                 {excerpt ? (
-                  <p className="mt-3.5 text-[15px] leading-[1.65] text-foreground/90">
+                  <p className="mt-3 text-[15px] leading-[1.6] text-foreground/90">
                     {excerpt}
                   </p>
                 ) : null}
 
-                <div className="mt-4 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+                <div className="mt-3 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">{r.display_name}</span>
                   {r.verified_purchase ? (
                     <>
@@ -70,7 +72,7 @@ export async function HomeLovedBySection() {
                 {r.product_slug ? (
                   <Link
                     href={`/product/${r.product_slug}`}
-                    className="mt-4 inline-flex w-fit items-center text-sm text-navy transition-colors hover:text-foreground"
+                    className="mt-3 inline-flex w-fit items-center text-sm text-navy transition-colors hover:text-foreground"
                   >
                     Shop this piece
                     <span aria-hidden className="ml-1.5">
@@ -80,13 +82,13 @@ export async function HomeLovedBySection() {
                 ) : null}
 
                 {r.media[0] ? (
-                  <div className="relative mt-4 aspect-[4/5] max-h-48 w-full max-w-[9.5rem] overflow-hidden rounded-[var(--radius-sm)] border border-border/70 bg-muted">
+                  <div className="relative mt-3 aspect-[4/5] max-h-40 w-full max-w-[8.5rem] overflow-hidden rounded-[var(--radius-sm)] border border-border/70 bg-muted">
                     <Image
                       src={r.media[0].public_url}
                       alt="Customer photo"
                       fill
                       className="object-cover"
-                      sizes="160px"
+                      sizes="140px"
                       unoptimized
                     />
                   </div>
