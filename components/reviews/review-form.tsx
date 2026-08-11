@@ -74,7 +74,6 @@ export function ReviewForm({
   );
   const [orderItemId, setOrderItemId] = React.useState(openItems[0]?.order_item_id ?? "");
   const [rating, setRating] = React.useState(5);
-  const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
   const [displayName, setDisplayName] = React.useState(defaultDisplayName);
   const [photos, setPhotos] = React.useState<Uploaded[]>([]);
@@ -158,7 +157,6 @@ export function ReviewForm({
           orderItemId: selected.order_item_id,
           productId,
           rating,
-          title,
           body,
           displayName,
           media: photos.map(({ storage_path, public_url }) => ({ storage_path, public_url })),
@@ -254,19 +252,6 @@ export function ReviewForm({
       </div>
 
       <div className="space-y-2.5">
-        <FieldLabel htmlFor="review-title">Review title</FieldLabel>
-        <Input
-          id="review-title"
-          value={title}
-          maxLength={120}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="A short headline"
-          disabled={busy}
-          className="h-12 border-border/80 bg-transparent"
-        />
-      </div>
-
-      <div className="space-y-2.5">
         <FieldLabel htmlFor="review-body">Your review</FieldLabel>
         <Textarea
           id="review-body"
@@ -276,7 +261,7 @@ export function ReviewForm({
           rows={6}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Tell us about the fit, quality, material and your overall experience."
+          placeholder="Tell us about your experience with this piece…"
           disabled={busy}
           className="min-h-[9.5rem] resize-y border-border/80 bg-transparent leading-relaxed"
         />
