@@ -16,25 +16,59 @@ type Uploaded = { storage_path: string; public_url: string; previewUrl: string }
 /** Desktop reading width ~768px — balanced in PDP, not full-bleed. */
 const REVIEW_CONTENT_WIDTH = "max-w-3xl";
 
-function purchaseVariantKey(item: EligibleReviewItem): string {
-  return [
-    item.product_id,
-    (item.purchased_color ?? "").trim().toLowerCase(),
-    (item.purchased_size ?? "").trim().toLowerCase(),
-  ].join("|");
+function variantLineKey(color: string | null, size: string | null): string {
+  return `${(color ?? "").trim().toLowerCase()}|${(size ?? "").trim().toLowerCase()}`;
 }
 
-/** One selectable option per product + color + size; keeps first eligible line item. */
-function dedupeByPurchasedVariant(items: EligibleReviewItem[]): EligibleReviewItem[] {
+function uniquePurchasedVariantLines(items: EligibleReviewItem[]): string[] {
   const seen = new Set<string>();
-  const out: EligibleReviewItem[] = [];
+  const lines: string[] = [];
   for (const item of items) {
-    const key = purchaseVariantKey(item);
+    const line = formatPurchasedVariantLine(item.purchased_color, item.purchased_size);
+    if (!line) continue;
+    const key = variantLineKey(item.purchased_color, item.purchased_size);
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(item);
+    lines.push(line);
   }
-  return out;
+  return lines;
+}
+
+/**
+ * Product-level review opportunity for this PDP:
+ * - Auto-pick the most recent unreviewed eligible line item
+ * - Skip remaining unreviewed siblings on an order that already has a review for this product
+ *   (avoids forcing a size/color picker while still allowing a later new order to be reviewed)
+ */
+function resolveReviewOpportunity(eligibleItems: EligibleReviewItem[]): {
+  selected: EligibleReviewItem | null;
+  purchasedVariantLines: string[];
+  alreadyReviewed: boolean;
+  notEligible: boolean;
+} {
+  const openItems = eligibleItems.filter((i) => !i.already_reviewed);
+  const reviewedOrderIds = new Set(
+    eligibleItems.filter((i) => i.already_reviewed).map((i) => i.order_id)
+  );
+  const reviewable = openItems.filter((i) => !reviewedOrderIds.has(i.order_id));
+
+  if (reviewable.length === 0) {
+    return {
+      selected: null,
+      purchasedVariantLines: [],
+      alreadyReviewed: eligibleItems.some((i) => i.already_reviewed),
+      notEligible: !eligibleItems.length,
+    };
+  }
+
+  const selected = reviewable[0];
+  const sameOrderItems = eligibleItems.filter((i) => i.order_id === selected.order_id);
+  return {
+    selected,
+    purchasedVariantLines: uniquePurchasedVariantLines(sameOrderItems),
+    alreadyReviewed: false,
+    notEligible: false,
+  };
 }
 
 function FieldLabel({
@@ -68,11 +102,12 @@ export function ReviewForm({
   eligibleItems: EligibleReviewItem[];
   defaultDisplayName: string;
 }) {
-  const openItems = React.useMemo(
-    () => dedupeByPurchasedVariant(eligibleItems.filter((i) => !i.already_reviewed)),
+  const opportunity = React.useMemo(
+    () => resolveReviewOpportunity(eligibleItems),
     [eligibleItems]
   );
-  const [orderItemId, setOrderItemId] = React.useState(openItems[0]?.order_item_id ?? "");
+  const selected = opportunity.selected;
+
   const [rating, setRating] = React.useState(5);
   const [body, setBody] = React.useState("");
   const [displayName, setDisplayName] = React.useState(defaultDisplayName);
@@ -82,33 +117,27 @@ export function ReviewForm({
   const [done, setDone] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
-    if (!openItems.some((i) => i.order_item_id === orderItemId)) {
-      setOrderItemId(openItems[0]?.order_item_id ?? "");
-    }
-  }, [openItems, orderItemId]);
-
-  const selected = openItems.find((i) => i.order_item_id === orderItemId) ?? openItems[0];
-  const variant = selected
-    ? formatPurchasedVariantLine(selected.purchased_color, selected.purchased_size)
-    : null;
-  const showPurchaseSelector = openItems.length > 1;
-
-  if (openItems.length === 0) {
+  if (!selected) {
     return (
       <div className={cn(REVIEW_CONTENT_WIDTH, "border-t border-border pt-8")}>
-        {eligibleItems.some((i) => i.already_reviewed) ? (
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            You’ve already reviewed your purchase of this piece. Thank you.
+        {opportunity.alreadyReviewed ? (
+          <p className="font-serif-display text-lg font-semibold tracking-tight text-foreground">
+            You’ve already reviewed this piece.
           </p>
         ) : (
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Only verified purchases can leave a review.{" "}
-            <Link href="/account/orders" className="text-foreground underline underline-offset-4">
-              View your orders
-            </Link>
-            .
-          </p>
+          <div className="space-y-2">
+            <p className="font-serif-display text-lg font-semibold tracking-tight text-foreground">
+              Reviews are for verified customers
+            </p>
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+              Once you’ve purchased and received this piece, you can share your experience here.
+            </p>
+            <p className="pt-1 text-sm text-muted-foreground">
+              <Link href="/account/orders" className="text-foreground underline underline-offset-4">
+                View your orders
+              </Link>
+            </p>
+          </div>
         )}
       </div>
     );
@@ -188,63 +217,31 @@ export function ReviewForm({
     );
   }
 
+  const purchasedLabel =
+    opportunity.purchasedVariantLines.length > 0
+      ? opportunity.purchasedVariantLines.join(", ")
+      : null;
+
   return (
     <form
       onSubmit={onSubmit}
       className={cn(REVIEW_CONTENT_WIDTH, "space-y-8 border-t border-border pt-8")}
-      noValidate={false}
     >
       <header className="space-y-3">
         <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
           Share your experience
         </p>
-        {!showPurchaseSelector ? (
-          <div>
-            <h3 className="font-serif-display text-xl font-semibold leading-snug tracking-tight text-foreground md:text-[1.35rem]">
-              {selected.product_name}
-            </h3>
-            {variant ? (
-              <p className="mt-1.5 text-sm tracking-wide text-muted-foreground">{variant}</p>
-            ) : null}
-          </div>
-        ) : null}
+        <div>
+          <h3 className="font-serif-display text-xl font-semibold leading-snug tracking-tight text-foreground md:text-[1.35rem]">
+            {selected.product_name}
+          </h3>
+          {purchasedLabel ? (
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              <span className="text-foreground/70">Purchased:</span> {purchasedLabel}
+            </p>
+          ) : null}
+        </div>
       </header>
-
-      {showPurchaseSelector ? (
-        <fieldset className="space-y-3">
-          <legend className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            Select your purchase
-          </legend>
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            {openItems.map((item) => {
-              const line = formatPurchasedVariantLine(item.purchased_color, item.purchased_size);
-              const active = item.order_item_id === (selected?.order_item_id ?? orderItemId);
-              return (
-                <button
-                  key={item.order_item_id}
-                  type="button"
-                  onClick={() => setOrderItemId(item.order_item_id)}
-                  className={cn(
-                    "flex w-full flex-col items-start gap-1 rounded-[var(--radius-md)] border px-4 py-3.5 text-left transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2",
-                    active
-                      ? "border-foreground bg-muted/40 ring-1 ring-foreground"
-                      : "border-border/80 bg-transparent hover:border-foreground/35"
-                  )}
-                  aria-pressed={active}
-                >
-                  <span className="text-[15px] font-medium leading-snug text-foreground">
-                    {item.product_name}
-                  </span>
-                  {line ? (
-                    <span className="text-xs tracking-wide text-muted-foreground">{line}</span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-      ) : null}
 
       <div className="space-y-3">
         <FieldLabel>Rating</FieldLabel>
@@ -283,9 +280,7 @@ export function ReviewForm({
       </div>
 
       <div className="space-y-3">
-        <FieldLabel hint="Share photos of your O & I piece.">
-          Add photos · Optional
-        </FieldLabel>
+        <FieldLabel hint="Share photos of your O & I piece.">Add photos · Optional</FieldLabel>
 
         <input
           ref={fileRef}
