@@ -6,11 +6,34 @@ import Link from "next/link";
 import { StarRatingInput } from "@/components/reviews/star-rating";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { formatPurchasedVariantLine, REVIEW_MAX_PHOTOS } from "@/lib/reviews/types";
 import type { EligibleReviewItem } from "@/lib/reviews/types";
 
 type Uploaded = { storage_path: string; public_url: string; previewUrl: string };
+
+function FieldLabel({
+  htmlFor,
+  children,
+  hint,
+}: {
+  htmlFor?: string;
+  children: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <label
+        htmlFor={htmlFor}
+        className="block text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground"
+      >
+        {children}
+      </label>
+      {hint ? <p className="text-xs leading-relaxed text-muted-foreground/90">{hint}</p> : null}
+    </div>
+  );
+}
 
 export function ReviewForm({
   productId,
@@ -31,6 +54,7 @@ export function ReviewForm({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
   const selected = openItems.find((i) => i.order_item_id === orderItemId) ?? openItems[0];
   const variant = selected
@@ -39,13 +63,15 @@ export function ReviewForm({
 
   if (openItems.length === 0) {
     return (
-      <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5 text-sm text-muted-foreground">
+      <div className="max-w-xl border-t border-border pt-8">
         {eligibleItems.some((i) => i.already_reviewed) ? (
-          <p>You’ve already reviewed your purchase of this piece. Thank you.</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            You’ve already reviewed your purchase of this piece. Thank you.
+          </p>
         ) : (
-          <p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
             Only verified purchases can leave a review.{" "}
-            <Link href="/account/orders" className="text-navy underline underline-offset-2">
+            <Link href="/account/orders" className="text-foreground underline underline-offset-4">
               View your orders
             </Link>
             .
@@ -82,6 +108,7 @@ export function ReviewForm({
         },
       ]);
     }
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -118,9 +145,11 @@ export function ReviewForm({
 
   if (done) {
     return (
-      <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5 text-sm">
-        <p className="font-medium text-foreground">Thank you for your review.</p>
-        <p className="mt-1 text-muted-foreground">
+      <div className="max-w-xl border-t border-border pt-8">
+        <p className="font-serif-display text-xl font-semibold tracking-tight text-foreground">
+          Thank you for your review.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           It’s pending moderation and will appear once approved.
         </p>
       </div>
@@ -130,101 +159,158 @@ export function ReviewForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-5 rounded-[var(--radius-lg)] border border-border bg-card p-5 shadow-[var(--shadow-soft)] md:p-6"
+      className="mx-auto max-w-xl space-y-8 border-t border-border pt-8 md:mx-0"
+      noValidate={false}
     >
-      <div>
-        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          Write a review
+      <header className="space-y-3">
+        <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+          Share your experience
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Order {selected.order_number}
-          {variant ? ` · ${variant}` : ""}
-        </p>
-      </div>
+        <div>
+          <h3 className="font-serif-display text-xl font-semibold leading-snug tracking-tight text-foreground md:text-[1.35rem]">
+            {selected.product_name}
+          </h3>
+          {variant ? (
+            <p className="mt-1.5 text-sm tracking-wide text-muted-foreground">{variant}</p>
+          ) : null}
+        </div>
+      </header>
 
       {openItems.length > 1 ? (
-        <div className="space-y-2">
-          <Label htmlFor="review-purchase">Purchase</Label>
-          <select
-            id="review-purchase"
-            className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
-            value={orderItemId}
-            onChange={(e) => setOrderItemId(e.target.value)}
-          >
-            {openItems.map((i) => (
-              <option key={i.order_item_id} value={i.order_item_id}>
-                {i.order_number}
-                {formatPurchasedVariantLine(i.purchased_color, i.purchased_size)
-                  ? ` · ${formatPurchasedVariantLine(i.purchased_color, i.purchased_size)}`
-                  : ""}
-              </option>
-            ))}
-          </select>
-        </div>
+        <fieldset className="space-y-3">
+          <legend className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            Which purchase?
+          </legend>
+          <div className="space-y-2">
+            {openItems.map((item) => {
+              const line = formatPurchasedVariantLine(item.purchased_color, item.purchased_size);
+              const active = item.order_item_id === (selected?.order_item_id ?? orderItemId);
+              return (
+                <button
+                  key={item.order_item_id}
+                  type="button"
+                  onClick={() => setOrderItemId(item.order_item_id)}
+                  className={cn(
+                    "flex w-full flex-col items-start gap-0.5 rounded-[var(--radius-md)] border px-4 py-3 text-left transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2",
+                    active
+                      ? "border-foreground bg-foreground/[0.03]"
+                      : "border-border hover:border-foreground/40"
+                  )}
+                  aria-pressed={active}
+                >
+                  <span className="text-sm font-medium text-foreground">{item.product_name}</span>
+                  {line ? (
+                    <span className="text-xs text-muted-foreground">{line}</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Your purchase</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
       ) : null}
 
-      <div className="space-y-2">
-        <Label>Rating</Label>
+      <div className="space-y-3">
+        <FieldLabel>Rating</FieldLabel>
         <StarRatingInput value={rating} onChange={setRating} disabled={busy} />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="review-title">Title (optional)</Label>
+      <div className="space-y-2.5">
+        <FieldLabel htmlFor="review-title">Review title</FieldLabel>
         <Input
           id="review-title"
           value={title}
           maxLength={120}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="A short headline"
+          disabled={busy}
+          className="h-12 border-border/80 bg-transparent"
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="review-body">Your review</Label>
-        <textarea
+      <div className="space-y-2.5">
+        <FieldLabel htmlFor="review-body">Your review</FieldLabel>
+        <Textarea
           id="review-body"
           required
           minLength={10}
           maxLength={2000}
-          rows={5}
+          rows={6}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Tell us about the fit, quality, material and your overall experience."
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm leading-relaxed outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+          disabled={busy}
+          className="min-h-[9.5rem] resize-y border-border/80 bg-transparent leading-relaxed"
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="review-name">Display name</Label>
+      <div className="space-y-2.5">
+        <FieldLabel htmlFor="review-name" hint="How you’d like your name displayed">
+          Your name
+        </FieldLabel>
         <Input
           id="review-name"
           value={displayName}
           maxLength={60}
           onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="How your name appears publicly"
+          placeholder="Your name"
+          disabled={busy}
+          className="h-12 border-border/80 bg-transparent"
         />
-        <p className="text-xs text-muted-foreground">Your email and phone are never shown.</p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="review-photos">Photos (optional, up to {REVIEW_MAX_PHOTOS})</Label>
-        <Input
+      <div className="space-y-3">
+        <FieldLabel hint="Share photos of your O & I piece.">
+          Add photos · Optional
+        </FieldLabel>
+
+        <input
+          ref={fileRef}
           id="review-photos"
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
           multiple
+          className="sr-only"
           disabled={busy || photos.length >= REVIEW_MAX_PHOTOS}
           onChange={(e) => void onFiles(e.target.files)}
         />
+
+        {photos.length < REVIEW_MAX_PHOTOS ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => fileRef.current?.click()}
+            className={cn(
+              "inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-border px-5 text-sm text-muted-foreground transition-colors",
+              "hover:border-foreground/50 hover:text-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2",
+              "disabled:pointer-events-none disabled:opacity-50"
+            )}
+          >
+            <span aria-hidden className="text-base leading-none">
+              +
+            </span>
+            Add photos
+          </button>
+        ) : null}
+
         {photos.length ? (
-          <ul className="flex flex-wrap gap-2 pt-1">
+          <ul className="flex flex-wrap gap-2.5 pt-1">
             {photos.map((p) => (
-              <li key={p.storage_path} className="relative h-16 w-16 overflow-hidden rounded-md border border-border">
+              <li
+                key={p.storage_path}
+                className="group relative h-[4.5rem] w-[4.5rem] overflow-hidden rounded-[var(--radius-sm)] border border-border"
+              >
                 <Image src={p.previewUrl} alt="" fill className="object-cover" unoptimized />
                 <button
                   type="button"
-                  className="absolute inset-x-0 bottom-0 bg-black/60 py-0.5 text-[10px] text-white"
-                  onClick={() => setPhotos((prev) => prev.filter((x) => x.storage_path !== p.storage_path))}
+                  aria-label="Remove photo"
+                  className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 to-transparent pb-1.5 text-[10px] font-medium uppercase tracking-wider text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                  onClick={() =>
+                    setPhotos((prev) => prev.filter((x) => x.storage_path !== p.storage_path))
+                  }
                 >
                   Remove
                 </button>
@@ -232,13 +318,28 @@ export function ReviewForm({
             ))}
           </ul>
         ) : null}
+        <p className="text-[11px] text-muted-foreground">
+          Up to {REVIEW_MAX_PHOTOS} photos · JPEG, PNG, WebP or GIF
+        </p>
       </div>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-      <Button type="submit" disabled={busy}>
-        {busy ? "Submitting…" : "Submit review"}
-      </Button>
+      <div className="pt-1">
+        <Button
+          type="submit"
+          variant="navy"
+          size="lg"
+          disabled={busy || !body.trim()}
+          className="w-full uppercase tracking-[0.12em] sm:w-auto sm:min-w-[12rem]"
+        >
+          {busy ? "Submitting…" : "Submit review"}
+        </Button>
+      </div>
     </form>
   );
 }

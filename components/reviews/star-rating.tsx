@@ -40,7 +40,7 @@ export function StarRatingInput({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating">
+    <div className="flex items-center gap-1.5 sm:gap-2" role="radiogroup" aria-label="Rating">
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
@@ -50,9 +50,20 @@ export function StarRatingInput({
           aria-label={`${n} star${n === 1 ? "" : "s"}`}
           disabled={disabled}
           onClick={() => onChange(n)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+              e.preventDefault();
+              onChange(Math.min(5, value + 1));
+            } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+              e.preventDefault();
+              onChange(Math.max(1, value - 1));
+            }
+          }}
           className={cn(
-            "h-10 w-10 text-xl transition-colors",
-            n <= value ? "text-foreground" : "text-border hover:text-foreground/50"
+            "flex h-11 w-11 items-center justify-center text-[1.35rem] leading-none transition-colors",
+            "rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2",
+            "disabled:pointer-events-none disabled:opacity-50",
+            n <= value ? "text-foreground" : "text-border hover:text-foreground/45"
           )}
         >
           ★

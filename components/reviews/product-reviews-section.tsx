@@ -94,8 +94,10 @@ export function ProductReviewsSection({
       </h2>
 
       {aggregates.count === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">
-          No reviews yet. Be the first to share your experience.
+        <p className="mt-8 max-w-md text-sm leading-relaxed text-muted-foreground">
+          No reviews yet.
+          <br />
+          Be the first to share your experience.
         </p>
       ) : (
         <>
