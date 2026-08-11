@@ -12,17 +12,27 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Smartphone } from "lucide-react";
 
-const steps = ["Details", "Shipping", "Payment", "Review"] as const;
-
 type AppliedPromo = {
   code: string;
   label: string;
   discountGhs: number;
 };
 
+type FieldErrors = Partial<
+  Record<"firstName" | "lastName" | "email" | "phone" | "address" | "city" | "region", string>
+>;
+
+function sectionTitle(title: string, hint: string) {
+  return (
+    <div className="space-y-1">
+      <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
+      <p className="text-sm text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
 export function CheckoutWizard() {
   const { selectedLines, subtotalGhs, isExpressCheckout } = useCart();
-  const [step, setStep] = React.useState(0);
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -32,10 +42,13 @@ export function CheckoutWizard() {
   const [region, setRegion] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [promoInput, setPromoInput] = React.useState("");
   const [appliedPromo, setAppliedPromo] = React.useState<AppliedPromo | null>(null);
   const [promoBusy, setPromoBusy] = React.useState(false);
   const [promoError, setPromoError] = React.useState<string | null>(null);
+
+  const formTopRef = React.useRef<HTMLDivElement>(null);
 
   const shippingGhs = 0;
   const discountGhs = appliedPromo?.discountGhs ?? 0;
@@ -64,15 +77,6 @@ export function CheckoutWizard() {
         </p>
       </Container>
     );
-  }
-
-  function next() {
-    setError(null);
-    setStep((s) => Math.min(s + 1, steps.length - 1));
-  }
-  function back() {
-    setError(null);
-    setStep((s) => Math.max(s - 1, 0));
   }
 
   async function applyPromoCode() {
@@ -120,9 +124,30 @@ export function CheckoutWizard() {
     setPromoError(null);
   }
 
+  function validateFields(): FieldErrors {
+    const next: FieldErrors = {};
+    if (!firstName.trim()) next.firstName = "Enter your first name";
+    if (!lastName.trim()) next.lastName = "Enter your last name";
+    if (!email.trim()) next.email = "Enter your email";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = "Enter a valid email";
+    if (!phone.trim()) next.phone = "Enter your phone number";
+    if (!address.trim()) next.address = "Enter your delivery address";
+    if (!city.trim()) next.city = "Enter your city";
+    if (!region.trim()) next.region = "Enter your region";
+    return next;
+  }
+
   async function placeOrder() {
     if (submitting) return;
     setError(null);
+    const errors = validateFields();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setError("Please complete the highlighted fields.");
+      formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch("/api/checkout/initialize", {
@@ -166,160 +191,214 @@ export function CheckoutWizard() {
     }
   }
 
+  function fieldClass(key: keyof FieldErrors) {
+    return fieldErrors[key] ? "border-destructive" : undefined;
+  }
+
   return (
     <Container className="py-10 md:py-14">
       <Heading as="h1" eyebrow="Checkout">
         Complete your order
       </Heading>
-      <div className="mt-8 flex flex-wrap gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        {steps.map((s, i) => (
-          <span
-            key={s}
-            className={
-              i === step ? "text-navy" : i < step ? "text-foreground" : ""
-            }
-          >
-            {i + 1}. {s}
-            {i < steps.length - 1 ? " · " : ""}
-          </span>
-        ))}
-      </div>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_380px]">
-        <div className="rounded-[var(--radius-lg)] border border-border bg-card p-6 shadow-[var(--shadow-soft)] md:p-8">
-          {step === 0 && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Contact details for order updates.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="first">First name</Label>
-                  <Input id="first" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="last">Last name</Label>
-                  <Input id="last" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                </div>
+        <div
+          ref={formTopRef}
+          className="space-y-8 rounded-[var(--radius-lg)] border border-border bg-card p-6 shadow-[var(--shadow-soft)] md:p-8"
+        >
+          <section className="space-y-4">
+            {sectionTitle("Contact details", "We’ll use these for order updates.")}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="first">First name</Label>
+                <Input
+                  id="first"
+                  value={firstName}
+                  className={fieldClass("firstName")}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, firstName: undefined }));
+                  }}
+                  autoComplete="given-name"
+                />
+                {fieldErrors.firstName ? (
+                  <p className="text-xs text-destructive">{fieldErrors.firstName}</p>
+                ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-              </div>
-            </div>
-          )}
-          {step === 1 && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Where should we deliver?
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="addr">Address</Label>
-                <Input id="addr" value={address} onChange={(e) => setAddress(e.target.value)} required />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="region">Region</Label>
-                  <Input id="region" value={region} onChange={(e) => setRegion(e.target.value)} required />
-                </div>
+                <Label htmlFor="last">Last name</Label>
+                <Input
+                  id="last"
+                  value={lastName}
+                  className={fieldClass("lastName")}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, lastName: undefined }));
+                  }}
+                  autoComplete="family-name"
+                />
+                {fieldErrors.lastName ? (
+                  <p className="text-xs text-destructive">{fieldErrors.lastName}</p>
+                ) : null}
               </div>
             </div>
-          )}
-          {step === 2 && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-foreground">Payment method</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Choose how you&apos;d like to pay for this order.
-                </p>
-              </div>
-              <div
-                role="radiogroup"
-                aria-label="Payment method"
-                className="space-y-3"
-              >
-                <div
-                  role="radio"
-                  aria-checked="true"
-                  tabIndex={0}
-                  className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-foreground/20 bg-background p-4 shadow-[var(--shadow-soft)] ring-1 ring-foreground/5"
-                >
-                  <span
-                    className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted"
-                    aria-hidden
-                  >
-                    <Smartphone className="h-5 w-5 text-foreground" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold tracking-tight text-foreground">
-                      Mobile Money
-                    </span>
-                    <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
-                      Pay securely with your Mobile Money account.
-                    </span>
-                  </span>
-                  <span
-                    className="mt-1 h-4 w-4 shrink-0 rounded-full border border-foreground bg-foreground shadow-[inset_0_0_0_3px_hsl(var(--background))]"
-                    aria-hidden
-                  />
-                </div>
-              </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                On the next step you&apos;ll review your order, then continue to a secure payment page to complete checkout.
-              </p>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                className={fieldClass("email")}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                }}
+                autoComplete="email"
+                required
+              />
+              {fieldErrors.email ? <p className="text-xs text-destructive">{fieldErrors.email}</p> : null}
             </div>
-          )}
-          {step === 3 && (
-            <div className="space-y-4 text-sm">
-              <p>
-                Review your selected products and total, then continue to secure payment.
-              </p>
-              <ul className="space-y-2">
-                {selectedLines.map((l) => (
-                  <li key={l.variantId} className="flex justify-between">
-                    <span>
-                      {l.name} × {l.quantity}
-                    </span>
-                    <Price amountGhs={l.unitPriceGhs * l.quantity} />
-                  </li>
-                ))}
-              </ul>
-              {appliedPromo ? (
-                <p className="text-sm text-emerald-700">
-                  Promo <span className="font-medium">{appliedPromo.code}</span> — {appliedPromo.label}
-                </p>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                className={fieldClass("phone")}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                }}
+                autoComplete="tel"
+                required
+              />
+              {fieldErrors.phone ? <p className="text-xs text-destructive">{fieldErrors.phone}</p> : null}
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4">
+            {sectionTitle("Delivery", "Where should we deliver?")}
+            <div className="space-y-2">
+              <Label htmlFor="addr">Address</Label>
+              <Input
+                id="addr"
+                value={address}
+                className={fieldClass("address")}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, address: undefined }));
+                }}
+                autoComplete="street-address"
+                required
+              />
+              {fieldErrors.address ? (
+                <p className="text-xs text-destructive">{fieldErrors.address}</p>
               ) : null}
             </div>
-          )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={city}
+                  className={fieldClass("city")}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, city: undefined }));
+                  }}
+                  autoComplete="address-level2"
+                  required
+                />
+                {fieldErrors.city ? <p className="text-xs text-destructive">{fieldErrors.city}</p> : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="region">Region</Label>
+                <Input
+                  id="region"
+                  value={region}
+                  className={fieldClass("region")}
+                  onChange={(e) => {
+                    setRegion(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, region: undefined }));
+                  }}
+                  autoComplete="address-level1"
+                  required
+                />
+                {fieldErrors.region ? (
+                  <p className="text-xs text-destructive">{fieldErrors.region}</p>
+                ) : null}
+              </div>
+            </div>
+          </section>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            {step > 0 ? (
-              <Button type="button" variant="outline" onClick={back}>
-                Back
-              </Button>
+          <Separator />
+
+          <section className="space-y-4">
+            {sectionTitle("Payment", "Choose how you’d like to pay for this order.")}
+            <div role="radiogroup" aria-label="Payment method" className="space-y-3">
+              <div
+                role="radio"
+                aria-checked="true"
+                tabIndex={0}
+                className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-foreground/20 bg-background p-4 shadow-[var(--shadow-soft)] ring-1 ring-foreground/5"
+              >
+                <span
+                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted"
+                  aria-hidden
+                >
+                  <Smartphone className="h-5 w-5 text-foreground" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold tracking-tight text-foreground">
+                    Mobile Money
+                  </span>
+                  <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                    Pay securely with your Mobile Money account.
+                  </span>
+                </span>
+                <span
+                  className="mt-1 h-4 w-4 shrink-0 rounded-full border border-foreground bg-foreground shadow-[inset_0_0_0_3px_hsl(var(--background))]"
+                  aria-hidden
+                />
+              </div>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              After you proceed, you’ll complete payment on a secure Mobile Money page.
+            </p>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4">
+            {sectionTitle("Your items", "Confirm what’s in this order.")}
+            <ul className="space-y-2 text-sm">
+              {selectedLines.map((l) => (
+                <li key={l.variantId} className="flex justify-between gap-3">
+                  <span>
+                    {l.name} × {l.quantity}
+                  </span>
+                  <Price amountGhs={l.unitPriceGhs * l.quantity} />
+                </li>
+              ))}
+            </ul>
+            {appliedPromo ? (
+              <p className="text-sm text-emerald-700">
+                Promo <span className="font-medium">{appliedPromo.code}</span> — {appliedPromo.label}
+              </p>
             ) : null}
-            {step < steps.length - 1 ? (
-              <Button type="button" onClick={next}>
-                Continue
-              </Button>
-            ) : (
-              <Button type="button" onClick={placeOrder} disabled={submitting}>
-                {submitting ? "Redirecting..." : "Proceed to payment"}
-              </Button>
-            )}
+          </section>
+
+          <div className="pt-2">
+            <Button type="button" className="w-full sm:w-auto" onClick={placeOrder} disabled={submitting}>
+              {submitting ? "Redirecting..." : "Proceed to payment"}
+            </Button>
+            {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
           </div>
-          {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
         </div>
 
-        <aside className="h-fit space-y-4 rounded-[var(--radius-lg)] border border-border bg-muted/40 p-6">
+        <aside className="h-fit space-y-4 rounded-[var(--radius-lg)] border border-border bg-muted/40 p-6 lg:sticky lg:top-24">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Summary
           </p>
@@ -388,6 +467,14 @@ export function CheckoutWizard() {
             <Price amountGhs={totalGhs} />
           </div>
           <p className="text-xs text-muted-foreground">Shipping is included where applicable. Tax at GH₵ 0.</p>
+          <Button
+            type="button"
+            className="hidden w-full lg:inline-flex"
+            onClick={placeOrder}
+            disabled={submitting}
+          >
+            {submitting ? "Redirecting..." : "Proceed to payment"}
+          </Button>
         </aside>
       </div>
     </Container>
