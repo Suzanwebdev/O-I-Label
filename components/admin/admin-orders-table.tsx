@@ -129,6 +129,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
       unit_price_ghs: number;
       quantity: number;
       image: string | null;
+      review?: { id: string; rating: number; status: string } | null;
     }>;
     payments: Array<{ id: string; provider: string; status: string; amount_ghs: number; reference: string | null; created_at: string }>;
     shipments: Array<{ id: string; carrier: string | null; tracking_number: string | null; status: string | null; created_at: string }>;
@@ -1009,6 +1010,17 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                         <p className="text-xs text-muted-foreground">
                           {item.sku ?? "No SKU"} • Qty {item.quantity} • GHc{" "}
                           {item.unit_price_ghs.toFixed(2)}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Review:{" "}
+                          {item.review ? (
+                            <span>
+                              {"★".repeat(item.review.rating)}
+                              {"☆".repeat(5 - item.review.rating)} · {item.review.status}
+                            </span>
+                          ) : (
+                            "Not reviewed"
+                          )}
                         </p>
                       </div>
                     </li>

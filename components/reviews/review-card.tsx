@@ -1,7 +1,9 @@
 "use client";
 
+import * as React from "react";
 import Image from "next/image";
 import { StarRating } from "@/components/reviews/star-rating";
+import { ReviewPhotoLightbox } from "@/components/reviews/review-photo-gallery";
 import { formatPurchasedVariantLine } from "@/lib/reviews/types";
 import type { ReviewPublic } from "@/lib/reviews/types";
 
@@ -13,6 +15,8 @@ function formatDate(iso: string) {
 
 export function ReviewCard({ review }: { review: ReviewPublic }) {
   const variant = formatPurchasedVariantLine(review.purchased_color, review.purchased_size);
+  const [openIndex, setOpenIndex] = React.useState<number | null>(null);
+
   return (
     <article className="border-b border-border py-6 last:border-b-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -25,7 +29,7 @@ export function ReviewCard({ review }: { review: ReviewPublic }) {
         <h3 className="mt-2 text-sm font-semibold tracking-tight text-foreground">{review.title}</h3>
       ) : null}
       {review.body ? (
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{review.body}</p>
+        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{review.body}</p>
       ) : null}
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foreground/80">
         <span className="font-medium">{review.display_name}</span>
@@ -38,19 +42,34 @@ export function ReviewCard({ review }: { review: ReviewPublic }) {
       ) : null}
       {review.media.length > 0 ? (
         <ul className="mt-4 flex flex-wrap gap-2">
-          {review.media.map((m) => (
-            <li key={m.id} className="relative h-20 w-20 overflow-hidden rounded-md border border-border bg-muted">
-              <Image
-                src={m.public_url}
-                alt="Customer review photo"
-                fill
-                className="object-cover"
-                sizes="80px"
-                unoptimized
-              />
+          {review.media.map((m, i) => (
+            <li key={m.id}>
+              <button
+                type="button"
+                className="relative h-20 w-20 overflow-hidden rounded-md border border-border bg-muted"
+                onClick={() => setOpenIndex(i)}
+                aria-label="Open customer photo"
+              >
+                <Image
+                  src={m.public_url}
+                  alt="Customer review photo"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                  unoptimized
+                />
+              </button>
             </li>
           ))}
         </ul>
+      ) : null}
+      {openIndex != null ? (
+        <ReviewPhotoLightbox
+          photos={review.media}
+          index={openIndex}
+          onClose={() => setOpenIndex(null)}
+          onIndexChange={setOpenIndex}
+        />
       ) : null}
     </article>
   );

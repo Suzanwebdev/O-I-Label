@@ -135,6 +135,19 @@ export function AdminReviewsPanel() {
                         ? ` · ${row.photo_count} photo${row.photo_count === 1 ? "" : "s"}`
                         : ""}
                     </p>
+                    {row.media?.length ? (
+                      <ul className="mt-3 flex flex-wrap gap-2">
+                        {row.media.map((m) => (
+                          <li
+                            key={m.id}
+                            className="relative h-14 w-14 overflow-hidden rounded-md border border-border bg-muted"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={m.public_url} alt="" className="h-full w-full object-cover" />
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {row.status !== "published" ? (

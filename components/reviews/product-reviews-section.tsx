@@ -3,6 +3,7 @@
 import * as React from "react";
 import { StarRating } from "@/components/reviews/star-rating";
 import { ReviewCard } from "@/components/reviews/review-card";
+import { ReviewPhotoGallery } from "@/components/reviews/review-photo-gallery";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ReviewAggregates, ReviewPublic } from "@/lib/reviews/types";
@@ -70,6 +71,18 @@ export function ProductReviewsSection({
   ];
 
   const maxBar = Math.max(1, ...Object.values(aggregates.distribution));
+  const customerPhotos = React.useMemo(() => {
+    const seen = new Set<string>();
+    const out: Array<{ id: string; public_url: string }> = [];
+    for (const r of reviews) {
+      for (const m of r.media) {
+        if (seen.has(m.id)) continue;
+        seen.add(m.id);
+        out.push({ id: m.id, public_url: m.public_url });
+      }
+    }
+    return out.slice(0, 12);
+  }, [reviews]);
 
   return (
     <section className="mt-14 border-t border-border pt-10 md:mt-16 md:pt-12" aria-labelledby="customer-reviews-heading">
@@ -114,6 +127,12 @@ export function ProductReviewsSection({
               })}
             </div>
           </div>
+
+          {customerPhotos.length > 0 ? (
+            <ReviewPhotoGallery photos={customerPhotos} className="mt-8" />
+          ) : aggregates.count > 0 ? (
+            <p className="mt-8 text-sm text-muted-foreground">No customer photos yet.</p>
+          ) : null}
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

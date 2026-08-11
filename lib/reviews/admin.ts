@@ -19,6 +19,7 @@ export type AdminReviewRow = {
   order_id: string | null;
   order_number: string | null;
   photo_count: number;
+  media: Array<{ id: string; public_url: string }>;
 };
 
 export async function listAdminReviews(opts: {
@@ -50,7 +51,7 @@ export async function listAdminReviews(opts: {
       order_id,
       products ( name ),
       orders ( order_number ),
-      review_media ( id )
+      review_media ( id, public_url, sort_order )
     `,
       { count: "exact" }
     )
@@ -97,6 +98,13 @@ export async function listAdminReviews(opts: {
           ? String((orderObj as { order_number?: string }).order_number ?? "") || null
           : null,
       photo_count: media.length,
+      media: media
+        .map((m) => {
+          const rowMedia = m as { id?: string; public_url?: string };
+          if (!rowMedia.id || !rowMedia.public_url) return null;
+          return { id: String(rowMedia.id), public_url: String(rowMedia.public_url) };
+        })
+        .filter(Boolean) as Array<{ id: string; public_url: string }>,
     };
   });
 

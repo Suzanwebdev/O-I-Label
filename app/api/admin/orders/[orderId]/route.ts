@@ -63,6 +63,27 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: orderError?.message ?? "Order not found" }, { status: 404 });
   }
 
+  const itemIds = (items ?? []).map((i) => String(i.id));
+  const reviewByItem = new Map<
+    string,
+    { id: string; rating: number; status: string }
+  >();
+  if (itemIds.length) {
+    const { data: reviews } = await service
+      .from("reviews")
+      .select("id, order_item_id, rating, status")
+      .in("order_item_id", itemIds);
+    for (const r of reviews ?? []) {
+      if (r.order_item_id) {
+        reviewByItem.set(String(r.order_item_id), {
+          id: String(r.id),
+          rating: Number(r.rating),
+          status: String(r.status),
+        });
+      }
+    }
+  }
+
   return NextResponse.json({
     order: {
       ...order,
@@ -72,11 +93,17 @@ export async function GET(_request: Request, context: RouteContext) {
       discount_ghs: Number(order.discount_ghs ?? 0),
       total_ghs: Number(order.total_ghs ?? 0),
     },
-    items: (items ?? []).map((i) => ({
-      ...i,
-      unit_price_ghs: Number(i.unit_price_ghs ?? 0),
-      image: pickProductImageFromJoin(i.products),
-    })),
+    items: (items ?? []).map((i) => {
+      const review = reviewByItem.get(String(i.id));
+      return {
+        ...i,
+        unit_price_ghs: Number(i.unit_price_ghs ?? 0),
+        image: pickProductImageFromJoin(i.products),
+        review: review
+          ? { id: review.id, rating: review.rating, status: review.status }
+          : null,
+      };
+    }),
     payments: (payments ?? []).map((p) => ({
       ...p,
       amount_ghs: Number(p.amount_ghs ?? 0),
