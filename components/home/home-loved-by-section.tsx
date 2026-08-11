@@ -62,7 +62,7 @@ export async function HomeLovedBySection() {
                       <span aria-hidden className="text-border">
                         ·
                       </span>
-                      <span className="text-foreground/70">✓ Verified Purchase</span>
+                      <span className="text-emerald-800/85">✓ Verified Purchase</span>
                     </>
                   ) : null}
                 </div>
