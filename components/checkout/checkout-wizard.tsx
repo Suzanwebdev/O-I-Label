@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Smartphone } from "lucide-react";
+import { MomoNetworkLogos } from "@/components/checkout/momo-network-logos";
 
 type AppliedPromo = {
   code: string;
@@ -351,8 +352,11 @@ export function CheckoutWizard() {
                   <Smartphone className="h-5 w-5 text-foreground" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold tracking-tight text-foreground">
-                    Mobile Money
+                  <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 pr-1">
+                    <span className="text-sm font-semibold tracking-tight text-foreground">
+                      Mobile Money
+                    </span>
+                    <MomoNetworkLogos />
                   </span>
                   <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
                     Pay securely with your Mobile Money account.
