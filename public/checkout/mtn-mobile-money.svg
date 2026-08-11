@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 52" fill="none" role="img" aria-label="MTN Mobile Money">
+  <title>MTN Mobile Money</title>
+  <rect width="140" height="52" rx="5" fill="#FFCC00"/>
+  <text x="10" y="20" fill="#111111" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="15" font-weight="900" letter-spacing="0.04em">MTN</text>
+  <text x="10" y="34" fill="#111111" font-family="Arial, Helvetica, sans-serif" font-size="8" font-weight="700">Mobile</text>
+  <text x="10" y="44" fill="#111111" font-family="Arial, Helvetica, sans-serif" font-size="8" font-weight="700">Money</text>
+  <!-- Handset with MoMo disc (payment-mark treatment) -->
+  <g transform="translate(96,5)">
+    <rect x="2" y="1" width="24" height="40" rx="4" fill="#0054A5"/>
+    <rect x="4.8" y="4.5" width="18.4" height="29" rx="1.5" fill="#FFFFFF"/>
+    <circle cx="14" cy="18" r="8" fill="#0054A5"/>
+    <text x="14" y="20.2" text-anchor="middle" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="5.5" font-weight="800">MoMo</text>
+    <rect x="10" y="36.2" width="8" height="2.2" rx="1.1" fill="#9FCBF0"/>
+  </g>
+</svg>
