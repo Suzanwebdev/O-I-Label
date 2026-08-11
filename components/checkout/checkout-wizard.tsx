@@ -207,7 +207,7 @@ export function CheckoutWizard() {
           className="space-y-8 rounded-[var(--radius-lg)] border border-border bg-card p-6 shadow-[var(--shadow-soft)] md:p-8"
         >
           <section className="space-y-4">
-            {sectionTitle("Contact details", "We’ll use these for order updates.")}
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">Contact details</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="first">First name</Label>
@@ -364,9 +364,6 @@ export function CheckoutWizard() {
                 />
               </div>
             </div>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              After you proceed, you’ll complete payment on a secure Mobile Money page.
-            </p>
           </section>
 
           <Separator />
