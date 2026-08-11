@@ -45,8 +45,8 @@ export async function HomeLovedBySection() {
                   "flex shrink-0 flex-col border border-border/80 bg-background px-4 py-4",
                   "rounded-[var(--radius-md)]",
                   single
-                    ? "w-full max-w-[22rem] md:max-w-sm"
-                    : "min-w-[min(100%,18.75rem)] sm:min-w-[17.5rem] md:min-w-0"
+                    ? "w-full md:max-w-sm"
+                    : "w-full min-w-full md:min-w-0 md:w-auto"
                 )}
               >
                 <StarRating value={r.rating} size="sm" />
