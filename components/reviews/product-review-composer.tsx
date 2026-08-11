@@ -48,11 +48,11 @@ export function ProductReviewComposer({
 
   if (!isSignedIn) {
     return (
-      <div className="mt-10 max-w-xl border-t border-border pt-8">
+      <div className="mt-10 max-w-3xl border-t border-border pt-8">
         <p className="font-serif-display text-lg font-semibold tracking-tight text-foreground">
           Have you purchased this piece?
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
           Sign in to share your experience with O & I Label.
         </p>
         <Button asChild variant="navy" className="mt-5 tracking-[0.04em]">
@@ -66,7 +66,7 @@ export function ProductReviewComposer({
 
   if (items === null) {
     return (
-      <p className="mt-10 max-w-xl border-t border-border pt-8 text-sm text-muted-foreground">
+      <p className="mt-10 max-w-3xl border-t border-border pt-8 text-sm text-muted-foreground">
         Checking your purchases…
       </p>
     );
@@ -74,7 +74,7 @@ export function ProductReviewComposer({
 
   if (error) {
     return (
-      <p className="mt-10 max-w-xl border-t border-border pt-8 text-sm text-destructive">{error}</p>
+      <p className="mt-10 max-w-3xl border-t border-border pt-8 text-sm text-destructive">{error}</p>
     );
   }
 

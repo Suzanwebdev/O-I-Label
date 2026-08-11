@@ -13,6 +13,30 @@ import type { EligibleReviewItem } from "@/lib/reviews/types";
 
 type Uploaded = { storage_path: string; public_url: string; previewUrl: string };
 
+/** Desktop reading width ~768px — balanced in PDP, not full-bleed. */
+const REVIEW_CONTENT_WIDTH = "max-w-3xl";
+
+function purchaseVariantKey(item: EligibleReviewItem): string {
+  return [
+    item.product_id,
+    (item.purchased_color ?? "").trim().toLowerCase(),
+    (item.purchased_size ?? "").trim().toLowerCase(),
+  ].join("|");
+}
+
+/** One selectable option per product + color + size; keeps first eligible line item. */
+function dedupeByPurchasedVariant(items: EligibleReviewItem[]): EligibleReviewItem[] {
+  const seen = new Set<string>();
+  const out: EligibleReviewItem[] = [];
+  for (const item of items) {
+    const key = purchaseVariantKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
 function FieldLabel({
   htmlFor,
   children,
@@ -44,7 +68,10 @@ export function ReviewForm({
   eligibleItems: EligibleReviewItem[];
   defaultDisplayName: string;
 }) {
-  const openItems = eligibleItems.filter((i) => !i.already_reviewed);
+  const openItems = React.useMemo(
+    () => dedupeByPurchasedVariant(eligibleItems.filter((i) => !i.already_reviewed)),
+    [eligibleItems]
+  );
   const [orderItemId, setOrderItemId] = React.useState(openItems[0]?.order_item_id ?? "");
   const [rating, setRating] = React.useState(5);
   const [title, setTitle] = React.useState("");
@@ -56,14 +83,21 @@ export function ReviewForm({
   const [done, setDone] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
+  React.useEffect(() => {
+    if (!openItems.some((i) => i.order_item_id === orderItemId)) {
+      setOrderItemId(openItems[0]?.order_item_id ?? "");
+    }
+  }, [openItems, orderItemId]);
+
   const selected = openItems.find((i) => i.order_item_id === orderItemId) ?? openItems[0];
   const variant = selected
     ? formatPurchasedVariantLine(selected.purchased_color, selected.purchased_size)
     : null;
+  const showPurchaseSelector = openItems.length > 1;
 
   if (openItems.length === 0) {
     return (
-      <div className="max-w-xl border-t border-border pt-8">
+      <div className={cn(REVIEW_CONTENT_WIDTH, "border-t border-border pt-8")}>
         {eligibleItems.some((i) => i.already_reviewed) ? (
           <p className="text-sm leading-relaxed text-muted-foreground">
             You’ve already reviewed your purchase of this piece. Thank you.
@@ -145,7 +179,7 @@ export function ReviewForm({
 
   if (done) {
     return (
-      <div className="max-w-xl border-t border-border pt-8">
+      <div className={cn(REVIEW_CONTENT_WIDTH, "border-t border-border pt-8")}>
         <p className="font-serif-display text-xl font-semibold tracking-tight text-foreground">
           Thank you for your review.
         </p>
@@ -159,29 +193,31 @@ export function ReviewForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="mx-auto max-w-xl space-y-8 border-t border-border pt-8 md:mx-0"
+      className={cn(REVIEW_CONTENT_WIDTH, "space-y-8 border-t border-border pt-8")}
       noValidate={false}
     >
       <header className="space-y-3">
         <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
           Share your experience
         </p>
-        <div>
-          <h3 className="font-serif-display text-xl font-semibold leading-snug tracking-tight text-foreground md:text-[1.35rem]">
-            {selected.product_name}
-          </h3>
-          {variant ? (
-            <p className="mt-1.5 text-sm tracking-wide text-muted-foreground">{variant}</p>
-          ) : null}
-        </div>
+        {!showPurchaseSelector ? (
+          <div>
+            <h3 className="font-serif-display text-xl font-semibold leading-snug tracking-tight text-foreground md:text-[1.35rem]">
+              {selected.product_name}
+            </h3>
+            {variant ? (
+              <p className="mt-1.5 text-sm tracking-wide text-muted-foreground">{variant}</p>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
-      {openItems.length > 1 ? (
+      {showPurchaseSelector ? (
         <fieldset className="space-y-3">
           <legend className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            Which purchase?
+            Select your purchase
           </legend>
-          <div className="space-y-2">
+          <div className="grid gap-2.5 sm:grid-cols-2">
             {openItems.map((item) => {
               const line = formatPurchasedVariantLine(item.purchased_color, item.purchased_size);
               const active = item.order_item_id === (selected?.order_item_id ?? orderItemId);
@@ -191,20 +227,20 @@ export function ReviewForm({
                   type="button"
                   onClick={() => setOrderItemId(item.order_item_id)}
                   className={cn(
-                    "flex w-full flex-col items-start gap-0.5 rounded-[var(--radius-md)] border px-4 py-3 text-left transition-colors",
+                    "flex w-full flex-col items-start gap-1 rounded-[var(--radius-md)] border px-4 py-3.5 text-left transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2",
                     active
-                      ? "border-foreground bg-foreground/[0.03]"
-                      : "border-border hover:border-foreground/40"
+                      ? "border-foreground bg-muted/40 ring-1 ring-foreground"
+                      : "border-border/80 bg-transparent hover:border-foreground/35"
                   )}
                   aria-pressed={active}
                 >
-                  <span className="text-sm font-medium text-foreground">{item.product_name}</span>
+                  <span className="text-[15px] font-medium leading-snug text-foreground">
+                    {item.product_name}
+                  </span>
                   {line ? (
-                    <span className="text-xs text-muted-foreground">{line}</span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Your purchase</span>
-                  )}
+                    <span className="text-xs tracking-wide text-muted-foreground">{line}</span>
+                  ) : null}
                 </button>
               );
             })}
