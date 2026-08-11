@@ -103,7 +103,17 @@ export async function getAccountOrderById(orderId: string) {
       created_at,
       paid_at,
       shipping_address,
-      order_items ( name, sku, quantity, unit_price_ghs )
+      order_items (
+        id,
+        product_id,
+        variant_id,
+        name,
+        sku,
+        quantity,
+        unit_price_ghs,
+        variants ( color, size ),
+        products ( slug )
+      )
     `
     )
     .eq("id", orderId)

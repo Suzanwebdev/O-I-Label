@@ -17,6 +17,7 @@ import {
   SlidersHorizontal,
   ShoppingBag,
   ShoppingBasket,
+  Star,
   Store,
   Users,
   UsersRound,
@@ -59,6 +60,7 @@ const groups: NavGroup[] = [
     title: "Content",
     items: [
       { href: "/admin/blog", label: "Blog", icon: MessageSquareText },
+      { href: "/admin/reviews", label: "Reviews", icon: Star },
       { href: "/admin/homepage", label: "Homepage", icon: Store },
       { href: "/admin/discounts", label: "Discounts", icon: Percent },
       { href: "/admin/marketing", label: "Marketing", icon: Megaphone },

@@ -14,6 +14,14 @@ import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/json-ld";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { getRelatedProducts } from "@/lib/data/related-products";
 import { ProductYouMayAlsoLike } from "@/components/product/product-you-may-also-like";
+import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
+import { ProductReviewComposer } from "@/components/reviews/product-review-composer";
+import { StarRating } from "@/components/reviews/star-rating";
+import {
+  getPublishedReviewAggregates,
+  listPublishedReviews,
+} from "@/lib/reviews/queries";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -50,11 +58,35 @@ export default async function ProductPage({ params }: Props) {
   const storefrontProduct = toStorefrontProduct(product);
   const productPath = `/product/${product.slug}`;
 
+  const supabase = await createServerSupabaseClient();
+  const [aggregates, listed, userResult] = await Promise.all([
+    getPublishedReviewAggregates(product.id),
+    listPublishedReviews({ productId: product.id, page: 1, pageSize: 8, sort: "newest" }),
+    supabase.auth.getUser(),
+  ]);
+
+  const user = userResult.data.user;
+  const displayName =
+    (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name) ||
+    (typeof user?.user_metadata?.name === "string" && user.user_metadata.name) ||
+    "O & I Customer";
+
+  const publicRating =
+    aggregates.count > 0 && aggregates.average != null
+      ? { rating: aggregates.average, review_count: aggregates.count }
+      : { rating: null as number | null, review_count: 0 };
+
+  const productForSeo = {
+    ...product,
+    rating: publicRating.rating ?? undefined,
+    review_count: publicRating.review_count,
+  };
+
   return (
     <article className="border-border/60 border-b bg-background py-8 md:py-12">
       <JsonLd
         data={[
-          productJsonLd(product, productPath),
+          productJsonLd(productForSeo, productPath, listed.reviews),
           breadcrumbJsonLd([
             { name: "Home", path: "/" },
             { name: "Shop", path: "/shop" },
@@ -99,12 +131,17 @@ export default async function ProductPage({ params }: Props) {
               <h1 className="mt-2 font-serif-display text-3xl font-semibold tracking-tight text-foreground md:text-[2.125rem]">
                 {product.name}
               </h1>
-              {product.rating != null ? (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {product.rating.toFixed(1)} rating
-                  {product.review_count != null ? ` · ${product.review_count} reviews` : null}
+              {publicRating.rating != null && publicRating.review_count > 0 ? (
+                <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <StarRating value={publicRating.rating} size="sm" />
+                  <span>
+                    {publicRating.rating.toFixed(1)} · {publicRating.review_count} review
+                    {publicRating.review_count === 1 ? "" : "s"}
+                  </span>
                 </p>
-              ) : null}
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">Be the first to review this piece.</p>
+              )}
               <div className="mt-4">
                 <BadgeSet badges={product.badges} />
               </div>
@@ -114,6 +151,20 @@ export default async function ProductPage({ params }: Props) {
             </div>
           </aside>
         </div>
+
+        <ProductReviewsSection
+          productId={product.id}
+          initialAggregates={aggregates}
+          initialReviews={listed.reviews}
+          initialTotal={listed.total}
+        />
+
+        <ProductReviewComposer
+          productId={product.id}
+          productSlug={product.slug}
+          isSignedIn={Boolean(user)}
+          defaultDisplayName={displayName}
+        />
 
         <ProductYouMayAlsoLike products={relatedProducts} />
       </Container>

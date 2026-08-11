@@ -45,7 +45,18 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
   };
 }
 
-export function productJsonLd(product: Product, productPath: string) {
+export function productJsonLd(
+  product: Product,
+  productPath: string,
+  publishedReviews?: Array<{
+    rating: number;
+    body: string | null;
+    title: string | null;
+    display_name: string;
+    published_at: string | null;
+    created_at: string;
+  }>
+) {
   const url = absoluteUrl(productPath);
   const prices = product.variants.map((v) => v.price_ghs);
   const minPrice = prices.length ? Math.min(...prices) : undefined;
@@ -58,6 +69,9 @@ export function productJsonLd(product: Product, productPath: string) {
     .filter(Boolean)
     .map((src) => toAbsoluteImageUrl(src))
     .slice(0, 8);
+
+  const reviewCount = product.review_count ?? 0;
+  const hasRealRating = product.rating != null && reviewCount > 0;
 
   return {
     "@context": "https://schema.org",
@@ -91,13 +105,32 @@ export function productJsonLd(product: Product, productPath: string) {
         url,
       })),
     },
-    ...(product.rating != null
+    ...(hasRealRating
       ? {
           aggregateRating: {
             "@type": "AggregateRating",
             ratingValue: product.rating,
-            reviewCount: Math.max(1, product.review_count ?? 1),
+            reviewCount,
           },
+        }
+      : {}),
+    ...(publishedReviews && publishedReviews.length
+      ? {
+          review: publishedReviews.slice(0, 5).map((r) => ({
+            "@type": "Review",
+            reviewRating: {
+              "@type": "Rating",
+              ratingValue: r.rating,
+              bestRating: 5,
+              worstRating: 1,
+            },
+            author: {
+              "@type": "Person",
+              name: r.display_name,
+            },
+            reviewBody: r.body ?? r.title ?? undefined,
+            datePublished: r.published_at ?? r.created_at,
+          })),
         }
       : {}),
   };
