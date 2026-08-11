@@ -2,22 +2,22 @@ import Image from "next/image";
 
 const LOGOS = [
   {
-    src: "/checkout/mtn-mobile-money.svg",
+    src: "/checkout/mtn-mobile-money.png",
     alt: "MTN Mobile Money",
-    width: 70,
-    height: 26,
+    width: 78,
+    height: 28,
   },
   {
-    src: "/checkout/telecel-cash.svg",
+    src: "/checkout/telecel-cash.png",
     alt: "Telecel Cash",
-    width: 70,
-    height: 26,
+    width: 78,
+    height: 28,
   },
   {
-    src: "/checkout/airteltigo-money.svg",
+    src: "/checkout/airteltigo-money.png",
     alt: "AirtelTigo Money",
-    width: 70,
-    height: 26,
+    width: 78,
+    height: 28,
   },
 ] as const;
 
@@ -40,8 +40,7 @@ export function MomoNetworkLogos({ className }: { className?: string }) {
           alt={logo.alt}
           width={logo.width}
           height={logo.height}
-          className="h-[26px] w-auto max-w-[70px] shrink-0 rounded-[3px] object-contain shadow-[0_0_0_1px_rgba(0,0,0,0.04)]"
-          unoptimized
+          className="h-[28px] w-auto max-w-[78px] shrink-0 rounded-[3px] object-contain"
         />
       ))}
     </span>
