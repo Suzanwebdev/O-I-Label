@@ -401,7 +401,7 @@ export async function listAdminInventory(opts?: {
   let query = supabase
     .from("variants")
     .select(
-      "id, product_id, sku, stock, price_ghs, created_at, products!inner(name, slug, product_images ( storage_path, sort_order ), categories ( slug, name ))"
+      "id, product_id, sku, stock, price_ghs, created_at, products!inner(name, slug, product_images ( storage_path, sort_order ), categories!products_category_id_fkey ( slug, name ))"
     )
     .order("name", { foreignTable: "products", ascending: true })
     .order("created_at", { ascending: true })
@@ -621,7 +621,7 @@ export async function listAdminProducts(): Promise<AdminProductRow[]> {
     .select(
       `
       id, name, slug, is_active, badges, occasions, created_at,
-      categories ( name ),
+      categories!products_category_id_fkey ( name ),
       product_images ( storage_path, sort_order ),
       variants ( id, sku, stock, price_ghs, size, color )
     `

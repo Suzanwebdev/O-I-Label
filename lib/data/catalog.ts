@@ -68,7 +68,7 @@ async function extraCategorySlugsByProductId(
   if (!productIds.length) return map;
   const { data, error } = await supabase
     .from("product_categories")
-    .select("product_id, categories ( slug )")
+    .select("product_id, categories!product_categories_category_id_fkey ( slug )")
     .in("product_id", productIds);
   if (error || !data) return map;
   for (const row of data as {
@@ -126,7 +126,7 @@ export async function listProducts(): Promise<Product[]> {
       .select(
         `
         id, slug, name, description, is_active, badges, occasions, love_it_points, rating, review_count,
-        categories ( slug, name ),
+        categories!products_category_id_fkey ( slug, name ),
         variants ( id, sku, price_ghs, compare_at_ghs, stock, size, color ),
         product_images ( storage_path, sort_order )
       `
@@ -158,7 +158,7 @@ export async function getProductBySlugFromDb(
       .select(
         `
         id, slug, name, description, seo_title, seo_description, is_active, badges, occasions, love_it_points, rating, review_count,
-        categories ( slug, name ),
+        categories!products_category_id_fkey ( slug, name ),
         variants ( id, sku, price_ghs, compare_at_ghs, stock, size, color ),
         product_images ( storage_path, sort_order )
       `
