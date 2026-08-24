@@ -37,9 +37,10 @@ import {
 } from "@/components/ui/sheet";
 import { SlidersHorizontal } from "lucide-react";
 import { QuickViewModal } from "@/components/shop/quick-view-modal";
+import { SHOP_FILTER_COLORS } from "@/lib/shop-color-filter";
 
 const sizes = ["XS", "S", "M", "L", "XL"];
-const colors = ["Black", "Ivory", "Navy", "Nude", "Espresso"];
+const colors = SHOP_FILTER_COLORS;
 
 export function ShopCatalog({
   products,

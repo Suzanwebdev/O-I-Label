@@ -1,5 +1,6 @@
 import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
 import { isVariantInStock } from "@/lib/catalog/storefront-product";
+import { variantMatchesAnyShopColorFilter } from "@/lib/shop-color-filter";
 import type { OccasionTag, Product, ProductBadge } from "@/lib/types";
 
 const OCCASION_TAGS: OccasionTag[] = [
@@ -73,7 +74,7 @@ export function filterProducts<T extends CatalogProduct>(
   }
   if (opts.colors?.length) {
     list = list.filter((p) =>
-      p.variants.some((v) => v.color && opts.colors!.includes(v.color))
+      p.variants.some((v) => variantMatchesAnyShopColorFilter(v.color, opts.colors!))
     );
   }
   if (opts.inStockOnly) {
