@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Container } from "@/components/store/container";
 
 export default function ResetPasswordClient() {
@@ -53,23 +53,23 @@ export default function ResetPasswordClient() {
         </div>
 
         <form className="space-y-3" onSubmit={onSubmit}>
-          <Input
-            type="password"
+          <PasswordInput
             name="password"
             placeholder="New password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={8}
+            autoComplete="new-password"
           />
-          <Input
-            type="password"
+          <PasswordInput
             name="confirm"
             placeholder="Confirm password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required
             minLength={8}
+            autoComplete="new-password"
           />
           <Button type="submit" disabled={busy} className="w-full">
             {busy ? "Saving…" : "Update password"}

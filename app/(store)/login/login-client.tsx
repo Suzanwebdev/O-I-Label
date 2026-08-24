@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Container } from "@/components/store/container";
 
 export default function LoginClient() {
@@ -68,13 +69,13 @@ export default function LoginClient() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <Input
-            type="password"
+          <PasswordInput
             name="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
           />
           <p className="text-right text-xs">
             <Link href="/forgot-password" className="text-navy underline-offset-4 hover:underline">
