@@ -35,6 +35,8 @@ export interface Product {
   /** Optional PDP bullets under "Why you'll love it"; empty hides the block. */
   love_it_points?: string[];
   occasions?: OccasionTag[];
+  /** All category slugs this product appears under, including the primary. */
+  category_slugs?: string[];
   rating?: number;
   review_count?: number;
   variants: ProductVariant[];

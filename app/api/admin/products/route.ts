@@ -1,8 +1,28 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { mergeProductCategoryIds, parseExtraCategoryIds } from "@/lib/catalog/product-categories";
 import { normalizeProductImagePaths } from "@/lib/catalog/product-image-url";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { ProductBadge } from "@/lib/types";
+
+async function syncProductCategories(
+  service: ReturnType<typeof createServiceRoleClient>,
+  productId: string,
+  primaryCategoryId: string,
+  extraRaw: unknown
+): Promise<string | null> {
+  const ids = mergeProductCategoryIds(primaryCategoryId, parseExtraCategoryIds(extraRaw));
+  const { data, error } = await service.from("categories").select("id").in("id", ids);
+  if (error) return error.message;
+  if ((data ?? []).length !== ids.length) return "One or more categories are invalid";
+
+  const { error: delErr } = await service.from("product_categories").delete().eq("product_id", productId);
+  if (delErr) return delErr.message;
+  const { error: insErr } = await service.from("product_categories").insert(
+    ids.map((category_id) => ({ product_id: productId, category_id }))
+  );
+  return insErr?.message ?? null;
+}
 
 function toSlug(value: string) {
   return value
@@ -243,6 +263,16 @@ export async function POST(request: Request) {
         alt: name,
       }))
     );
+  }
+
+  const categorySyncError = await syncProductCategories(
+    service,
+    product.id,
+    categoryId,
+    (body as { extraCategoryIds?: unknown })?.extraCategoryIds
+  );
+  if (categorySyncError) {
+    return NextResponse.json({ error: categorySyncError }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, productId: product.id }, { status: 201 });
@@ -514,6 +544,16 @@ export async function PUT(request: Request) {
         alt: name,
       }))
     );
+  }
+
+  const categorySyncError = await syncProductCategories(
+    service,
+    productId,
+    categoryId,
+    (body as { extraCategoryIds?: unknown })?.extraCategoryIds
+  );
+  if (categorySyncError) {
+    return NextResponse.json({ error: categorySyncError }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

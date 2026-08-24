@@ -1,5 +1,6 @@
 import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
 import { isVariantInStock } from "@/lib/catalog/storefront-product";
+import { productBelongsToCategorySlug } from "@/lib/catalog/product-categories";
 import { variantMatchesAnyShopColorFilter } from "@/lib/shop-color-filter";
 import type { OccasionTag, Product, ProductBadge } from "@/lib/types";
 
@@ -42,7 +43,7 @@ export function filterProducts<T extends CatalogProduct>(
     );
   }
   if (opts.category) {
-    list = list.filter((p) => p.category_slug === opts.category);
+    list = list.filter((p) => productBelongsToCategorySlug(p, opts.category!));
   }
   const occasionRaw = opts.occasion?.trim();
   if (occasionRaw) {

@@ -167,6 +167,9 @@ export function ProductCreateForm({
   const [categoryId, setCategoryId] = React.useState(
     editProduct?.category_id ?? categories[0]?.id ?? ""
   );
+  const [extraCategoryIds, setExtraCategoryIds] = React.useState<string[]>(() =>
+    editProduct?.extra_category_ids?.length ? [...editProduct.extra_category_ids] : []
+  );
   const [seoTitle, setSeoTitle] = React.useState(editProduct?.seo_title ?? "");
   const [seoDescription, setSeoDescription] = React.useState(editProduct?.seo_description ?? "");
   const [isActive, setIsActive] = React.useState(editProduct ? editProduct.is_active : true);
@@ -214,6 +217,16 @@ export function ProductCreateForm({
 
   function toggleOccasion(occasion: OccasionTag) {
     setOccasions((prev) => (prev.includes(occasion) ? prev.filter((o) => o !== occasion) : [...prev, occasion]));
+  }
+
+  function setPrimaryCategory(nextId: string) {
+    setCategoryId(nextId);
+    setExtraCategoryIds((prev) => prev.filter((id) => id !== nextId));
+  }
+
+  function toggleExtraCategory(id: string) {
+    if (id === categoryId) return;
+    setExtraCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   const bulkGeneratorArgs = React.useMemo<BulkGeneratorArgs>(
@@ -369,6 +382,7 @@ export function ProductCreateForm({
                 badges,
                 occasions,
                 categoryId,
+                extraCategoryIds,
                 imagePaths: imageUrls,
                 videoUrls,
                 loveItPoints,
@@ -384,6 +398,7 @@ export function ProductCreateForm({
                 badges,
                 occasions,
                 categoryId,
+                extraCategoryIds,
                 imagePaths: imageUrls,
                 videoUrls,
                 loveItPoints,
@@ -429,8 +444,8 @@ export function ProductCreateForm({
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Category</Label>
-          <Select value={categoryId} onValueChange={setCategoryId} disabled={busy || categories.length === 0}>
+          <Label>Primary category</Label>
+          <Select value={categoryId} onValueChange={setPrimaryCategory} disabled={busy || categories.length === 0}>
             <SelectTrigger>
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
@@ -443,6 +458,36 @@ export function ProductCreateForm({
             </SelectContent>
           </Select>
         </div>
+        {categories.length > 1 ? (
+          <div className="space-y-2">
+            <Label>Also appear in</Label>
+            <p className="text-xs text-muted-foreground">
+              Optional. Select extra categories so this product shows in more than one shop section.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {categories
+                .filter((c) => c.id !== categoryId)
+                .map((c) => {
+                  const checked = extraCategoryIds.includes(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => toggleExtraCategory(c.id)}
+                      className={
+                        checked
+                          ? "rounded-full border border-black bg-black px-3 py-1.5 text-xs font-medium text-white"
+                          : "rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:border-black/40"
+                      }
+                    >
+                      {c.name}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        ) : null}
         <div className="space-y-2">
           <Label htmlFor="description">Description</Label>
           <Textarea

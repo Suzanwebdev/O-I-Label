@@ -127,6 +127,8 @@ export type AdminProductDetail = {
   slug: string;
   description: string | null;
   category_id: string | null;
+  /** Additional categories beyond the primary (excludes category_id). */
+  extra_category_ids: string[];
   is_active: boolean;
   badges: string[];
   occasions: ("birthday" | "vacation" | "wedding" | "corporate")[];
@@ -155,7 +157,8 @@ export async function getAdminProductById(productId: string): Promise<AdminProdu
       `
       id, name, slug, description, category_id, is_active, badges, occasions, seo_title, seo_description, love_it_points, video_urls,
       variants ( id, sku, stock, price_ghs, compare_at_ghs, size, color ),
-      product_images ( storage_path, sort_order )
+      product_images ( storage_path, sort_order ),
+      product_categories ( category_id )
     `
     )
     .eq("id", productId)
@@ -189,12 +192,23 @@ export async function getAdminProductById(productId: string): Promise<AdminProdu
   }));
   variants.sort((a, b) => (a.sku || "").localeCompare(b.sku || ""));
 
+  const primaryCategoryId = typeof data.category_id === "string" ? data.category_id : null;
+  const rawCategoryLinks = (data.product_categories ?? []) as { category_id: string | null }[];
+  const extra_category_ids = [
+    ...new Set(
+      rawCategoryLinks
+        .map((row) => row.category_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0 && id !== primaryCategoryId)
+    ),
+  ];
+
   return {
     id: data.id,
     name: data.name ?? "",
     slug: data.slug ?? "",
     description: typeof data.description === "string" ? data.description : null,
-    category_id: typeof data.category_id === "string" ? data.category_id : null,
+    category_id: primaryCategoryId,
+    extra_category_ids,
     is_active: Boolean(data.is_active),
     badges: Array.isArray(data.badges) ? data.badges.filter((b): b is string => typeof b === "string") : [],
     occasions: Array.isArray(data.occasions)

@@ -44,7 +44,48 @@ function mapVariant(v: DbVariant): ProductVariant {
   };
 }
 
-function mapRow(row: DbProduct): Product {
+function uniqueCategorySlugs(row: DbProduct, extraSlugs: string[] = []): string[] {
+  const slugs: string[] = [];
+  const seen = new Set<string>();
+  const primary = row.categories?.slug;
+  if (primary) {
+    slugs.push(primary);
+    seen.add(primary);
+  }
+  for (const slug of extraSlugs) {
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    slugs.push(slug);
+  }
+  return slugs.length ? slugs : primary ? [primary] : ["new-arrivals"];
+}
+
+async function extraCategorySlugsByProductId(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  productIds: string[]
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (!productIds.length) return map;
+  const { data, error } = await supabase
+    .from("product_categories")
+    .select("product_id, categories ( slug )")
+    .in("product_id", productIds);
+  if (error || !data) return map;
+  for (const row of data as {
+    product_id: string;
+    categories: { slug: string } | { slug: string }[] | null;
+  }[]) {
+    const cat = row.categories;
+    const slug = Array.isArray(cat) ? cat[0]?.slug : cat?.slug;
+    if (!slug) continue;
+    const current = map.get(row.product_id) ?? [];
+    if (!current.includes(slug)) current.push(slug);
+    map.set(row.product_id, current);
+  }
+  return map;
+}
+
+function mapRow(row: DbProduct, extraSlugs: string[] = []): Product {
   const imgs = (row.product_images ?? [])
     .slice()
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -63,6 +104,7 @@ function mapRow(row: DbProduct): Product {
       typeof row.seo_description === "string" && row.seo_description.trim() ? row.seo_description.trim() : null,
     category_slug: row.categories?.slug ?? "new-arrivals",
     category_name: row.categories?.name ?? "New Arrivals",
+    category_slugs: uniqueCategorySlugs(row, extraSlugs),
     images: imgs.length ? imgs : ["/file.svg"],
     badges: (row.badges ?? []) as ProductBadge[],
     ...(loveLines.length ? { love_it_points: loveLines } : {}),
@@ -93,7 +135,11 @@ export async function listProducts(): Promise<Product[]> {
       .order("created_at", { ascending: false });
 
     if (error || !data?.length) return [];
-    return (data as unknown as DbProduct[]).map(mapRow);
+    const extras = await extraCategorySlugsByProductId(
+      supabase,
+      (data as { id: string }[]).map((row) => row.id)
+    );
+    return (data as unknown as DbProduct[]).map((row) => mapRow(row, extras.get(row.id) ?? []));
   } catch {
     return [];
   }
@@ -122,7 +168,8 @@ export async function getProductBySlugFromDb(
       .maybeSingle();
 
     if (!error && data) {
-      return mapRow(data as unknown as DbProduct);
+      const extras = await extraCategorySlugsByProductId(supabase, [(data as { id: string }).id]);
+      return mapRow(data as unknown as DbProduct, extras.get((data as { id: string }).id) ?? []);
     }
   } catch {
     /* no mock fallback — only real catalog rows */
