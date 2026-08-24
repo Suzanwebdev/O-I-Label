@@ -60,7 +60,7 @@ export function ReviewsVisibilityToggle({
             Show reviews on storefront
           </Label>
           <p className={cn("text-xs leading-relaxed", dark ? "text-white/60" : "text-muted-foreground")}>
-            When off, the product-page review section and homepage reviews strip are hidden.
+            When off, the product-page review section is hidden.
             Moderation and existing reviews are kept. Use Hide/Reject on individual reviews to
             keep a single review private.
           </p>

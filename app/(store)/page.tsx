@@ -19,7 +19,6 @@ import { toStorefrontProducts } from "@/lib/catalog/storefront-product";
 import { BestSellersRow } from "@/components/home/best-sellers-row";
 import { HomeHero } from "@/components/home/home-hero";
 import { OccasionSection } from "@/components/home/occasion-section";
-import { HomeLovedBySection } from "@/components/home/home-loved-by-section";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { sections, updatedAt } = await getHomeContentRow();
@@ -173,8 +172,6 @@ export default async function HomePage() {
           </div>
         </Container>
       </Section>
-
-      <HomeLovedBySection />
     </>
   );
 }
