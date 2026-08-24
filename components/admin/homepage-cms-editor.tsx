@@ -15,6 +15,7 @@ import {
   type FooterColumn,
   type FooterLink,
 } from "@/lib/home/homepage-cms";
+import { VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL } from "@/lib/media/image-cache";
 
 const BUCKET = "product-images";
 
@@ -77,7 +78,7 @@ export function HomepageCmsEditor({ initial }: { initial: HomepageCms }) {
       const supabase = createClient();
       const path = `homepage/hero/${Date.now()}-${safeFileName(file.name)}`;
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, {
-        cacheControl: "3600",
+        cacheControl: VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL,
         upsert: false,
       });
       if (uploadError) {

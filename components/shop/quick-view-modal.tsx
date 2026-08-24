@@ -16,7 +16,6 @@ import { Price } from "@/components/store/price";
 import { BadgeSet } from "@/components/store/badge-set";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { SoldOutBadge, SoldOutMessage } from "@/components/store/sold-out-message";
-import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function QuickViewModal({
   product,
@@ -30,8 +29,6 @@ export function QuickViewModal({
   if (!product) return null;
   const v = primaryStorefrontVariant(product);
   const inStock = isStorefrontProductInStock(product);
-  const preserveQuality = shouldBypassImageOptimization(product.images[0] ?? "");
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0 sm:max-w-3xl">
@@ -42,9 +39,8 @@ export function QuickViewModal({
               alt={product.name}
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
+              sizes="(max-width: 768px) 92vw, 384px"
               quality={100}
-              unoptimized={preserveQuality}
             />
             {!inStock ? (
               <div className="absolute right-3 top-3">

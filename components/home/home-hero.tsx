@@ -4,9 +4,20 @@ import * as React from "react";
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import type { HomeHeroSlide } from "@/lib/home-hero-slides";
-import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 const AUTO_MS = 1000;
+
+/** Active + previous (crossfade) + next (autoplay). Never the full deck. */
+export function heroSlideImageIndices(active: number, count: number): Set<number> {
+  const loaded = new Set<number>();
+  if (count <= 0) return loaded;
+  const i = ((active % count) + count) % count;
+  loaded.add(i);
+  if (count === 1) return loaded;
+  loaded.add((i - 1 + count) % count);
+  loaded.add((i + 1) % count);
+  return loaded;
+}
 
 export function HomeHero({
   slides,
@@ -18,6 +29,7 @@ export function HomeHero({
   const reduceMotion = useReducedMotion();
   const [index, setIndex] = React.useState(0);
   const n = slides.length;
+  const loaded = heroSlideImageIndices(index, n);
 
   /** Autoplay always on (no hover-pause — the full hero is “hoverable”, which was stopping the timer on desktop). */
   React.useEffect(() => {
@@ -36,26 +48,31 @@ export function HomeHero({
       <div className="absolute inset-0 z-0">
         {n > 0 &&
           slides.map((slide, i) => {
-            const preserveQuality = shouldBypassImageOptimization(slide.src);
+            const isActive = i === index;
+            const nextIndex = n > 1 ? (index + 1) % n : i;
+            const loadImage = loaded.has(i);
             return (
             <motion.div
               key={slide.src}
               className="absolute inset-0"
               initial={false}
-              animate={{ opacity: i === index ? 1 : 0 }}
+              animate={{ opacity: isActive ? 1 : 0 }}
               transition={{ duration, ease: [0.22, 1, 0.36, 1] }}
-              aria-hidden={i !== index}
+              aria-hidden={!isActive}
             >
-              <Image
-                src={slide.src}
-                alt={slide.alt}
-                fill
-                className="object-cover object-[center_32%] sm:object-center md:object-center"
-                sizes="100vw"
-                priority={i === 0}
-                quality={100}
-                unoptimized={preserveQuality}
-              />
+              {loadImage ? (
+                <Image
+                  src={slide.src}
+                  alt={slide.alt}
+                  fill
+                  className="object-cover object-[center_32%] sm:object-center md:object-center"
+                  sizes="100vw"
+                  priority={i === 0 && index === 0}
+                  fetchPriority={i === 0 && index === 0 ? "high" : "auto"}
+                  loading={isActive || i === nextIndex ? "eager" : "lazy"}
+                  quality={100}
+                />
+              ) : null}
               <div
                 className={`pointer-events-none absolute inset-0 z-[1] md:hidden ${slide.mobileOverlayClassName ?? "bg-gradient-to-t from-black/78 via-black/45 to-black/15"}`}
                 aria-hidden

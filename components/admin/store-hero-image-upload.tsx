@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL } from "@/lib/media/image-cache";
 
 const BUCKET = "product-images";
 
@@ -40,7 +41,7 @@ export function StoreHeroImageUpload({
       const supabase = createClient();
       const path = `store-control/${Date.now()}-${safeFileName(file.name)}`;
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
-        cacheControl: "3600",
+        cacheControl: VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL,
         upsert: false,
       });
       if (upErr) {

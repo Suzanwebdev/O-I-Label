@@ -16,6 +16,7 @@ import {
   type OccasionSectionCardStored,
   type ShopOccasionKey,
 } from "@/lib/home/shop-by-occasion";
+import { VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL } from "@/lib/media/image-cache";
 
 const BUCKET = "product-images";
 
@@ -100,7 +101,7 @@ export function ShopByOccasionEditor({ initialSections }: { initialSections: Rec
       const supabase = createClient();
       const path = `occasions/${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safeFileName(file.name)}`;
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, {
-        cacheControl: "3600",
+        cacheControl: VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL,
         upsert: false,
       });
       if (uploadError) {

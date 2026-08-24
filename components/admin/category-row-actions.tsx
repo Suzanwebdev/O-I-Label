@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL } from "@/lib/media/image-cache";
 
 const BUCKET = "product-images";
 
@@ -51,7 +52,7 @@ export function CategoryRowActions({
       const supabase = createClient();
       const path = `categories/${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safeFileName(file.name)}`;
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, {
-        cacheControl: "3600",
+        cacheControl: VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL,
         upsert: false,
       });
       if (uploadError) {

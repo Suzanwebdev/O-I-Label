@@ -13,7 +13,6 @@ import { Price } from "@/components/store/price";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { SoldOutBadge, SoldOutMessage } from "@/components/store/sold-out-message";
 import { cn } from "@/lib/utils";
-import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function ProductCard({
   product,
@@ -25,7 +24,6 @@ export function ProductCard({
   priority?: boolean;
 }) {
   const image = product.images[0];
-  const preserveQuality = shouldBypassImageOptimization(image);
   const v = primaryStorefrontVariant(product);
   const compare = v.compare_at_ghs;
   const inStock = isStorefrontProductInStock(product);
@@ -47,10 +45,10 @@ export function ProductCard({
             alt={product.name}
             fill
             className="object-cover transition duration-500 group-hover:scale-[1.03]"
-            sizes="(max-width: 768px) 50vw, 25vw"
-            priority={priority}
+            sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            priority={Boolean(priority)}
+            loading={priority ? "eager" : "lazy"}
             quality={100}
-            unoptimized={preserveQuality}
           />
           <div className="absolute left-3 top-3">
             <BadgeSet badges={product.badges} />

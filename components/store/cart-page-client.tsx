@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Price } from "@/components/store/price";
 import { cn } from "@/lib/utils";
-import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function CartPageClient() {
   const {
@@ -62,7 +61,6 @@ export function CartPageClient() {
         <div className="space-y-4">
           {lines.map((line) => {
             const isSelected = line.selected !== false;
-            const preserveQuality = shouldBypassImageOptimization(line.image);
             return (
               <article
                 key={line.variantId}
@@ -86,7 +84,6 @@ export function CartPageClient() {
                     className="object-cover"
                     sizes="80px"
                     quality={100}
-                    unoptimized={preserveQuality}
                   />
                 </div>
                 <div className="min-w-0 flex-1 space-y-2">

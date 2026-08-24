@@ -6,7 +6,6 @@ import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useWishlist } from "@/components/providers/wishlist-provider";
-import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function ProductGallery({
   productKey,
@@ -23,38 +22,36 @@ export function ProductGallery({
   const [announce, setAnnounce] = React.useState("");
   const { hasItem, toggleItem } = useWishlist();
   const isSaved = hasItem(productKey);
+  const activeSrc = images[active] ?? images[0];
+  const isInitialMain = active === 0;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:grid md:grid-cols-[4.6rem_minmax(0,1fr)] md:items-start">
         <div className="order-2 flex gap-2.5 overflow-x-auto pb-1 md:order-1 md:flex-col md:overflow-visible md:pb-0">
-          {images.map((src, i) => {
-            const preserveQuality = shouldBypassImageOptimization(src);
-            return (
-              <button
-                key={`${src}-${i}`}
-                type="button"
-                onClick={() => setActive(i)}
-                onMouseEnter={() => setActive(i)}
-                className={cn(
-                  "relative h-20 w-16 shrink-0 overflow-hidden rounded-[var(--radius-md)] border-2 transition-all",
-                  i === active ? "border-navy shadow-[var(--shadow-soft)]" : "border-transparent opacity-70 hover:opacity-100"
-                )}
-                aria-label={`Show image ${i + 1}`}
-              >
-                <Image
-                  src={src}
-                  alt={`${name} — image ${i + 1} of ${images.length}`}
-                  fill
-                  className="object-cover"
-                  sizes="64px"
-                  loading="lazy"
-                  quality={100}
-                  unoptimized={preserveQuality}
-                />
-              </button>
-            );
-          })}
+          {images.map((src, i) => (
+            <button
+              key={`${src}-${i}`}
+              type="button"
+              onClick={() => setActive(i)}
+              onMouseEnter={() => setActive(i)}
+              className={cn(
+                "relative h-20 w-16 shrink-0 overflow-hidden rounded-[var(--radius-md)] border-2 transition-all",
+                i === active ? "border-navy shadow-[var(--shadow-soft)]" : "border-transparent opacity-70 hover:opacity-100"
+              )}
+              aria-label={`Show image ${i + 1}`}
+            >
+              <Image
+                src={src}
+                alt={`${name} — image ${i + 1} of ${images.length}`}
+                fill
+                className="object-cover"
+                sizes="64px"
+                loading="lazy"
+                quality={90}
+              />
+            </button>
+          ))}
         </div>
         <motion.div
           className="group relative order-1 aspect-[3/4] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-muted/60 shadow-[var(--shadow-soft)] md:order-2"
@@ -85,17 +82,19 @@ export function ProductGallery({
           <span className="sr-only" aria-live="polite">
             {announce}
           </span>
-          <Image
-            src={images[active]}
-            alt={`${name} — premium women's fashion at O & I Label`}
-            fill
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
-            sizes="(max-width: 1024px) 100vw, 55vw"
-            priority
-            fetchPriority="high"
-            quality={100}
-            unoptimized={shouldBypassImageOptimization(images[active] ?? "")}
-          />
+          {activeSrc ? (
+            <Image
+              key={activeSrc}
+              src={activeSrc}
+              alt={`${name} — premium women's fashion at O & I Label`}
+              fill
+              className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
+              sizes="(max-width: 1024px) 100vw, 55vw"
+              priority={isInitialMain}
+              fetchPriority={isInitialMain ? "high" : "auto"}
+              quality={100}
+            />
+          ) : null}
         </motion.div>
       </div>
       <p className="text-xs text-muted-foreground">

@@ -241,9 +241,9 @@ export function ShopCatalog({
             {filtered.length} piece{filtered.length === 1 ? "" : "s"}
           </p>
           <div className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((p) => (
+            {filtered.map((p, index) => (
               <div key={p.id} className="space-y-2">
-                <ProductCard product={p} />
+                <ProductCard product={p} priority={index < 4} />
                 <Button
                   type="button"
                   variant="ghost"
