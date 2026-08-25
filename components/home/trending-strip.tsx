@@ -13,7 +13,7 @@ import { Heading } from "@/components/store/heading";
 import { Price } from "@/components/store/price";
 import { BadgeSet } from "@/components/store/badge-set";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
-import { SoldOutMessage } from "@/components/store/sold-out-message";
+import { RestockNotifyListingCta } from "@/components/store/restock-notify-listing-cta";
 
 export function TrendingStrip({ products }: { products: StorefrontProduct[] }) {
   const list = products.length ? products : [];
@@ -74,7 +74,12 @@ export function TrendingStrip({ products }: { products: StorefrontProduct[] }) {
                         }}
                       />
                     ) : (
-                      <SoldOutMessage size="xs" />
+                      <RestockNotifyListingCta
+                        product={p}
+                        source="card"
+                        soldOutSize="xs"
+                        compact
+                      />
                     )}
                   </div>
                 </div>

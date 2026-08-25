@@ -11,7 +11,8 @@ import {
 import { BadgeSet } from "@/components/store/badge-set";
 import { Price } from "@/components/store/price";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
-import { SoldOutBadge, SoldOutMessage } from "@/components/store/sold-out-message";
+import { SoldOutBadge } from "@/components/store/sold-out-message";
+import { RestockNotifyListingCta } from "@/components/store/restock-notify-listing-cta";
 import { cn } from "@/lib/utils";
 
 export function ProductCard({
@@ -90,7 +91,7 @@ export function ProductCard({
             }}
           />
         ) : (
-          <SoldOutMessage className="mt-auto pt-1" />
+          <RestockNotifyListingCta product={product} source="card" className="mt-auto pt-1" />
         )}
       </div>
     </motion.article>

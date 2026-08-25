@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Image from "next/image";
 import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
 import {
@@ -12,10 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Price } from "@/components/store/price";
 import { BadgeSet } from "@/components/store/badge-set";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { SoldOutBadge, SoldOutMessage } from "@/components/store/sold-out-message";
+import { RestockNotifyDialog } from "@/components/store/restock-notify-dialog";
+import { shouldShowRestockNotify } from "@/lib/restock-notifications/ui";
 
 export function QuickViewModal({
   product,
@@ -26,9 +30,17 @@ export function QuickViewModal({
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
+  const [restockOpen, setRestockOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) setRestockOpen(false);
+  }, [open, product?.id]);
+
   if (!product) return null;
   const v = primaryStorefrontVariant(product);
   const inStock = isStorefrontProductInStock(product);
+  const showNotify = shouldShowRestockNotify(product);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0 sm:max-w-3xl">
@@ -62,7 +74,7 @@ export function QuickViewModal({
             <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground">
               {product.description}
             </p>
-            <div className="mt-auto pt-4">
+            <div className="mt-auto space-y-2 pt-4">
               {inStock ? (
                 <PurchaseActions
                   productSlug={product.slug}
@@ -80,7 +92,28 @@ export function QuickViewModal({
                   }}
                 />
               ) : (
-                <SoldOutMessage />
+                <>
+                  <SoldOutMessage />
+                  {showNotify ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        className="w-full rounded-[var(--radius-lg)] border-black/25 bg-white font-medium transition-colors hover:bg-muted"
+                        onClick={() => setRestockOpen(true)}
+                      >
+                        Notify Me
+                      </Button>
+                      <RestockNotifyDialog
+                        product={product}
+                        open={restockOpen}
+                        onOpenChange={setRestockOpen}
+                        source="quick_view"
+                      />
+                    </>
+                  ) : null}
+                </>
               )}
             </div>
           </div>

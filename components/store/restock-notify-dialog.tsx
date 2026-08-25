@@ -33,10 +33,18 @@ type Props = {
   product: StorefrontProduct;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Subscription source for analytics; defaults to PDP. */
+  source?: "pdp" | "card" | "quick_view";
   className?: string;
 };
 
-export function RestockNotifyDialog({ product, open, onOpenChange, className }: Props) {
+export function RestockNotifyDialog({
+  product,
+  open,
+  onOpenChange,
+  source = "pdp",
+  className,
+}: Props) {
   const sizes = React.useMemo(() => collectProductSizes(product), [product]);
   const colors = React.useMemo(() => collectProductColors(product), [product]);
 
@@ -73,7 +81,7 @@ export function RestockNotifyDialog({ product, open, onOpenChange, className }: 
         email,
         preferredSize,
         preferredColor,
-        source: "pdp",
+        source,
       });
 
       const res = await fetch("/api/restock-notifications/subscribe", {

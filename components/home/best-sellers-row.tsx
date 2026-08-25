@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/store/price";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
-import { SoldOutMessage } from "@/components/store/sold-out-message";
+import { RestockNotifyListingCta } from "@/components/store/restock-notify-listing-cta";
 import { HOME_BEST_SELLERS_BATCH } from "@/lib/shop-utils";
 
 export function BestSellersRow({ products }: { products: StorefrontProduct[] }) {
@@ -91,7 +91,12 @@ export function BestSellersRow({ products }: { products: StorefrontProduct[] }) 
                     }}
                   />
                 ) : (
-                  <SoldOutMessage size="xs" />
+                  <RestockNotifyListingCta
+                    product={product}
+                    source="card"
+                    soldOutSize="xs"
+                    compact
+                  />
                 )}
               </div>
             </article>
