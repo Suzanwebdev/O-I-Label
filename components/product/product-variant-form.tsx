@@ -13,8 +13,10 @@ import { Label } from "@/components/ui/label";
 import { useCart } from "@/components/providers/cart-provider";
 import { Price } from "@/components/store/price";
 import { SoldOutMessage, SoldOutNotice } from "@/components/store/sold-out-message";
+import { RestockNotifyDialog } from "@/components/store/restock-notify-dialog";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { useStoreControl } from "@/components/store-control/store-control-provider";
+import { shouldShowRestockNotify } from "@/lib/restock-notifications/ui";
 import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveSwatchColor } from "@/lib/color-swatch";
@@ -96,6 +98,8 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
 
   const oos = !isVariantInStock(variant);
   const productSoldOut = !isStorefrontProductInStock(product);
+  const showRestockNotify = shouldShowRestockNotify(product);
+  const [restockOpen, setRestockOpen] = React.useState(false);
   const quantityMax = oos ? 1 : MAX_QTY;
   const safeQty = Math.min(qty, quantityMax);
 
@@ -288,6 +292,25 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
             </Button>
           </>
         )}
+
+        {showRestockNotify ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full rounded-[var(--radius-lg)] border-black/25 bg-white font-medium transition-colors hover:bg-muted"
+              onClick={() => setRestockOpen(true)}
+            >
+              Notify Me When Available
+            </Button>
+            <RestockNotifyDialog
+              product={product}
+              open={restockOpen}
+              onOpenChange={setRestockOpen}
+            />
+          </>
+        ) : null}
       </div>
 
       {(product.love_it_points ?? []).filter(Boolean).length > 0 ? (
