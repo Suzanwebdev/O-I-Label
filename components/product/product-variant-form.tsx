@@ -296,9 +296,8 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
           <>
             <Button
               type="button"
-              variant="outline"
               size="lg"
-              className="w-full rounded-[var(--radius-lg)] border-black/25 bg-white font-medium transition-colors hover:bg-muted"
+              className="w-full rounded-[var(--radius-lg)] bg-black font-semibold text-white shadow-[0_14px_32px_-20px_rgba(0,0,0,0.72)] transition-transform hover:-translate-y-[1px] hover:bg-black/90"
               onClick={() => setRestockOpen(true)}
             >
               Notify Me When Available
