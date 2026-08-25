@@ -4,6 +4,7 @@ import { mergeProductCategoryIds, parseExtraCategoryIds } from "@/lib/catalog/pr
 import { normalizeProductImagePaths } from "@/lib/catalog/product-image-url";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { ProductBadge } from "@/lib/types";
+import { maybeNotifyRestockAfterAdminStockChange } from "@/lib/restock-notifications/admin-side-effect";
 
 async function syncProductCategories(
   service: ReturnType<typeof createServiceRoleClient>,
@@ -509,6 +510,16 @@ export async function PUT(request: Request) {
       }
     }
   }
+
+  // Product-level restock notify (0 → available). Failures must not fail this stock update.
+  await maybeNotifyRestockAfterAdminStockChange({
+    productId,
+    beforeVariants: (variantRowsBefore ?? []).map((r) => ({
+      id: String(r.id),
+      stock: Number(r.stock ?? 0),
+    })),
+    afterVariants: mappedWithAutoSku.map((v) => ({ stock: v.stock })),
+  });
 
   const { error: prodErr } = await service
     .from("products")

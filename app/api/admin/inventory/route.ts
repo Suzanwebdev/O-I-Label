@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  applySingleVariantStockChange,
+  loadProductVariantStockSnapshots,
+  maybeNotifyRestockAfterAdminStockChange,
+} from "@/lib/restock-notifications/admin-side-effect";
 
 export async function PATCH(request: Request) {
   const authz = await getRequestAuthz();
@@ -38,10 +43,22 @@ export async function PATCH(request: Request) {
   }
 
   const service = createServiceRoleClient();
-  const { data: current } = await service.from("variants").select("stock").eq("id", variantId).maybeSingle();
+  const { data: current } = await service
+    .from("variants")
+    .select("id, stock, product_id")
+    .eq("id", variantId)
+    .maybeSingle();
   if (!current) {
     return NextResponse.json({ error: "Variant not found" }, { status: 404 });
   }
+
+  const productId = String(current.product_id);
+  const beforeVariants = await loadProductVariantStockSnapshots(service, productId);
+  // Fail closed to a single-row snapshot if the product query is empty (should not happen).
+  const before =
+    beforeVariants.length > 0
+      ? beforeVariants.map((v) => ({ id: String(v.id), stock: v.stock }))
+      : [{ id: variantId, stock: Number(current.stock ?? 0) }];
 
   const delta = stock - Number(current.stock ?? 0);
 
@@ -59,6 +76,12 @@ export async function PATCH(request: Request) {
     });
   }
 
+  const afterVariants = applySingleVariantStockChange(before, variantId, stock);
+  await maybeNotifyRestockAfterAdminStockChange({
+    productId,
+    beforeVariants: before,
+    afterVariants,
+  });
+
   return NextResponse.json({ ok: true });
 }
-

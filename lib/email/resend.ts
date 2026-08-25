@@ -14,6 +14,10 @@ import {
 } from "@/lib/email/templates/order-status";
 import { orderConfirmationCopy, orderStatusEmailCopy } from "@/lib/email/templates/copy";
 import { renderPasswordResetEmail } from "@/lib/email/templates/password-reset";
+import {
+  renderRestockAvailableEmail,
+  restockAvailableEmailSubject,
+} from "@/lib/email/templates/restock-available";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
 export type EmailSendResult =
@@ -152,6 +156,30 @@ export async function sendNewsletterWelcomeEmail(opts: { to: string }): Promise<
     to: opts.to,
     subject: "Welcome to O & I Label",
     html: renderNewsletterWelcomeEmail(footerLinks),
+  });
+}
+
+export async function sendRestockAvailableEmail(opts: {
+  to: string;
+  productName: string;
+  productImageUrl: string;
+  productUrl: string;
+  unsubscribeUrl: string;
+}): Promise<EmailSendResult> {
+  const footerLinks = await getEmailFooterLinks();
+  return dispatchEmail({
+    from: fromAddress(),
+    to: opts.to,
+    subject: restockAvailableEmailSubject(opts.productName),
+    html: renderRestockAvailableEmail(
+      {
+        productName: opts.productName,
+        productImageUrl: opts.productImageUrl,
+        productUrl: opts.productUrl,
+        unsubscribeUrl: opts.unsubscribeUrl,
+      },
+      footerLinks
+    ),
   });
 }
 

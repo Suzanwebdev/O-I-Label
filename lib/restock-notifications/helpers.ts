@@ -46,9 +46,10 @@ export function isValidProductId(productId: string): boolean {
 /**
  * Product is completely sold out when it has at least one variant and
  * every variant has stock <= 0.
+ * Accepts nullable/optional stock (treats nullish as 0) for admin snapshots.
  */
 export function isProductCompletelySoldOut(
-  variants: ReadonlyArray<Pick<RestockProductVariantRow, "stock">>
+  variants: ReadonlyArray<{ stock?: number | null }>
 ): boolean {
   if (!variants.length) return false;
   return variants.every((v) => Number(v.stock ?? 0) <= 0);
