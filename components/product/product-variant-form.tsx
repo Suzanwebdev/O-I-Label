@@ -20,6 +20,7 @@ import { shouldShowRestockNotify } from "@/lib/restock-notifications/ui";
 import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveSwatchColor } from "@/lib/color-swatch";
+import { sortProductSizes } from "@/lib/catalog/product-size-order";
 
 const MAX_QTY = 10;
 
@@ -40,9 +41,7 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
   const router = useRouter();
   const control = useStoreControl();
   const { addItem, openCart, beginBuyNowCheckout } = useCart();
-  const sizes = Array.from(
-    new Set(product.variants.map((v) => v.size).filter(Boolean))
-  ) as string[];
+  const sizes = sortProductSizes(product.variants.map((v) => v.size));
   const colors = Array.from(
     new Set(product.variants.map((v) => v.color).filter(Boolean))
   ) as string[];

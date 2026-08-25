@@ -1,4 +1,5 @@
 import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import { sortProductSizes } from "@/lib/catalog/product-size-order";
 
 export const RESTOCK_PREF_ANY = "__any__";
 
@@ -22,9 +23,7 @@ export function preferenceToApiValue(value: string | null | undefined): string |
 }
 
 export function collectProductSizes(product: Pick<StorefrontProduct, "variants">): string[] {
-  return Array.from(
-    new Set(product.variants.map((v) => v.size).filter((s): s is string => Boolean(s?.trim())))
-  );
+  return sortProductSizes(product.variants.map((v) => v.size));
 }
 
 export function collectProductColors(product: Pick<StorefrontProduct, "variants">): string[] {
