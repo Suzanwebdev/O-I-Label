@@ -1,7 +1,4 @@
-import {
-  isStorefrontProductInStock,
-  type StorefrontProduct,
-} from "@/lib/catalog/storefront-product";
+import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
 
 export const RESTOCK_PREF_ANY = "__any__";
 
@@ -11,7 +8,7 @@ export function shouldShowRestockNotify(
 ): boolean {
   if (product.is_active === false) return false;
   if (!product.variants.length) return false;
-  return !isStorefrontProductInStock(product);
+  return !product.variants.some((v) => v.in_stock);
 }
 
 /** UI "Any" / empty → API null. */
