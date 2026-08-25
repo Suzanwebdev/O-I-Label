@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
-import { getRestockDemandSummaryForProduct } from "@/lib/restock-notifications/demand-store";
+import {
+  getRestockDemandOverview,
+  getRestockDemandSummaryForProduct,
+} from "@/lib/restock-notifications/demand-store";
 
 /**
- * Admin-only aggregate restock demand for a product.
- * Returns counts by preferred size/colour — never emails or raw subscription rows.
+ * Admin-only aggregate restock demand.
+ *
+ * - GET ?productId=… → single-product summary
+ * - GET (no productId) → overview of products with active waiting demand
+ *
+ * Never returns emails, tokens, or raw subscription rows.
  */
 export async function GET(request: Request) {
   const authz = await getRequestAuthz();
@@ -16,14 +23,19 @@ export async function GET(request: Request) {
   }
 
   const productId = new URL(request.url).searchParams.get("productId")?.trim() ?? "";
-  if (!productId) {
-    return NextResponse.json({ error: "productId is required" }, { status: 400 });
+
+  if (productId) {
+    const result = await getRestockDemandSummaryForProduct(productId);
+    if ("error" in result) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true, ...result });
   }
 
-  const result = await getRestockDemandSummaryForProduct(productId);
-  if ("error" in result) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+  const overview = await getRestockDemandOverview();
+  if ("error" in overview) {
+    return NextResponse.json({ error: overview.error }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: true, products: overview });
 }

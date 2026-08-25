@@ -4,12 +4,17 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
   aggregateRestockDemand,
+  buildRestockDemandOverview,
+  filterRestockDemandOverview,
   preferenceDisplayValue,
   preferenceLabel,
+  type RestockDemandMultiProductRow,
   type RestockDemandPreferenceRow,
 } from "../lib/restock-notifications/demand-analytics.ts";
 
 const PRODUCT_ID = "11111111-1111-4111-8111-111111111111";
+const PRODUCT_B = "22222222-2222-4222-8222-222222222222";
+const PRODUCT_C = "33333333-3333-4333-8333-333333333333";
 
 function row(
   partial: Partial<RestockDemandPreferenceRow> & Pick<RestockDemandPreferenceRow, "status">
@@ -165,6 +170,136 @@ describe("aggregateRestockDemand", () => {
   });
 });
 
+function multi(
+  productId: string,
+  partial: Partial<RestockDemandPreferenceRow> & Pick<RestockDemandPreferenceRow, "status">
+): RestockDemandMultiProductRow {
+  return { product_id: productId, ...row(partial) };
+}
+
+describe("buildRestockDemandOverview", () => {
+  it("includes products with active subscriptions", () => {
+    const overview = buildRestockDemandOverview([
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Pink", preferred_size: "M" }),
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Pink", preferred_size: "L" }),
+    ]);
+    assert.equal(overview.length, 1);
+    assert.equal(overview[0]?.productId, PRODUCT_ID);
+    assert.equal(overview[0]?.waiting, 2);
+  });
+
+  it("omits products with no active subscriptions", () => {
+    const overview = buildRestockDemandOverview([
+      multi(PRODUCT_ID, { status: "notified", preferred_color: "Pink", preferred_size: "M" }),
+      multi(PRODUCT_B, { status: "unsubscribed", preferred_color: "Black", preferred_size: "S" }),
+      multi(PRODUCT_C, { status: "cancelled", preferred_color: null, preferred_size: null }),
+    ]);
+    assert.deepEqual(overview, []);
+  });
+
+  it("sorts products by active waiting count descending", () => {
+    const overview = buildRestockDemandOverview([
+      multi(PRODUCT_B, { status: "active", preferred_color: "Black", preferred_size: "M" }),
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Pink", preferred_size: "M" }),
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Pink", preferred_size: "L" }),
+      multi(PRODUCT_ID, { status: "active", preferred_color: "White", preferred_size: "S" }),
+      multi(PRODUCT_C, { status: "active", preferred_color: null, preferred_size: "M" }),
+      multi(PRODUCT_C, { status: "active", preferred_color: null, preferred_size: "L" }),
+    ]);
+    assert.deepEqual(
+      overview.map((o) => [o.productId, o.waiting]),
+      [
+        [PRODUCT_ID, 3],
+        [PRODUCT_C, 2],
+        [PRODUCT_B, 1],
+      ]
+    );
+  });
+
+  it("exposes correct top size, colour, and combination", () => {
+    const overview = buildRestockDemandOverview([
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Pink", preferred_size: "M" }),
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Pink", preferred_size: "M" }),
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Pink", preferred_size: "L" }),
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Black", preferred_size: "M" }),
+      multi(PRODUCT_ID, { status: "notified", preferred_color: "White", preferred_size: "XL" }),
+    ]);
+    const item = overview[0];
+    assert.ok(item);
+    assert.equal(item.waiting, 4);
+    assert.equal(item.topSize?.label, "M");
+    assert.equal(item.topSize?.count, 3);
+    assert.equal(item.topColor?.label, "Pink");
+    assert.equal(item.topColor?.count, 3);
+    assert.equal(item.topCombination?.colorLabel, "Pink");
+    assert.equal(item.topCombination?.sizeLabel, "M");
+    assert.equal(item.topCombination?.count, 2);
+    assert.equal(item.demand.historical.notified, 1);
+  });
+
+  it("does not count notified or unsubscribed toward overview ranking", () => {
+    const overview = buildRestockDemandOverview([
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Pink", preferred_size: "M" }),
+      multi(PRODUCT_ID, { status: "notified", preferred_color: "Pink", preferred_size: "M" }),
+      multi(PRODUCT_ID, { status: "unsubscribed", preferred_color: "Pink", preferred_size: "M" }),
+      multi(PRODUCT_B, {
+        status: "notified",
+        preferred_color: "Black",
+        preferred_size: "L",
+      }),
+      multi(PRODUCT_B, {
+        status: "notified",
+        preferred_color: "Black",
+        preferred_size: "L",
+      }),
+      multi(PRODUCT_B, {
+        status: "notified",
+        preferred_color: "Black",
+        preferred_size: "L",
+      }),
+    ]);
+    assert.equal(overview.length, 1);
+    assert.equal(overview[0]?.productId, PRODUCT_ID);
+    assert.equal(overview[0]?.waiting, 1);
+  });
+
+  it("does not include email fields in overview items", () => {
+    const overview = buildRestockDemandOverview([
+      multi(PRODUCT_ID, { status: "active", preferred_color: "Pink", preferred_size: "M" }),
+    ]);
+    assert.doesNotMatch(JSON.stringify(overview), /email/i);
+  });
+});
+
+describe("filterRestockDemandOverview", () => {
+  const items = [
+    {
+      productName: "Silk Midi Dress",
+      productSlug: "silk-midi",
+      categoryName: "Dresses",
+      waiting: 10,
+    },
+    {
+      productName: "Linen Shirt",
+      productSlug: "linen-shirt",
+      categoryName: "Tops",
+      waiting: 4,
+    },
+  ];
+
+  it("filters by product name search", () => {
+    const hit = filterRestockDemandOverview(items, "silk");
+    assert.equal(hit.length, 1);
+    assert.equal(hit[0]?.productName, "Silk Midi Dress");
+  });
+
+  it("filters by category", () => {
+    const hit = filterRestockDemandOverview(items, "", "Tops");
+    assert.equal(hit.length, 1);
+    assert.equal(hit[0]?.productName, "Linen Shirt");
+  });
+});
+
 describe("admin restock demand API security", () => {
   it("requires admin authorization and never selects email columns", () => {
     const root = process.cwd();
@@ -176,10 +311,24 @@ describe("admin restock demand API security", () => {
     assert.match(route, /status: 401/);
     assert.match(route, /status: 403/);
     assert.match(route, /getRestockDemandSummaryForProduct/);
+    assert.match(route, /getRestockDemandOverview/);
 
     assert.match(store, /preferred_color, preferred_size, status/);
+    assert.match(store, /product_id, preferred_color, preferred_size, status/);
     assert.doesNotMatch(store, /email_normalized|email_raw|unsubscribe_token/);
     assert.doesNotMatch(route, /email_normalized|email_raw/);
+  });
+
+  it("loads overview with a bounded number of server queries (not one per product)", () => {
+    const store = readFileSync(
+      join(process.cwd(), "lib/restock-notifications/demand-store.ts"),
+      "utf8"
+    );
+    assert.match(store, /getRestockDemandOverview/);
+    assert.match(store, /loadRestockDemandOverviewRows/);
+    assert.match(store, /\.in\("id", productIds\)/);
+    // Must not loop with per-product preference queries in overview.
+    assert.doesNotMatch(store, /for \(const .+ of overview[\s\S]*loadRestockDemandPreferenceRows/);
   });
 
   it("does not wire demand analytics into storefront or purchase paths", () => {
@@ -197,12 +346,17 @@ describe("admin restock demand API security", () => {
     assert.doesNotMatch(send, /demand-analytics|demand-store/);
   });
 
-  it("surfaces demand on the admin product edit page only", () => {
-    const page = readFileSync(
-      join(process.cwd(), "app/admin/products/[productId]/page.tsx"),
-      "utf8"
-    );
+  it("keeps product-edit demand panel and adds overview page + nav", () => {
+    const root = process.cwd();
+    const page = readFileSync(join(root, "app/admin/products/[productId]/page.tsx"), "utf8");
+    const overview = readFileSync(join(root, "app/admin/restock-demand/page.tsx"), "utf8");
+    const sidebar = readFileSync(join(root, "components/admin/admin-sidebar.tsx"), "utf8");
+
     assert.match(page, /RestockDemandPanel/);
     assert.match(page, /getRestockDemandSummaryForProduct/);
+    assert.match(overview, /getRestockDemandOverview/);
+    assert.match(overview, /RestockDemandOverview/);
+    assert.match(sidebar, /\/admin\/restock-demand/);
+    assert.match(sidebar, /Restock Demand/);
   });
 });

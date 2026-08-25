@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import {
   BarChart3,
+  BellRing,
   Boxes,
   ClipboardList,
   LayoutDashboard,
@@ -54,6 +55,7 @@ const groups: NavGroup[] = [
       { href: "/admin/categories", label: "Categories", icon: Boxes },
       { href: "/admin/collections", label: "Collections", icon: Store },
       { href: "/admin/inventory", label: "Inventory", icon: Workflow },
+      { href: "/admin/restock-demand", label: "Restock Demand", icon: BellRing },
     ],
   },
   {

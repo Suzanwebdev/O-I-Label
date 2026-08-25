@@ -147,3 +147,86 @@ export function aggregateRestockDemand(
     historical: { notified, unsubscribedOrCancelled },
   };
 }
+
+export type RestockDemandMultiProductRow = RestockDemandPreferenceRow & {
+  product_id: string;
+};
+
+export type RestockDemandOverviewItem = {
+  productId: string;
+  waiting: number;
+  topSize: RestockDemandBucket | null;
+  topColor: RestockDemandBucket | null;
+  topCombination: RestockDemandCombination | null;
+  /** Full per-product summary (active + historical) for detail expand. */
+  demand: RestockDemandSummary;
+};
+
+export type RestockDemandOverviewProduct = RestockDemandOverviewItem & {
+  productName: string;
+  productSlug: string;
+  categoryName: string;
+  imagePath: string | null;
+};
+
+/**
+ * Build an overview of products with CURRENT active demand only.
+ * Sorted by active waiting count descending. Products with zero active are omitted.
+ * Reuses aggregateRestockDemand — does not change aggregation rules.
+ */
+export function buildRestockDemandOverview(
+  rows: ReadonlyArray<RestockDemandMultiProductRow>
+): RestockDemandOverviewItem[] {
+  const byProduct = new Map<string, RestockDemandPreferenceRow[]>();
+
+  for (const row of rows) {
+    const productId = typeof row.product_id === "string" ? row.product_id.trim() : "";
+    if (!productId) continue;
+    const list = byProduct.get(productId) ?? [];
+    list.push({
+      preferred_color: row.preferred_color,
+      preferred_size: row.preferred_size,
+      status: row.status,
+    });
+    byProduct.set(productId, list);
+  }
+
+  const items: RestockDemandOverviewItem[] = [];
+  for (const [productId, prefs] of byProduct) {
+    const demand = aggregateRestockDemand(productId, prefs);
+    if (demand.active.total <= 0) continue;
+    items.push({
+      productId,
+      waiting: demand.active.total,
+      topSize: demand.active.sizes[0] ?? null,
+      topColor: demand.active.colors[0] ?? null,
+      topCombination: demand.active.combinations[0] ?? null,
+      demand,
+    });
+  }
+
+  return items.sort(
+    (a, b) => b.waiting - a.waiting || a.productId.localeCompare(b.productId)
+  );
+}
+
+/** Client/server search filter for overview rows (name, slug, category). */
+export function filterRestockDemandOverview<
+  T extends { productName: string; productSlug: string; categoryName: string },
+>(items: ReadonlyArray<T>, query: string, categoryKey?: string): T[] {
+  const q = query.trim().toLowerCase();
+  const cat = (categoryKey ?? "all").trim();
+  return items.filter((item) => {
+    const matchesCategory =
+      cat === "all" ||
+      cat === "" ||
+      item.categoryName.toLowerCase() === cat.toLowerCase();
+    if (!matchesCategory) return false;
+    if (!q) return true;
+    return (
+      item.productName.toLowerCase().includes(q) ||
+      item.productSlug.toLowerCase().includes(q) ||
+      item.categoryName.toLowerCase().includes(q)
+    );
+  });
+}
