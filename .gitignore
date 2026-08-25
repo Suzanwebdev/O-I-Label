@@ -44,3 +44,6 @@ vercel-deploy-log*.txt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local migration operator logs (Phase 7)
+/scripts/logs/
