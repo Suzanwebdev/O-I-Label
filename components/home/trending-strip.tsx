@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
 import {
   isStorefrontProductInStock,
+  listingBadgesForStorefrontProduct,
   primaryStorefrontVariant,
 } from "@/lib/catalog/storefront-product";
 import { Container } from "@/components/store/container";
@@ -46,7 +47,7 @@ export function TrendingStrip({ products }: { products: StorefrontProduct[] }) {
                       sizes="260px"
                     />
                     <div className="absolute left-2 top-2">
-                      <BadgeSet badges={p.badges.slice(0, 2)} />
+                      <BadgeSet badges={listingBadgesForStorefrontProduct(p).slice(0, 2)} />
                     </div>
                   </Link>
                   <div className="space-y-2 p-4">

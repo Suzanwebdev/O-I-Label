@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
 import {
   isStorefrontProductInStock,
+  listingBadgesForStorefrontProduct,
   primaryStorefrontVariant,
 } from "@/lib/catalog/storefront-product";
 import { BadgeSet } from "@/components/store/badge-set";
@@ -52,7 +53,7 @@ export function ProductCard({
             quality={100}
           />
           <div className="absolute left-3 top-3">
-            <BadgeSet badges={product.badges} />
+            <BadgeSet badges={listingBadgesForStorefrontProduct(product)} />
           </div>
           {!inStock ? (
             <div className="absolute right-3 top-3">

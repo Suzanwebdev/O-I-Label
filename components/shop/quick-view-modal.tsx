@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
 import {
   isStorefrontProductInStock,
+  listingBadgesForStorefrontProduct,
   primaryStorefrontVariant,
 } from "@/lib/catalog/storefront-product";
 import {
@@ -62,7 +63,7 @@ export function QuickViewModal({
           </div>
           <div className="flex flex-col gap-4 p-6 md:p-8">
             <DialogHeader className="space-y-2 text-left">
-              <BadgeSet badges={product.badges} />
+              <BadgeSet badges={listingBadgesForStorefrontProduct(product)} />
               <DialogTitle className="font-serif-display text-2xl leading-snug">
                 {product.name}
               </DialogTitle>

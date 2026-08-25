@@ -1,4 +1,4 @@
-import type { Product, ProductVariant } from "@/lib/types";
+import type { Product, ProductBadge, ProductVariant } from "@/lib/types";
 
 /** Customer-facing variant — availability flag only, no inventory counts. */
 export type StorefrontProductVariant = Omit<ProductVariant, "stock"> & {
@@ -37,6 +37,20 @@ export function primaryStorefrontVariant(product: StorefrontProduct): Storefront
   return product.variants.find((v) => v.in_stock) ?? product.variants[0];
 }
 
-export function isStorefrontProductInStock(product: StorefrontProduct): boolean {
+export function isStorefrontProductInStock(
+  product: Pick<StorefrontProduct, "variants">
+): boolean {
   return product.variants.some((v) => v.in_stock);
+}
+
+/**
+ * Listing/card badges only. Fully sold-out products hide promotional tags
+ * (Best Seller, Trending, etc.) so only the Sold Out badge is shown.
+ * Does not mutate product.badges — PDP should keep using product.badges directly.
+ */
+export function listingBadgesForStorefrontProduct(
+  product: Pick<StorefrontProduct, "badges" | "variants">
+): ProductBadge[] {
+  if (!isStorefrontProductInStock(product)) return [];
+  return product.badges ?? [];
 }
