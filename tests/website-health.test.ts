@@ -217,13 +217,16 @@ describe("admin website health API and page security", () => {
     assert.equal(/fetch\s*\(/.test(panel), false);
   });
 
-  it("wires Admin System nav without touching Superadmin", () => {
+  it("wires Admin System nav and keeps Admin Website Health separate from Superadmin", () => {
     const sidebar = readFileSync(join(root, "components/admin/admin-sidebar.tsx"), "utf8");
     const topbar = readFileSync(join(root, "components/admin/admin-topbar.tsx"), "utf8");
     assert.match(sidebar, /\/admin\/website-health/);
     assert.match(sidebar, /Website Health/);
     assert.match(topbar, /\/admin\/website-health/);
-    assert.throws(() => readFileSync(join(root, "app/superadmin/website-health/page.tsx"), "utf8"));
+    const adminPage = readFileSync(join(root, "app/admin/website-health/page.tsx"), "utf8");
+    assert.match(adminPage, /WebsiteHealthPanel/);
+    const superPage = readFileSync(join(root, "app/superadmin/website-health/page.tsx"), "utf8");
+    assert.match(superPage, /SuperadminWebsiteHealthPanel/);
   });
 
   it("does not modify checkout payment inventory restock capture paths", () => {

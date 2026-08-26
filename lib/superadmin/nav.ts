@@ -5,6 +5,7 @@ export const SUPERADMIN_NAV = [
   { href: "/superadmin/payments", label: "Payments" },
   { href: "/superadmin/reviews", label: "Reviews" },
   { href: "/superadmin/system", label: "System" },
+  { href: "/superadmin/website-health", label: "Website Health" },
   { href: "/superadmin/exports", label: "Exports" },
   { href: "/superadmin/security", label: "Security" },
 ] as const;
