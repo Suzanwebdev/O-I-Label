@@ -18,12 +18,19 @@ import {
   renderRestockAvailableEmail,
   restockAvailableEmailSubject,
 } from "@/lib/email/templates/restock-available";
+import { observeOperationalEvent } from "@/lib/errors/capture-event";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
 export type EmailSendResult =
   | { sent: true; id?: string }
   | { skipped: true; reason: string }
   | { sent: false; error: string };
+
+type EmailOpsContext = {
+  purpose: string;
+  category?: "email" | "restock";
+  surface?: "storefront" | "admin" | "superadmin" | "webhook" | "cron";
+};
 
 function client() {
   const key = process.env.RESEND_API_KEY;
@@ -42,20 +49,43 @@ function fromAddress() {
   return "O & I Label <onboarding@resend.dev>";
 }
 
-async function dispatchEmail(payload: {
-  from: string;
-  to: string;
-  subject: string;
-  html: string;
-}): Promise<EmailSendResult> {
+async function dispatchEmail(
+  payload: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+  },
+  ops?: EmailOpsContext
+): Promise<EmailSendResult> {
   const resend = client();
   if (!resend) {
+    observeOperationalEvent({
+      severity: "warning",
+      category: ops?.category ?? "email",
+      surface: ops?.surface ?? "storefront",
+      code: `${ops?.purpose ?? "email"}_not_configured`,
+      message: "Resend API key is not configured",
+      metadata: { purpose: ops?.purpose ?? "email", outcome: "skipped" },
+    });
     return { skipped: true, reason: "RESEND_API_KEY not configured" };
   }
 
   const { data, error } = await resend.emails.send(payload);
   if (error) {
     console.warn("Resend send failed:", error.message);
+    observeOperationalEvent({
+      severity: "error",
+      category: ops?.category ?? "email",
+      surface: ops?.surface ?? "storefront",
+      code: `${ops?.purpose ?? "email"}_send_failed`,
+      message: "Resend email send failed",
+      metadata: {
+        purpose: ops?.purpose ?? "email",
+        outcome: "failed",
+        provider_error_class: error.name?.slice(0, 64) || "ResendError",
+      },
+    });
     return { sent: false, error: error.message };
   }
   return { sent: true, id: data?.id };
@@ -79,7 +109,10 @@ export async function sendOrderConfirmationEmail(opts: {
         const copy = orderConfirmationCopy(ctx.customerName);
         html = renderOrderConfirmationEmail(ctx, footerLinks);
         subject = copy.subject(ctx.orderNumber);
-        return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+        return dispatchEmail(
+          { from: fromAddress(), to: opts.to, subject, html },
+          { purpose: "order_confirmation" }
+        );
       }
     } catch (e) {
       console.warn("Order confirmation email context fetch failed:", e);
@@ -96,17 +129,23 @@ export async function sendOrderConfirmationEmail(opts: {
   );
   subject = copy.subject(opts.orderNumber);
 
-  return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+  return dispatchEmail(
+    { from: fromAddress(), to: opts.to, subject, html },
+    { purpose: "order_confirmation" }
+  );
 }
 
 export async function sendPasswordResetEmail(opts: { to: string; link: string }): Promise<EmailSendResult> {
   const footerLinks = await getEmailFooterLinks();
-  return dispatchEmail({
-    from: fromAddress(),
-    to: opts.to,
-    subject: "Reset your password — O & I Label",
-    html: renderPasswordResetEmail(opts.link, footerLinks),
-  });
+  return dispatchEmail(
+    {
+      from: fromAddress(),
+      to: opts.to,
+      subject: "Reset your password — O & I Label",
+      html: renderPasswordResetEmail(opts.link, footerLinks),
+    },
+    { purpose: "password_reset" }
+  );
 }
 
 export async function dispatchStoreCampaignEmail(payload: {
@@ -114,12 +153,15 @@ export async function dispatchStoreCampaignEmail(payload: {
   subject: string;
   html: string;
 }): Promise<EmailSendResult> {
-  return dispatchEmail({
-    from: fromAddress(),
-    to: payload.to,
-    subject: payload.subject,
-    html: payload.html,
-  });
+  return dispatchEmail(
+    {
+      from: fromAddress(),
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.html,
+    },
+    { purpose: "store_campaign", surface: "admin" }
+  );
 }
 
 export async function sendStoreWaitlistWelcomeEmail(opts: {
@@ -130,7 +172,10 @@ export async function sendStoreWaitlistWelcomeEmail(opts: {
   const { subject, html } = renderStoreCampaignEmail("waitlist_welcome", footerLinks, {
     firstName: opts.firstName,
   });
-  return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+  return dispatchEmail(
+    { from: fromAddress(), to: opts.to, subject, html },
+    { purpose: "waitlist_welcome" }
+  );
 }
 
 export async function sendStoreCampaignPreview(opts: {
@@ -144,19 +189,25 @@ export async function sendStoreCampaignPreview(opts: {
     customSubject: opts.customSubject,
     customHtml: opts.customHtml,
   });
-  return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+  return dispatchEmail(
+    { from: fromAddress(), to: opts.to, subject, html },
+    { purpose: "campaign_preview", surface: "admin" }
+  );
 }
 
 export { STORE_CAMPAIGN_SUBJECTS };
 
 export async function sendNewsletterWelcomeEmail(opts: { to: string }): Promise<EmailSendResult> {
   const footerLinks = await getEmailFooterLinks();
-  return dispatchEmail({
-    from: fromAddress(),
-    to: opts.to,
-    subject: "Welcome to O & I Label",
-    html: renderNewsletterWelcomeEmail(footerLinks),
-  });
+  return dispatchEmail(
+    {
+      from: fromAddress(),
+      to: opts.to,
+      subject: "Welcome to O & I Label",
+      html: renderNewsletterWelcomeEmail(footerLinks),
+    },
+    { purpose: "newsletter_welcome" }
+  );
 }
 
 export async function sendRestockAvailableEmail(opts: {
@@ -167,20 +218,23 @@ export async function sendRestockAvailableEmail(opts: {
   unsubscribeUrl: string;
 }): Promise<EmailSendResult> {
   const footerLinks = await getEmailFooterLinks();
-  return dispatchEmail({
-    from: fromAddress(),
-    to: opts.to,
-    subject: restockAvailableEmailSubject(opts.productName),
-    html: renderRestockAvailableEmail(
-      {
-        productName: opts.productName,
-        productImageUrl: opts.productImageUrl,
-        productUrl: opts.productUrl,
-        unsubscribeUrl: opts.unsubscribeUrl,
-      },
-      footerLinks
-    ),
-  });
+  return dispatchEmail(
+    {
+      from: fromAddress(),
+      to: opts.to,
+      subject: restockAvailableEmailSubject(opts.productName),
+      html: renderRestockAvailableEmail(
+        {
+          productName: opts.productName,
+          productImageUrl: opts.productImageUrl,
+          productUrl: opts.productUrl,
+          unsubscribeUrl: opts.unsubscribeUrl,
+        },
+        footerLinks
+      ),
+    },
+    { purpose: "restock_available", category: "restock", surface: "admin" }
+  );
 }
 
 export async function sendOrderStatusEmail(opts: {
@@ -201,7 +255,10 @@ export async function sendOrderStatusEmail(opts: {
       const ctx = await fetchOrderEmailContext(service, opts.orderId);
       if (ctx) {
         html = renderOrderStatusEmail(ctx, opts.status, footerLinks, opts.trackingNumber);
-        return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+        return dispatchEmail(
+          { from: fromAddress(), to: opts.to, subject, html },
+          { purpose: "order_status", surface: "admin" }
+        );
       }
     } catch (e) {
       console.warn("Order status email context fetch failed:", e);
@@ -218,5 +275,8 @@ export async function sendOrderStatusEmail(opts: {
     footerLinks
   );
 
-  return dispatchEmail({ from: fromAddress(), to: opts.to, subject, html });
+  return dispatchEmail(
+    { from: fromAddress(), to: opts.to, subject, html },
+    { purpose: "order_status", surface: "admin" }
+  );
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import {
+  Activity,
   BarChart3,
   BellRing,
   Boxes,
@@ -73,6 +74,7 @@ const groups: NavGroup[] = [
   {
     title: "System",
     items: [
+      { href: "/admin/website-health", label: "Website Health", icon: Activity },
       { href: "/admin/team-roles", label: "Team & Roles", icon: ShieldCheck },
       { href: "/admin/store-control", label: "Store Control", icon: SlidersHorizontal },
       { href: "/admin/settings", label: "Settings", icon: Settings },

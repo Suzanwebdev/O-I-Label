@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { sanitizeAuthErrorForOperation } from "@/lib/errors/safe-response";
 import { createClient } from "@/lib/supabase/client";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { Button } from "@/components/ui/button";
@@ -31,12 +32,12 @@ export default function LoginClient() {
         password,
       });
       if (signInError) {
-        setError(signInError.message);
+        setError(sanitizeAuthErrorForOperation("auth_sign_in", signInError));
         return;
       }
       window.location.assign(next);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to sign in right now.");
+    } catch {
+      setError("Unable to sign in right now. Please try again.");
     } finally {
       setBusy(false);
     }

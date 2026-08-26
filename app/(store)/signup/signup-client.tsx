@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { sanitizeAuthErrorForOperation } from "@/lib/errors/safe-response";
 import { createClient } from "@/lib/supabase/client";
 import { buildAuthCallbackUrl } from "@/lib/auth/auth-callback-url";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
@@ -59,7 +60,7 @@ export default function SignupClient() {
       });
 
       if (signupError) {
-        setError(signupError.message);
+        setError(sanitizeAuthErrorForOperation("auth_sign_up", signupError));
         return;
       }
 
@@ -69,8 +70,8 @@ export default function SignupClient() {
       }
 
       setSuccess("Account created. Check your email to confirm before signing in.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create account right now.");
+    } catch {
+      setError("Unable to create account right now. Please try again.");
     } finally {
       setBusy(false);
     }

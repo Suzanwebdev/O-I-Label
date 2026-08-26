@@ -1,4 +1,5 @@
 import type { EmailSendResult } from "@/lib/email/resend";
+import { observeOperationalEvent } from "@/lib/errors/capture-event";
 import {
   buildRestockProductUrl,
   buildRestockUnsubscribeUrl,
@@ -100,6 +101,14 @@ export async function notifyRestockSubscribers(
       });
     } catch {
       summary.failed += 1;
+      observeOperationalEvent({
+        severity: "error",
+        category: "restock",
+        surface: "admin",
+        code: "restock_email_exception",
+        message: "Restock notification email threw before send completed",
+        metadata: { outcome: "exception" },
+      });
       continue;
     }
 
@@ -111,6 +120,14 @@ export async function notifyRestockSubscribers(
       } catch {
         // Email went out but status update failed — count as failed so ops can retry carefully.
         summary.failed += 1;
+        observeOperationalEvent({
+          severity: "warning",
+          category: "restock",
+          surface: "admin",
+          code: "restock_mark_notified",
+          message: "Restock email sent but subscription status update failed",
+          metadata: { outcome: "mark_notified_failed" },
+        });
       }
       continue;
     }
@@ -121,6 +138,7 @@ export async function notifyRestockSubscribers(
     }
 
     summary.failed += 1;
+    // Send failure already observed in Resend dispatch (category: restock).
   }
 
   return summary;

@@ -13,6 +13,7 @@ import { initiatePayment } from "@/lib/payments";
 import { resolveMoolreCallbackUrl } from "@/lib/payments/providers/moolre";
 import { assertCheckoutAllowed } from "@/lib/store-control/server";
 import { createServerSupabaseClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { apiCustomerErrorResponse } from "@/lib/errors/api-error-response";
 import { enforceRateLimit } from "@/lib/http/rate-limit";
 
 type CheckoutLineInput = {
@@ -129,7 +130,15 @@ export async function POST(request: Request) {
     .in("id", variantIds);
 
   if (variantErr || !variants?.length) {
-    return NextResponse.json({ error: variantErr?.message ?? "Could not load product variants" }, { status: 500 });
+    return apiCustomerErrorResponse(500, {
+      operation: "checkout",
+      message: variantErr?.message,
+      capture: {
+        category: "checkout",
+        surface: "storefront",
+        code: "variants_load",
+      },
+    });
   }
 
   const variantMap = new Map(variants.map((v) => [v.id, v]));
@@ -218,7 +227,15 @@ export async function POST(request: Request) {
     .single();
 
   if (orderErr || !order) {
-    return NextResponse.json({ error: orderErr?.message ?? "Could not create order" }, { status: 500 });
+    return apiCustomerErrorResponse(500, {
+      operation: "checkout",
+      message: orderErr?.message,
+      capture: {
+        category: "checkout",
+        surface: "storefront",
+        code: "order_create",
+      },
+    });
   }
 
   const orderItems = parsedLines.map((line) => {
@@ -237,7 +254,15 @@ export async function POST(request: Request) {
   const { error: itemErr } = await service.from("order_items").insert(orderItems);
   if (itemErr) {
     await service.from("orders").delete().eq("id", order.id);
-    return NextResponse.json({ error: itemErr.message ?? "Could not add order items" }, { status: 500 });
+    return apiCustomerErrorResponse(500, {
+      operation: "checkout",
+      message: itemErr.message,
+      capture: {
+        category: "checkout",
+        surface: "storefront",
+        code: "order_items_create",
+      },
+    });
   }
 
   if (discountId) {
@@ -277,7 +302,15 @@ export async function POST(request: Request) {
     });
 
     if (paymentErr) {
-      return NextResponse.json({ error: paymentErr.message }, { status: 500 });
+      return apiCustomerErrorResponse(500, {
+        operation: "checkout",
+        message: paymentErr.message,
+        capture: {
+          category: "payment",
+          surface: "storefront",
+          code: "payment_row_create",
+        },
+      });
     }
 
     return NextResponse.json({
@@ -289,11 +322,20 @@ export async function POST(request: Request) {
       reference: payment.reference,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Payment initialization failed";
+    const msg = e instanceof Error ? e.message : undefined;
     await service.from("payments").delete().eq("order_id", order.id);
     await service.from("order_items").delete().eq("order_id", order.id);
     await service.from("orders").delete().eq("id", order.id);
-    return NextResponse.json({ error: msg }, { status: 502 });
+    return apiCustomerErrorResponse(502, {
+      operation: "checkout_payment",
+      message: msg,
+      capture: {
+        severity: "critical",
+        category: "payment",
+        surface: "storefront",
+        code: "payment_init",
+      },
+    });
   }
 }
 

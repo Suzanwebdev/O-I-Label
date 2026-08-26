@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { sanitizeAuthErrorForOperation } from "@/lib/errors/safe-response";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/auth/password-input";
@@ -32,13 +33,13 @@ export default function ResetPasswordClient() {
       const supabase = createClient();
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
-        setError(updateError.message);
+        setError(sanitizeAuthErrorForOperation("auth_reset_update", updateError));
         return;
       }
       router.replace("/account");
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update password.");
+    } catch {
+      setError("Unable to update password right now. Please try again.");
     } finally {
       setBusy(false);
     }

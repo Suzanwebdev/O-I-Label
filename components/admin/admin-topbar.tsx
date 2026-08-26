@@ -28,10 +28,12 @@ const routeMeta: Record<string, RouteMeta> = {
   "/admin/marketing": { title: "Marketing" },
   "/admin/newsletter": { title: "Newsletter" },
   "/admin/support-crm": { title: "Support CRM" },
+  "/admin/website-health": { title: "Website Health" },
   "/admin/team-roles": { title: "Team & Roles" },
   "/admin/store-control": { title: "Store Control" },
   "/admin/settings": { title: "Settings" },
   "/admin/feature-flags": { title: "Feature Flags" },
+  "/admin/restock-demand": { title: "Restock Demand" },
 };
 
 function resolveMeta(pathname: string): RouteMeta {

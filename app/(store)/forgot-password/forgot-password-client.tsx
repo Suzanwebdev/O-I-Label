@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { sanitizeAuthErrorForOperation } from "@/lib/errors/safe-response";
 import { createClient } from "@/lib/supabase/client";
 import { buildAuthCallbackUrl } from "@/lib/auth/auth-callback-url";
 import { Button } from "@/components/ui/button";
@@ -25,12 +26,12 @@ export default function ForgotPasswordClient() {
         redirectTo,
       });
       if (resetError) {
-        setError(resetError.message);
+        setError(sanitizeAuthErrorForOperation("auth_reset_request", resetError));
         return;
       }
       setSent(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to send reset email.");
+    } catch {
+      setError("Unable to send reset email right now. Please try again.");
     } finally {
       setBusy(false);
     }

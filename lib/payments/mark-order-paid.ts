@@ -1,6 +1,7 @@
 import { deductStockForPaidOrder } from "@/lib/inventory/deduct-order-stock";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { sendOrderConfirmationEmail } from "@/lib/email/resend";
+import { observeOperationalEvent } from "@/lib/errors/capture-event";
 import {
   buildOrderStatusSmsBody,
   normalizeSmsRecipient,
@@ -142,6 +143,14 @@ export async function markOrderPaidByReference(
       actor_id: null,
       message: `Stock deduction failed: ${stockResult.reason}`,
       meta: { reference: ref, provider, source },
+    });
+    observeOperationalEvent({
+      severity: "critical",
+      category: "inventory",
+      surface: source === "admin" ? "admin" : source === "reconcile" ? "cron" : "webhook",
+      code: `paid_order_${stockResult.reason}`,
+      message: `Paid-order inventory deduction failed: ${stockResult.reason}`,
+      metadata: { reason: stockResult.reason, source, provider },
     });
   }
 

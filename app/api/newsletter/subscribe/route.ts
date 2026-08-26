@@ -6,6 +6,7 @@ import {
 } from "@/lib/newsletter/subscribe-utils";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/http/rate-limit";
+import { customerErrorResponse } from "@/lib/errors/safe-response";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -73,7 +74,10 @@ export async function POST(request: Request) {
       .eq("email_normalized", email_normalized);
 
     if (upErr) {
-      return NextResponse.json({ error: upErr.message }, { status: 500 });
+      return customerErrorResponse(500, {
+        operation: "newsletter",
+        message: upErr.message,
+      });
     }
 
     return NextResponse.json({ ok: true, updated: true });
@@ -91,7 +95,10 @@ export async function POST(request: Request) {
   });
 
   if (insErr) {
-    return NextResponse.json({ error: insErr.message }, { status: 500 });
+    return customerErrorResponse(500, {
+      operation: "newsletter",
+      message: insErr.message,
+    });
   }
 
   const welcomeDisabled = process.env.NEWSLETTER_WELCOME_EMAIL === "0";

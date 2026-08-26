@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { observeOperationalEvent } from "@/lib/errors/capture-event";
 import type { PaymentProviderId } from "./types";
 import { parseWebhook, verifyWebhook } from "./index";
 import { markOrderPaidByReference } from "./mark-order-paid";
@@ -23,9 +24,23 @@ export async function handleProviderWebhook(
   });
 
   if (!sigOk || !parsed.success || !parsed.reference) {
+    const reason = !sigOk ? "verify" : !parsed.success ? "parse" : "no_reference";
+    observeOperationalEvent({
+      severity: reason === "verify" ? "warning" : "error",
+      category: "webhook",
+      surface: "webhook",
+      code: `moolre_${reason}`,
+      message:
+        reason === "verify"
+          ? "Moolre webhook signature verification failed"
+          : reason === "parse"
+            ? "Moolre webhook payload could not be parsed"
+            : "Moolre webhook missing payment reference",
+      metadata: { provider, reason },
+    });
     return {
       ok: false,
-      reason: !sigOk ? "verify" : !parsed.success ? "parse" : "no_reference",
+      reason,
     };
   }
 
@@ -40,6 +55,14 @@ export async function handleProviderWebhook(
       payload: { error: marked.reason, reference: parsed.reference },
       signature_ok: sigOk,
       processed: false,
+    });
+    observeOperationalEvent({
+      severity: marked.reason === "amount_mismatch" ? "critical" : "error",
+      category: marked.reason === "amount_mismatch" ? "payment" : "webhook",
+      surface: "webhook",
+      code: `moolre_${marked.reason}`,
+      message: `Moolre webhook processing failed: ${marked.reason}`,
+      metadata: { provider, reason: marked.reason },
     });
     return { ok: false, reason: marked.reason };
   }

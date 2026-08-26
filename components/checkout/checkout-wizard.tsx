@@ -173,11 +173,12 @@ export function CheckoutWizard() {
       const json = (await res.json()) as {
         redirectUrl?: string;
         error?: string;
-        detail?: string;
+        incidentId?: string;
       };
       if (!res.ok) {
-        const msg = json.detail ? `${json.error ?? "Checkout failed"}. ${json.detail}` : json.error;
-        setError(msg ?? "Could not initialize payment. Please try again.");
+        const baseMsg = json.error ?? "Could not initialize payment. Please try again.";
+        const msg = json.incidentId ? `${baseMsg} Reference: ${json.incidentId}` : baseMsg;
+        setError(msg);
         return;
       }
       if (json.redirectUrl) {

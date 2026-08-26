@@ -1,5 +1,6 @@
 import { shouldTriggerRestockNotification } from "@/lib/restock-notifications/transition";
 import { notifyProductRestock } from "@/lib/restock-notifications/send";
+import { observeOperationalEvent } from "@/lib/errors/capture-event";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type VariantStockSnapshot = { id?: string; stock: number };
@@ -67,6 +68,14 @@ export async function maybeNotifyRestockAfterAdminStockChange(opts: {
       `Restock notification failed after admin stock update for product ${opts.productId}:`,
       message
     );
+    observeOperationalEvent({
+      severity: "error",
+      category: "restock",
+      surface: "admin",
+      code: "restock_notify_pipeline",
+      message: "Restock notification pipeline failed after admin stock update",
+      metadata: { outcome: "pipeline_failed" },
+    });
     return { shouldNotify: true, notified: false, error: message };
   }
 }
