@@ -218,10 +218,10 @@ describe("admin website health API and page security", () => {
   });
 
   it("wires Admin System nav and keeps Admin Website Health separate from Superadmin", () => {
-    const sidebar = readFileSync(join(root, "components/admin/admin-sidebar.tsx"), "utf8");
+    const nav = readFileSync(join(root, "lib/admin/nav.ts"), "utf8");
     const topbar = readFileSync(join(root, "components/admin/admin-topbar.tsx"), "utf8");
-    assert.match(sidebar, /\/admin\/website-health/);
-    assert.match(sidebar, /Website Health/);
+    assert.match(nav, /\/admin\/website-health/);
+    assert.match(nav, /Website Health/);
     assert.match(topbar, /\/admin\/website-health/);
     const adminPage = readFileSync(join(root, "app/admin/website-health/page.tsx"), "utf8");
     assert.match(adminPage, /WebsiteHealthPanel/);

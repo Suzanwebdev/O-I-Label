@@ -350,13 +350,13 @@ describe("admin restock demand API security", () => {
     const root = process.cwd();
     const page = readFileSync(join(root, "app/admin/products/[productId]/page.tsx"), "utf8");
     const overview = readFileSync(join(root, "app/admin/restock-demand/page.tsx"), "utf8");
-    const sidebar = readFileSync(join(root, "components/admin/admin-sidebar.tsx"), "utf8");
+    const nav = readFileSync(join(root, "lib/admin/nav.ts"), "utf8");
 
     assert.match(page, /RestockDemandPanel/);
     assert.match(page, /getRestockDemandSummaryForProduct/);
     assert.match(overview, /getRestockDemandOverview/);
     assert.match(overview, /RestockDemandOverview/);
-    assert.match(sidebar, /\/admin\/restock-demand/);
-    assert.match(sidebar, /Restock Demand/);
+    assert.match(nav, /\/admin\/restock-demand/);
+    assert.match(nav, /Restock Demand/);
   });
 });

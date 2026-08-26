@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Plus } from "lucide-react";
+import { Bell, Menu, Plus, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type RouteMeta = {
@@ -46,27 +46,57 @@ function resolveMeta(pathname: string): RouteMeta {
   return { title: "Admin" };
 }
 
-export function AdminTopbar() {
+type Props = {
+  onOpenMobileNav?: () => void;
+};
+
+export function AdminTopbar({ onOpenMobileNav }: Props) {
   const pathname = usePathname();
   const meta = resolveMeta(pathname);
 
   return (
     <header className="admin-topbar sticky top-0 z-20 border-b border-black/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <div className="flex h-14 items-center justify-between px-4 md:px-6">
-        <p className="font-serif-display text-base font-semibold tracking-tight text-black">{meta.title}</p>
-        <div className="flex items-center gap-2">
+      <div className="flex h-14 items-center justify-between gap-2 px-4 md:gap-0 md:px-6">
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:flex-none md:gap-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-neutral-700 hover:bg-neutral-100 hover:text-black md:hidden"
+            aria-label="Open admin menu"
+            onClick={onOpenMobileNav}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <p className="min-w-0 truncate font-serif-display text-base font-semibold tracking-tight text-black md:truncate-none">
+            {meta.title}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
           {meta.ctaHref && meta.ctaLabel ? (
             <Button asChild size="sm" className="rounded-full bg-black text-white hover:bg-neutral-800">
-              <Link href={meta.ctaHref} className="gap-1">
+              <Link href={meta.ctaHref} className="gap-1" aria-label={meta.ctaLabel}>
                 <Plus className="h-4 w-4" />
-                {meta.ctaLabel}
+                <span className="hidden md:inline">{meta.ctaLabel}</span>
               </Link>
             </Button>
           ) : null}
-          <Button variant="ghost" size="icon" aria-label="Notifications" className="text-neutral-700 hover:bg-neutral-100 hover:text-black">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Notifications"
+            className="text-neutral-700 hover:bg-neutral-100 hover:text-black"
+          >
             <Bell className="h-4 w-4" />
           </Button>
-          <Link href="/" className="text-xs text-neutral-600 hover:text-black">
+          <Link
+            href="/"
+            aria-label="View storefront"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100 hover:text-black md:hidden"
+          >
+            <Store className="h-4 w-4" />
+          </Link>
+          <Link href="/" className="hidden text-xs text-neutral-600 hover:text-black md:inline">
             View storefront
           </Link>
         </div>
@@ -74,4 +104,3 @@ export function AdminTopbar() {
     </header>
   );
 }
-

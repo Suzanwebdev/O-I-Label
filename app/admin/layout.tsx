@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { AdminTopbar } from "@/components/admin/admin-topbar";
+import { AdminShell } from "@/components/admin/admin-shell";
 import { getRequestAuthz } from "@/lib/authz";
 
 export const metadata: Metadata = {
@@ -23,13 +22,5 @@ export default async function AdminLayout({
     redirect("/login?next=/admin&notice=no_access");
   }
 
-  return (
-    <div data-admin-layout className="admin-layout-root min-h-screen bg-neutral-50 text-foreground">
-      <AdminTopbar />
-      <div className="flex">
-        <AdminSidebar />
-        <main className="min-w-0 flex-1 bg-neutral-50 px-4 py-6 md:px-6 md:py-8">{children}</main>
-      </div>
-    </div>
-  );
+  return <AdminShell>{children}</AdminShell>;
 }
