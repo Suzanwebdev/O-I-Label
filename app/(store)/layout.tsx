@@ -1,4 +1,6 @@
 import { StoreGoogleAnalytics } from "@/components/analytics/google-analytics";
+import { StoreMetaPixel } from "@/components/analytics/meta-pixel";
+import { MetaPageViewTracker } from "@/components/analytics/meta-page-view";
 import { StoreHeader } from "@/components/layout/store-header";
 import { StoreFooter } from "@/components/layout/store-footer";
 import { ScrollProgress } from "@/components/layout/scroll-progress";
@@ -37,6 +39,8 @@ export default async function StoreLayout({
       <StoreFooter footer={footer} />
       <CartDrawer />
       <StoreGoogleAnalytics />
+      <StoreMetaPixel />
+      <MetaPageViewTracker />
     </StoreControlProvider>
   );
 }

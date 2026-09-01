@@ -7,7 +7,9 @@ import {
   writeBuyNowLines,
 } from "@/lib/cart/buy-now-storage";
 import { trackAddToCart } from "@/lib/analytics/ga4";
+import { trackMetaAddToCart } from "@/lib/analytics/meta";
 import { buildAddToCartEvent } from "@/lib/analytics/ga4-events";
+import { buildMetaAddToCartEvent } from "@/lib/analytics/meta-events";
 import type { CartLine } from "@/lib/types";
 
 function coerceCartLine(row: CartLine): CartLine {
@@ -113,6 +115,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prev, normalized];
     });
     trackAddToCart(buildAddToCartEvent(normalized, normalized.quantity));
+    trackMetaAddToCart(buildMetaAddToCartEvent(normalized, normalized.quantity));
   }, []);
 
   const updateQty = React.useCallback((variantId: string, quantity: number) => {
