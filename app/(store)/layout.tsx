@@ -1,3 +1,4 @@
+import { StoreGoogleAnalytics } from "@/components/analytics/google-analytics";
 import { StoreHeader } from "@/components/layout/store-header";
 import { StoreFooter } from "@/components/layout/store-footer";
 import { ScrollProgress } from "@/components/layout/scroll-progress";
@@ -35,6 +36,7 @@ export default async function StoreLayout({
       <main className="flex-1">{children}</main>
       <StoreFooter footer={footer} />
       <CartDrawer />
+      <StoreGoogleAnalytics />
     </StoreControlProvider>
   );
 }
