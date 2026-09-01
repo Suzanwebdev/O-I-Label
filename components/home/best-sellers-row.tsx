@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Price } from "@/components/store/price";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { RestockNotifyListingCta } from "@/components/store/restock-notify-listing-cta";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 import { HOME_BEST_SELLERS_BATCH } from "@/lib/shop-utils";
 
 export function BestSellersRow({ products }: { products: StorefrontProduct[] }) {
@@ -55,6 +56,7 @@ export function BestSellersRow({ products }: { products: StorefrontProduct[] }) 
                     fill
                     className="object-cover transition duration-500 group-hover:scale-[1.02]"
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    unoptimized={shouldBypassImageOptimization(image)}
                   />
                 </div>
               </Link>

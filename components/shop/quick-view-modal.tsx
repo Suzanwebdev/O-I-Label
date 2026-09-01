@@ -20,6 +20,7 @@ import { BadgeSet } from "@/components/store/badge-set";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { SoldOutBadge, SoldOutMessage } from "@/components/store/sold-out-message";
 import { RestockNotifyDialog } from "@/components/store/restock-notify-dialog";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 import { shouldShowRestockNotify } from "@/lib/restock-notifications/ui";
 
 export function QuickViewModal({
@@ -54,6 +55,7 @@ export function QuickViewModal({
               className="object-cover"
               sizes="(max-width: 768px) 92vw, 384px"
               quality={100}
+              unoptimized={shouldBypassImageOptimization(product.images[0])}
             />
             {!inStock ? (
               <div className="absolute right-3 top-3">

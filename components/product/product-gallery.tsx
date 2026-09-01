@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 import { cn } from "@/lib/utils";
 import { useWishlist } from "@/components/providers/wishlist-provider";
 
@@ -49,6 +50,7 @@ export function ProductGallery({
                 sizes="64px"
                 loading="lazy"
                 quality={90}
+                unoptimized={shouldBypassImageOptimization(src)}
               />
             </button>
           ))}
@@ -93,6 +95,7 @@ export function ProductGallery({
               priority={isInitialMain}
               fetchPriority={isInitialMain ? "high" : "auto"}
               quality={100}
+              unoptimized={shouldBypassImageOptimization(activeSrc)}
             />
           ) : null}
         </motion.div>

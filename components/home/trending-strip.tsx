@@ -15,6 +15,7 @@ import { Price } from "@/components/store/price";
 import { BadgeSet } from "@/components/store/badge-set";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { RestockNotifyListingCta } from "@/components/store/restock-notify-listing-cta";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 export function TrendingStrip({ products }: { products: StorefrontProduct[] }) {
   const list = products.length ? products : [];
@@ -45,6 +46,7 @@ export function TrendingStrip({ products }: { products: StorefrontProduct[] }) {
                       fill
                       className="object-cover transition duration-500 hover:scale-[1.03]"
                       sizes="260px"
+                      unoptimized={shouldBypassImageOptimization(p.images[0])}
                     />
                     <div className="absolute left-2 top-2">
                       <BadgeSet badges={listingBadgesForStorefrontProduct(p).slice(0, 2)} />

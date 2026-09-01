@@ -17,6 +17,7 @@ import {
   type ShopOccasionKey,
 } from "@/lib/home/shop-by-occasion";
 import { VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL } from "@/lib/media/image-cache";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 const BUCKET = "product-images";
 
@@ -216,7 +217,9 @@ export function ShopByOccasionEditor({ initialSections }: { initialSections: Rec
                   src={preview.image}
                   alt={preview.alt}
                   fill
-                  unoptimized={isDataPreview}
+                  unoptimized={
+                    isDataPreview || shouldBypassImageOptimization(preview.image)
+                  }
                   className="object-cover"
                   sizes="200px"
                 />

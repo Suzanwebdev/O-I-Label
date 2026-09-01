@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AdminProductRow } from "@/lib/data/admin";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 import { resolveSwatchColor } from "@/lib/color-swatch";
 
 const PAGE_SIZE = 12;
@@ -286,6 +287,7 @@ export function AdminProductsTable({ products }: { products: AdminProductRow[] }
                           fill
                           className="object-cover"
                           sizes="48px"
+                          unoptimized={shouldBypassImageOptimization(product.image_path || "/file.svg")}
                         />
                       </div>
                       <div className="min-w-0">

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { AdminOrderPreviewItem } from "@/lib/data/admin";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 const MAX_THUMBS = 3;
 
@@ -34,6 +35,7 @@ export function OrderItemPreviews({
             fill
             className="object-cover"
             sizes={size === "md" ? "48px" : "36px"}
+            unoptimized={shouldBypassImageOptimization(item.image || "/file.svg")}
           />
         </div>
       ))}

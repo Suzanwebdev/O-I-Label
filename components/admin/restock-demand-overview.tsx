@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { filterRestockDemandOverview } from "@/lib/restock-notifications/demand-analytics";
 import type { RestockDemandOverviewProduct } from "@/lib/restock-notifications/demand-analytics";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 type Props = {
   products: RestockDemandOverviewProduct[];
@@ -115,6 +116,7 @@ export function RestockDemandOverview({ products }: Props) {
                       fill
                       className="object-cover"
                       sizes="48px"
+                      unoptimized={shouldBypassImageOptimization(product.imagePath || "/file.svg")}
                     />
                   </div>
                   <div className="min-w-0 flex-1">

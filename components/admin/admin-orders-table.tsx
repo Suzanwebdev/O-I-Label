@@ -29,6 +29,7 @@ import { OrderItemPreviews } from "@/components/admin/order-item-previews";
 import Image from "next/image";
 import { Printer } from "lucide-react";
 import { MAX_BULK_INVOICE_ORDERS } from "@/lib/admin/order-invoice";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 const filterStatuses: AdminOrderRow["status"][] = [
   "pending",
@@ -1003,6 +1004,7 @@ export function AdminOrdersTable({ orders: initialOrders }: { orders: AdminOrder
                           fill
                           className="object-cover"
                           sizes="56px"
+                          unoptimized={shouldBypassImageOptimization(item.image || "/file.svg")}
                         />
                       </div>
                       <div className="min-w-0 flex-1">

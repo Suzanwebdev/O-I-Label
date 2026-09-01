@@ -8,6 +8,7 @@ import { useCart } from "@/components/providers/cart-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Price } from "@/components/store/price";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 import { cn } from "@/lib/utils";
 
 export function CartPageClient() {
@@ -84,6 +85,7 @@ export function CartPageClient() {
                     className="object-cover"
                     sizes="80px"
                     quality={100}
+                    unoptimized={shouldBypassImageOptimization(line.image)}
                   />
                 </div>
                 <div className="min-w-0 flex-1 space-y-2">

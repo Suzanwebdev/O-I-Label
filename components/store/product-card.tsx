@@ -14,6 +14,7 @@ import { Price } from "@/components/store/price";
 import { PurchaseActions } from "@/components/store-control/purchase-actions";
 import { SoldOutBadge } from "@/components/store/sold-out-message";
 import { RestockNotifyListingCta } from "@/components/store/restock-notify-listing-cta";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 import { cn } from "@/lib/utils";
 
 export function ProductCard({
@@ -51,6 +52,7 @@ export function ProductCard({
             priority={Boolean(priority)}
             loading={priority ? "eager" : "lazy"}
             quality={100}
+            unoptimized={shouldBypassImageOptimization(image)}
           />
           <div className="absolute left-3 top-3">
             <BadgeSet badges={listingBadgesForStorefrontProduct(product)} />

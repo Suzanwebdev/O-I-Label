@@ -18,6 +18,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Price } from "@/components/store/price";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 import { cn } from "@/lib/utils";
 
 export function CartDrawer() {
@@ -88,6 +89,7 @@ export function CartDrawer() {
                         className="object-cover"
                         sizes="80px"
                         quality={100}
+                        unoptimized={shouldBypassImageOptimization(line.image)}
                       />
                     </div>
                     <div className="min-w-0 flex-1 space-y-2">

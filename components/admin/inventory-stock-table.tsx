@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AdminInventoryRow } from "@/lib/data/admin";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 import { InventoryStockCell } from "@/components/admin/inventory-stock-cell";
 
 const UNCATEGORIZED = "__uncategorized__";
@@ -114,6 +115,7 @@ export function InventoryStockTable({
                       fill
                       className="object-cover"
                       sizes="48px"
+                      unoptimized={shouldBypassImageOptimization(r.product_image_path || "/file.svg")}
                     />
                   </div>
                   <div className="min-w-0">

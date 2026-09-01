@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { VERSIONED_PUBLIC_IMAGE_CACHE_CONTROL } from "@/lib/media/image-cache";
+import { shouldBypassImageOptimization } from "@/lib/media-quality";
 
 const BUCKET = "product-images";
 
@@ -63,7 +64,14 @@ export function StoreHeroImageUpload({
       <Label className="text-sm font-medium">{label}</Label>
       {value ? (
         <div className="relative aspect-[16/10] w-full max-w-xs overflow-hidden rounded-lg border border-border bg-muted">
-          <Image src={value} alt="" fill className="object-cover" sizes="320px" />
+          <Image
+            src={value}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="320px"
+            unoptimized={shouldBypassImageOptimization(value)}
+          />
         </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
