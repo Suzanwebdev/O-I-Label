@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { getProductBySlugFromDb } from "@/lib/data/catalog";
-import { toStorefrontProduct, toStorefrontProducts } from "@/lib/catalog/storefront-product";
+import { ProductViewTracker } from "@/components/analytics/product-view-tracker";
+import { toStorefrontProduct, toStorefrontProducts, primaryStorefrontVariant } from "@/lib/catalog/storefront-product";
 import { Container } from "@/components/store/container";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductVariantForm } from "@/components/product/product-variant-form";
@@ -57,6 +58,7 @@ export default async function ProductPage({ params }: Props) {
 
   const relatedProducts = toStorefrontProducts(await getRelatedProducts(product, 10));
   const storefrontProduct = toStorefrontProduct(product);
+  const primaryVariant = primaryStorefrontVariant(storefrontProduct);
   const productPath = `/product/${product.slug}`;
 
   const supabase = await createServerSupabaseClient();
@@ -94,6 +96,14 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <article className="border-border/60 border-b bg-background py-8 md:py-12">
+      <ProductViewTracker
+        productId={product.id}
+        productName={product.name}
+        categoryName={product.category_name}
+        priceGhs={primaryVariant.price_ghs}
+        size={primaryVariant.size}
+        color={primaryVariant.color}
+      />
       <JsonLd
         data={[
           productJsonLd(

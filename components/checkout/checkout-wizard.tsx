@@ -12,6 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Smartphone } from "lucide-react";
 import { MomoNetworkLogos } from "@/components/checkout/momo-network-logos";
+import { trackBeginCheckout } from "@/lib/analytics/ga4";
+import {
+  beginCheckoutStorageKey,
+  buildBeginCheckoutEvent,
+  buildBeginCheckoutSignature,
+  shouldFireDedupedEvent,
+} from "@/lib/analytics/ga4-events";
 
 type AppliedPromo = {
   code: string;
@@ -50,6 +57,16 @@ export function CheckoutWizard() {
   const [promoError, setPromoError] = React.useState<string | null>(null);
 
   const formTopRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (selectedLines.length === 0) return;
+
+    const signature = buildBeginCheckoutSignature(selectedLines);
+    const key = beginCheckoutStorageKey(signature);
+    if (!shouldFireDedupedEvent(sessionStorage, key)) return;
+
+    trackBeginCheckout(buildBeginCheckoutEvent(selectedLines, subtotalGhs));
+  }, [selectedLines, subtotalGhs]);
 
   const shippingGhs = 0;
   const discountGhs = appliedPromo?.discountGhs ?? 0;
