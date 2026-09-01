@@ -44,6 +44,7 @@ describe("GA4 view_item payload", () => {
     assert.equal(payload.items.length, 1);
     assert.equal(payload.items[0]?.item_id, "product-1");
     assert.equal(payload.items[0]?.item_name, "Silk Blouse");
+    assert.equal(payload.items[0]?.item_brand, "O & I Label");
     assert.equal(payload.items[0]?.item_category, "Tops");
     assert.equal(payload.items[0]?.item_variant, "Black · M");
     assert.equal(payload.items[0]?.price, 450);
@@ -155,6 +156,7 @@ describe("GA4 purchase payload", () => {
     assert.equal(payload.transaction_id, "OI-10042");
     assert.equal(payload.currency, GA4_CURRENCY);
     assert.equal(payload.value, 770);
+    assert.equal(payload.affiliation, "O & I Label");
     assert.equal(payload.tax, 0);
     assert.equal(payload.shipping, 0);
     assert.equal(payload.coupon, "WELCOME10");

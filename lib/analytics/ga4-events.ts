@@ -3,6 +3,17 @@ import type { CartLine } from "@/lib/types";
 
 export const GA4_CURRENCY = "GHS" as const;
 
+/** Store name sent on purchase for Monetization / ecommerce reports. */
+export const GA4_STORE_AFFILIATION = "O & I Label";
+
+/** Item brand for GA4 product performance reports (single-brand storefront). */
+export const GA4_ITEM_BRAND = "O & I Label";
+
+export function roundGhsAmount(amount: number): number {
+  if (!Number.isFinite(amount)) return 0;
+  return Math.round(amount * 100) / 100;
+}
+
 export const GA4_VIEW_ITEM_KEY_PREFIX = "ga4:view_item:";
 export const GA4_BEGIN_CHECKOUT_KEY_PREFIX = "ga4:begin_checkout:";
 export const GA4_PURCHASE_KEY_PREFIX = "ga4:purchase:";
@@ -10,6 +21,7 @@ export const GA4_PURCHASE_KEY_PREFIX = "ga4:purchase:";
 export type Ga4Item = {
   item_id: string;
   item_name: string;
+  item_brand?: string;
   item_category?: string;
   item_variant?: string;
   price: number;
@@ -48,6 +60,7 @@ export type Ga4PurchaseParams = {
   transaction_id: string;
   value: number;
   currency: typeof GA4_CURRENCY;
+  affiliation?: string;
   tax: number;
   shipping: number;
   coupon?: string;
@@ -79,12 +92,14 @@ export function formatGa4ItemVariant(
 }
 
 export function buildGa4ItemFromCartLine(line: CartLine, quantity?: number): Ga4Item {
+  const qty = quantity ?? line.quantity;
   return {
     item_id: line.variantId,
     item_name: line.name,
+    item_brand: GA4_ITEM_BRAND,
     item_variant: formatGa4ItemVariant(line.size, line.color),
-    price: line.unitPriceGhs,
-    quantity: quantity ?? line.quantity,
+    price: roundGhsAmount(line.unitPriceGhs),
+    quantity: qty,
   };
 }
 
@@ -96,10 +111,12 @@ export function buildViewItemEvent(input: {
   size?: string | null;
   color?: string | null;
 }): Ga4ViewItemParams {
+  const price = roundGhsAmount(input.priceGhs);
   const item: Ga4Item = {
     item_id: input.productId,
     item_name: input.productName,
-    price: input.priceGhs,
+    item_brand: GA4_ITEM_BRAND,
+    price,
     quantity: 1,
   };
   if (input.categoryName) item.item_category = input.categoryName;
@@ -108,7 +125,7 @@ export function buildViewItemEvent(input: {
 
   return {
     currency: GA4_CURRENCY,
-    value: input.priceGhs,
+    value: price,
     items: [item],
   };
 }
@@ -117,7 +134,7 @@ export function buildAddToCartEvent(line: CartLine, quantityAdded: number): Ga4A
   const item = buildGa4ItemFromCartLine(line, quantityAdded);
   return {
     currency: GA4_CURRENCY,
-    value: item.price * item.quantity,
+    value: roundGhsAmount(item.price * item.quantity),
     items: [item],
   };
 }
@@ -128,7 +145,7 @@ export function buildBeginCheckoutEvent(
 ): Ga4BeginCheckoutParams {
   return {
     currency: GA4_CURRENCY,
-    value: subtotalGhs,
+    value: roundGhsAmount(subtotalGhs),
     items: lines.map((line) => buildGa4ItemFromCartLine(line)),
   };
 }
@@ -144,7 +161,8 @@ export function buildPurchaseEvent(input: {
     const item: Ga4Item = {
       item_id: row.variant_id ?? row.product_id ?? "unknown",
       item_name: row.name,
-      price: row.unit_price_ghs,
+      item_brand: GA4_ITEM_BRAND,
+      price: roundGhsAmount(row.unit_price_ghs),
       quantity: row.quantity,
     };
     const variant = formatGa4ItemVariant(row.size, row.color);
@@ -154,9 +172,10 @@ export function buildPurchaseEvent(input: {
 
   const params: Ga4PurchaseParams = {
     transaction_id: input.orderNumber,
-    value: input.totalGhs,
+    value: roundGhsAmount(input.totalGhs),
     currency: GA4_CURRENCY,
-    tax: Number(input.taxGhs ?? 0),
+    affiliation: GA4_STORE_AFFILIATION,
+    tax: roundGhsAmount(Number(input.taxGhs ?? 0)),
     shipping: 0,
     items: gaItems,
   };
