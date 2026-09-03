@@ -24,16 +24,17 @@ export function isMetaEnabled(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim());
 }
 
-function trackMeta(eventName: string, params?: Record<string, unknown>, eventId?: string): void {
-  if (!isMetaEnabled()) return;
-  if (typeof window === "undefined" || typeof window.fbq !== "function") return;
+function trackMeta(eventName: string, params?: Record<string, unknown>, eventId?: string): boolean {
+  if (!isMetaEnabled()) return false;
+  if (typeof window === "undefined" || typeof window.fbq !== "function") return false;
 
   if (eventId) {
     window.fbq("track", eventName, params, { eventID: eventId });
-    return;
+    return true;
   }
 
   window.fbq("track", eventName, params);
+  return true;
 }
 
 export function trackMetaPageView(): void {
@@ -52,6 +53,7 @@ export function trackMetaInitiateCheckout(params: MetaInitiateCheckoutParams): v
   trackMeta("InitiateCheckout", params);
 }
 
-export function trackMetaPurchase(params: MetaPurchaseParams, orderId: string): void {
-  trackMeta("Purchase", params, orderId);
+/** Returns true only when fbq accepted the Purchase call (eventID = order UUID). */
+export function trackMetaPurchase(params: MetaPurchaseParams, orderId: string): boolean {
+  return trackMeta("Purchase", params, orderId);
 }
