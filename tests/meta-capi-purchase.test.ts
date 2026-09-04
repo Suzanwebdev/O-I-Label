@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
@@ -16,8 +17,16 @@ import {
   META_CAPI_PURCHASE_ORDER_EVENT_TYPE,
   postMetaCapiPurchaseEvent,
 } from "../lib/analytics/meta-capi-purchase.ts";
+import {
+  buildMetaCapiUserData,
+  normalizeEmailForMeta,
+  normalizePhoneForMeta,
+  sha256Hex,
+} from "../lib/analytics/meta-capi-user-data.ts";
 
 const orderId = "005141b2-d87c-4052-8438-22f5fd381dcc";
+const sampleEmail = "Customer@Example.com";
+const samplePhone = "+233241234567";
 
 const purchasePayload = buildMetaPurchaseEvent(
   buildPurchaseEvent({
@@ -41,6 +50,11 @@ const purchasePayload = buildMetaPurchaseEvent(
     ],
   })
 );
+
+const sampleUserData = buildMetaCapiUserData({
+  email: sampleEmail,
+  phone: samplePhone,
+})!;
 
 const previousEnv = {
   META_PIXEL_ID: process.env.META_PIXEL_ID,
@@ -139,11 +153,71 @@ function createMockSupabase(options: {
   };
 }
 
+function paidOrderFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: orderId,
+    order_number: "OI-20260903-59ZF2T",
+    email: sampleEmail,
+    phone: samplePhone,
+    total_ghs: 770,
+    tax_ghs: 0,
+    discount_code: null,
+    status: "paid",
+    paid_at: "2026-09-03T12:13:36.679+00:00",
+    order_items: [
+      {
+        name: "Silk Blouse",
+        quantity: 1,
+        unit_price_ghs: 450,
+        product_id: "product-1",
+        variant_id: "variant-1",
+        variants: { color: "Black", size: "M" },
+      },
+      {
+        name: "Linen Skirt",
+        quantity: 1,
+        unit_price_ghs: 320,
+        product_id: "product-2",
+        variant_id: "variant-2",
+        variants: { color: "Ivory", size: "S" },
+      },
+    ],
+    ...overrides,
+  };
+}
+
+describe("Meta CAPI user_data hashing", () => {
+  it("normalizes email and phone then SHA-256 hashes them", () => {
+    assert.equal(normalizeEmailForMeta("  Customer@Example.com "), "customer@example.com");
+    assert.equal(normalizePhoneForMeta("+233 24 123 4567"), "233241234567");
+    assert.equal(normalizePhoneForMeta("0241234567"), "233241234567");
+    assert.equal(normalizePhoneForMeta("241234567"), "233241234567");
+
+    const expectedEmailHash = createHash("sha256")
+      .update("customer@example.com", "utf8")
+      .digest("hex");
+    const expectedPhoneHash = createHash("sha256").update("233241234567", "utf8").digest("hex");
+
+    assert.equal(sha256Hex("customer@example.com"), expectedEmailHash);
+    assert.equal(sha256Hex("233241234567"), expectedPhoneHash);
+
+    const userData = buildMetaCapiUserData({ email: sampleEmail, phone: samplePhone });
+    assert.ok(userData);
+    assert.deepEqual(userData.em, [expectedEmailHash]);
+    assert.deepEqual(userData.ph, [expectedPhoneHash]);
+  });
+
+  it("returns null when neither email nor phone can be normalized", () => {
+    assert.equal(buildMetaCapiUserData({ email: "bad", phone: "12" }), null);
+  });
+});
+
 describe("Meta CAPI Purchase payload", () => {
-  it("builds Purchase with order UUID event_id and website action_source", () => {
+  it("builds Purchase with order UUID event_id, website action_source, and hashed user_data", () => {
     const event = buildMetaCapiPurchaseEvent({
       orderId,
       purchase: purchasePayload,
+      userData: sampleUserData,
       eventSourceUrl: `https://www.oandilabel.com/checkout/success?order=${orderId}`,
       eventTimeSec: 1_700_000_000,
     });
@@ -158,9 +232,13 @@ describe("Meta CAPI Purchase payload", () => {
     assert.equal(event.custom_data.content_type, "product");
     assert.equal(event.custom_data.num_items, 2);
     assert.deepEqual(event.custom_data.contents, purchasePayload.contents);
+    assert.ok(event.user_data.em?.[0]);
+    assert.ok(event.user_data.ph?.[0]);
+    assert.equal(event.user_data.em?.[0]?.length, 64);
+    assert.equal(event.user_data.ph?.[0]?.length, 64);
   });
 
-  it("request body excludes access token and can include optional test code", () => {
+  it("request body excludes access token, raw email/phone, and can include optional test code", () => {
     enableMetaCapiEnv();
     const config = getMetaCapiConfig();
     assert.ok(config);
@@ -168,12 +246,20 @@ describe("Meta CAPI Purchase payload", () => {
     const event = buildMetaCapiPurchaseEvent({
       orderId,
       purchase: purchasePayload,
+      userData: sampleUserData,
       eventSourceUrl: "https://www.oandilabel.com/checkout/success",
     });
 
     const body = buildMetaCapiPurchaseRequestBody(event, config);
+    const serialized = JSON.stringify(body);
     assert.deepEqual(Object.keys(body), ["data"]);
-    assert.equal(JSON.stringify(body).includes("test-access-token"), false);
+    assert.equal(serialized.includes("test-access-token"), false);
+    assert.equal(serialized.includes(sampleEmail), false);
+    assert.equal(serialized.includes(sampleEmail.toLowerCase()), false);
+    assert.equal(serialized.includes(samplePhone), false);
+    assert.equal(serialized.includes("233241234567"), false);
+    assert.ok(body.data[0]?.user_data.em?.[0]);
+    assert.ok(body.data[0]?.user_data.ph?.[0]);
 
     process.env.META_TEST_EVENT_CODE = "TEST12345";
     const withTest = buildMetaCapiPurchaseRequestBody(event, getMetaCapiConfig()!);
@@ -202,16 +288,11 @@ describe("Meta CAPI Purchase dispatch", () => {
     enableMetaCapiEnv();
     let fetchCalls = 0;
     const supabase = createMockSupabase({
-      paidOrder: {
-        id: orderId,
-        order_number: "OI-20260903-59ZF2T",
-        total_ghs: 770,
-        tax_ghs: 0,
-        discount_code: null,
+      paidOrder: paidOrderFixture({
         status: "pending",
         paid_at: null,
         order_items: [],
-      },
+      }),
     });
 
     const result = await dispatchMetaCapiPurchaseIfNeeded(supabase as never, orderId, {
@@ -227,37 +308,11 @@ describe("Meta CAPI Purchase dispatch", () => {
     assert.equal(supabase.orderEvents.length, 0);
   });
 
-  it("dispatches exactly once for a paid order and records idempotency", async () => {
+  it("dispatches exactly once for a paid order with hashed user_data and records idempotency", async () => {
     enableMetaCapiEnv();
     let fetchCalls = 0;
     const supabase = createMockSupabase({
-      paidOrder: {
-        id: orderId,
-        order_number: "OI-20260903-59ZF2T",
-        total_ghs: 770,
-        tax_ghs: 0,
-        discount_code: null,
-        status: "paid",
-        paid_at: "2026-09-03T12:13:36.679+00:00",
-        order_items: [
-          {
-            name: "Silk Blouse",
-            quantity: 1,
-            unit_price_ghs: 450,
-            product_id: "product-1",
-            variant_id: "variant-1",
-            variants: { color: "Black", size: "M" },
-          },
-          {
-            name: "Linen Skirt",
-            quantity: 1,
-            unit_price_ghs: 320,
-            product_id: "product-2",
-            variant_id: "variant-2",
-            variants: { color: "Ivory", size: "S" },
-          },
-        ],
-      },
+      paidOrder: paidOrderFixture(),
     });
 
     const fetchImpl = async (url: string, init?: RequestInit) => {
@@ -265,11 +320,23 @@ describe("Meta CAPI Purchase dispatch", () => {
       assert.match(url, /graph\.facebook\.com\/v26\.0\/2051174339097074\/events/);
       assert.match(url, /access_token=test-access-token/);
       const body = JSON.parse(String(init?.body)) as {
-        data: Array<{ event_id: string; custom_data: { value: number; currency: string } }>;
+        data: Array<{
+          event_id: string;
+          user_data: { em?: string[]; ph?: string[] };
+          custom_data: { value: number; currency: string; content_ids: string[]; num_items: number };
+        }>;
       };
-      assert.equal(body.data[0]?.event_id, orderId);
-      assert.equal(body.data[0]?.custom_data.currency, "GHS");
-      assert.equal(body.data[0]?.custom_data.value, 770);
+      const event = body.data[0]!;
+      assert.equal(event.event_id, orderId);
+      assert.equal(event.custom_data.currency, "GHS");
+      assert.equal(event.custom_data.value, 770);
+      assert.deepEqual(event.custom_data.content_ids, ["variant-1", "variant-2"]);
+      assert.equal(event.custom_data.num_items, 2);
+      assert.equal(event.user_data.em?.[0], sampleUserData.em?.[0]);
+      assert.equal(event.user_data.ph?.[0], sampleUserData.ph?.[0]);
+      const raw = JSON.stringify(body);
+      assert.equal(raw.includes(sampleEmail), false);
+      assert.equal(raw.includes(samplePhone), false);
       return new Response(JSON.stringify({ events_received: 1 }), { status: 200 });
     };
 
@@ -289,14 +356,7 @@ describe("Meta CAPI Purchase dispatch", () => {
   it("does not record idempotency when Meta API fails", async () => {
     enableMetaCapiEnv();
     const supabase = createMockSupabase({
-      paidOrder: {
-        id: orderId,
-        order_number: "OI-20260903-59ZF2T",
-        total_ghs: 770,
-        tax_ghs: 0,
-        discount_code: null,
-        status: "paid",
-        paid_at: "2026-09-03T12:13:36.679+00:00",
+      paidOrder: paidOrderFixture({
         order_items: [
           {
             name: "Silk Blouse",
@@ -307,7 +367,7 @@ describe("Meta CAPI Purchase dispatch", () => {
             variants: null,
           },
         ],
-      },
+      }),
     });
 
     const result = await dispatchMetaCapiPurchaseIfNeeded(supabase as never, orderId, {
@@ -324,6 +384,7 @@ describe("Meta CAPI Purchase dispatch", () => {
     const event = buildMetaCapiPurchaseEvent({
       orderId,
       purchase: purchasePayload,
+      userData: sampleUserData,
       eventSourceUrl: "https://www.oandilabel.com/checkout/success",
     });
     const config = getMetaCapiConfig()!;
@@ -359,6 +420,7 @@ describe("Meta CAPI security boundaries", () => {
       assert.equal(src.includes("META_CONVERSIONS_API_ACCESS_TOKEN"), false, rel);
       assert.equal(src.includes("meta-capi-purchase"), false, rel);
       assert.equal(src.includes("meta-capi-config"), false, rel);
+      assert.equal(src.includes("meta-capi-user-data"), false, rel);
     }
   });
 

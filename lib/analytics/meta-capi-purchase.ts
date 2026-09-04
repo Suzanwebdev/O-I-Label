@@ -8,6 +8,10 @@ import {
   isMetaCapiEnabled,
   type MetaCapiConfig,
 } from "@/lib/analytics/meta-capi-config";
+import {
+  buildMetaCapiUserData,
+  type MetaCapiUserData,
+} from "@/lib/analytics/meta-capi-user-data";
 import { observeOperationalEvent } from "@/lib/errors/capture-event";
 
 export const META_CAPI_PURCHASE_ORDER_EVENT_TYPE = "meta_capi_purchase";
@@ -21,6 +25,7 @@ export type MetaCapiPurchaseEvent = {
   event_id: string;
   action_source: "website";
   event_source_url: string;
+  user_data: MetaCapiUserData;
   custom_data: {
     currency: MetaPurchaseParams["currency"];
     value: number;
@@ -41,6 +46,7 @@ type FetchLike = typeof fetch;
 export function buildMetaCapiPurchaseEvent(input: {
   orderId: string;
   purchase: MetaPurchaseParams;
+  userData: MetaCapiUserData;
   eventSourceUrl: string;
   eventTimeSec?: number;
 }): MetaCapiPurchaseEvent {
@@ -50,6 +56,7 @@ export function buildMetaCapiPurchaseEvent(input: {
     event_id: input.orderId,
     action_source: "website",
     event_source_url: input.eventSourceUrl,
+    user_data: input.userData,
     custom_data: {
       currency: input.purchase.currency,
       value: input.purchase.value,
@@ -131,16 +138,21 @@ async function hasMetaCapiPurchaseBeenDispatched(
   return Boolean(data?.id);
 }
 
-async function loadPaidOrderPurchasePayload(
+async function loadPaidOrderCapiPayload(
   supabase: SupabaseClient,
   orderId: string
-): Promise<MetaPurchaseParams | null> {
+): Promise<
+  | { ok: true; purchase: MetaPurchaseParams; userData: MetaCapiUserData }
+  | { ok: false; reason: "order_not_paid_or_missing" | "insufficient_user_data" }
+> {
   const { data: order } = await supabase
     .from("orders")
     .select(
       `
       id,
       order_number,
+      email,
+      phone,
       total_ghs,
       tax_ghs,
       discount_code,
@@ -159,10 +171,16 @@ async function loadPaidOrderPurchasePayload(
     .eq("id", orderId)
     .maybeSingle();
 
-  if (!order) return null;
+  if (!order) return { ok: false, reason: "order_not_paid_or_missing" };
 
   const isPaid = order.status === "paid" || Boolean(order.paid_at);
-  if (!isPaid) return null;
+  if (!isPaid) return { ok: false, reason: "order_not_paid_or_missing" };
+
+  const userData = buildMetaCapiUserData({
+    email: typeof order.email === "string" ? order.email : null,
+    phone: typeof order.phone === "string" ? order.phone : null,
+  });
+  if (!userData) return { ok: false, reason: "insufficient_user_data" };
 
   const gaPurchase = buildPurchaseEvent({
     orderNumber: String(order.order_number),
@@ -183,12 +201,16 @@ async function loadPaidOrderPurchasePayload(
     }),
   });
 
-  return buildMetaPurchaseEvent(gaPurchase);
+  return {
+    ok: true,
+    purchase: buildMetaPurchaseEvent(gaPurchase),
+    userData,
+  };
 }
 
 /**
  * Idempotently send a Meta CAPI Purchase for a paid order.
- * Fire-and-forget safe: failures never throw to callers.
+ * Failures never throw to callers / never alter payment outcome.
  */
 export async function dispatchMetaCapiPurchaseIfNeeded(
   supabase: SupabaseClient,
@@ -208,14 +230,15 @@ export async function dispatchMetaCapiPurchaseIfNeeded(
     return { ok: true, skipped: true, reason: "already_dispatched" };
   }
 
-  const purchase = await loadPaidOrderPurchasePayload(supabase, orderId);
-  if (!purchase) {
-    return { ok: true, skipped: true, reason: "order_not_paid_or_missing" };
+  const payload = await loadPaidOrderCapiPayload(supabase, orderId);
+  if (!payload.ok) {
+    return { ok: true, skipped: true, reason: payload.reason };
   }
 
   const event = buildMetaCapiPurchaseEvent({
     orderId,
-    purchase,
+    purchase: payload.purchase,
+    userData: payload.userData,
     eventSourceUrl: `${config.siteUrl}/checkout/success?order=${encodeURIComponent(orderId)}`,
   });
 
@@ -244,9 +267,9 @@ export async function dispatchMetaCapiPurchaseIfNeeded(
     meta: {
       event_id: orderId,
       source: opts?.source ?? null,
-      currency: purchase.currency,
-      value: purchase.value,
-      num_items: purchase.num_items,
+      currency: payload.purchase.currency,
+      value: payload.purchase.value,
+      num_items: payload.purchase.num_items,
     },
   });
 
