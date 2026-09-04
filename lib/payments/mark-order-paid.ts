@@ -1,3 +1,4 @@
+import { dispatchMetaCapiPurchaseIfNeeded } from "@/lib/analytics/meta-capi-purchase";
 import { deductStockForPaidOrder } from "@/lib/inventory/deduct-order-stock";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { sendOrderConfirmationEmail } from "@/lib/email/resend";
@@ -67,6 +68,7 @@ export async function markOrderPaidByReference(
   }
 
   if (payment.status === "paid") {
+    await dispatchMetaCapiPurchaseIfNeeded(supabase, payment.order_id, { source }).catch(() => {});
     return { ok: true, orderId: payment.order_id, idempotent: true };
   }
 
@@ -190,6 +192,8 @@ export async function markOrderPaidByReference(
       });
     }
   }
+
+  await dispatchMetaCapiPurchaseIfNeeded(supabase, order.id, { source }).catch(() => {});
 
   return { ok: true, orderId: order.id };
 }
