@@ -65,10 +65,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [buyNowLines, setBuyNowLines] = React.useState<CartLine[] | null>(null);
   const [isOpen, setOpen] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
+  /** If payment clear runs before localStorage hydrate, apply it once lines load. */
+  const pendingClearPurchasedRef = React.useRef(false);
 
   React.useEffect(() => {
-    setLines(loadLines());
-    setBuyNowLines(readBuyNowLines());
+    let next = loadLines();
+    let nextBuyNow = readBuyNowLines();
+    if (pendingClearPurchasedRef.current) {
+      pendingClearPurchasedRef.current = false;
+      clearBuyNowLines();
+      nextBuyNow = null;
+      next = next.filter((l) => l.selected === false);
+    }
+    setLines(next);
+    setBuyNowLines(nextBuyNow);
     setHydrated(true);
   }, []);
 
@@ -168,8 +178,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearPurchasedAfterPayment = React.useCallback(() => {
     clearBuyNowLines();
     setBuyNowLines(null);
+    if (!hydrated) {
+      // Success page can fire before cart hydrates from localStorage; remember to clear then.
+      pendingClearPurchasedRef.current = true;
+      return;
+    }
     setLines((prev) => prev.filter((l) => l.selected === false));
-  }, []);
+  }, [hydrated]);
 
   const beginBuyNowCheckout = React.useCallback((next: CartLine[]) => {
     const rows = next.map((l) => coerceCartLine({ ...l, selected: true }));
