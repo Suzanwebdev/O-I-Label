@@ -2,12 +2,16 @@ import Link from "next/link";
 import { Container } from "@/components/store/container";
 import { HomeNewsletter } from "@/components/home/newsletter-block";
 import { MomoNetworkLogos } from "@/components/checkout/momo-network-logos";
-import { CookieSettingsButton } from "@/components/consent/cookie-settings-button";
 import type { HomeFooterCms } from "@/lib/home/homepage-cms";
 import { DEFAULT_FOOTER } from "@/lib/home/homepage-cms";
 
 const colLabel =
   "mb-5 text-[10px] font-medium uppercase tracking-[0.28em] text-white/55";
+
+const COOKIE_POLICY_LINK = {
+  href: "/policies/cookies",
+  label: "Cookie Policy",
+} as const;
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -89,9 +93,33 @@ function pickSocialIcon(label: string, href: string) {
   return GenericLinkIcon;
 }
 
+/** Keep Cookie Policy under Company even when CMS columns omit it. */
+function withCookiePolicyInCompany(
+  columns: HomeFooterCms["columns"]
+): HomeFooterCms["columns"] {
+  const hasCookiePolicy = columns.some((col) =>
+    col.links.some((link) => link.href === COOKIE_POLICY_LINK.href)
+  );
+  if (hasCookiePolicy) return columns;
+
+  return columns.map((col) => {
+    if (col.title.trim().toLowerCase() !== "company") return col;
+    const links = [...col.links];
+    const termsIdx = links.findIndex((link) => link.href === "/policies/terms");
+    if (termsIdx >= 0) {
+      links.splice(termsIdx, 0, { ...COOKIE_POLICY_LINK });
+    } else {
+      links.push({ ...COOKIE_POLICY_LINK });
+    }
+    return { ...col, links };
+  });
+}
+
 export function StoreFooter({ footer = DEFAULT_FOOTER }: { footer?: HomeFooterCms }) {
   const year = new Date().getFullYear();
-  const cols = footer.columns.length ? footer.columns : DEFAULT_FOOTER.columns;
+  const cols = withCookiePolicyInCompany(
+    footer.columns.length ? footer.columns : DEFAULT_FOOTER.columns
+  );
   const social = footer.social.length ? footer.social : DEFAULT_FOOTER.social;
   const brand = footer.copyright_brand.trim() || DEFAULT_FOOTER.copyright_brand;
 
@@ -144,19 +172,6 @@ export function StoreFooter({ footer = DEFAULT_FOOTER }: { footer?: HomeFooterCm
             <p className="text-[11px] tracking-[0.06em] text-white/50">
               © {year} {brand}
             </p>
-            <span className="hidden text-white/25 sm:inline" aria-hidden="true">
-              ·
-            </span>
-            <Link
-              href="/policies/cookies"
-              className="text-[11px] tracking-[0.06em] text-white/50 transition-colors hover:text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-            >
-              Cookie Policy
-            </Link>
-            <span className="hidden text-white/25 sm:inline" aria-hidden="true">
-              ·
-            </span>
-            <CookieSettingsButton />
             <MomoNetworkLogos
               className="inline-flex max-w-full flex-wrap items-center gap-1.5"
               imageClassName="h-[22px] w-auto max-w-[64px] shrink-0 rounded-[2px] object-contain"

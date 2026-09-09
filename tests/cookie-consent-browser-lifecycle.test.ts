@@ -297,6 +297,24 @@ describe("consent UI and Meta Pixel source contracts", () => {
     );
     assert.match(policy, /private-store access cookie/);
     assert.match(policy, /Supabase/);
+    assert.match(policy, /CookieSettingsButton/);
+    assert.match(policy, /slug === "cookies"/);
+    assert.match(policy, /Cookie Settings below/);
+  });
+
+  it("footer keeps Cookie Policy under Company and restores the original legal row", () => {
+    const footer = readFileSync("components/layout/store-footer.tsx", "utf8");
+    const defaults = readFileSync("lib/home/homepage-cms.ts", "utf8");
+
+    assert.match(defaults, /href: "\/policies\/cookies", label: "Cookie Policy"/);
+    assert.match(footer, /withCookiePolicyInCompany/);
+    assert.match(footer, /© \{year\} \{brand\}/);
+    assert.match(footer, /MomoNetworkLogos/);
+    assert.doesNotMatch(footer, /CookieSettingsButton/);
+    assert.doesNotMatch(
+      footer,
+      /href="\/policies\/cookies"[\s\S]*Cookie Policy[\s\S]*MomoNetworkLogos/
+    );
   });
 
   it("MetaPageViewTracker still skips first SPA render to avoid duplicate PageView", () => {

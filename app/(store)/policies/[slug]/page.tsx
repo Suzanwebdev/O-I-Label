@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/store/container";
+import { CookieSettingsButton } from "@/components/consent/cookie-settings-button";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 const POLICY_CONTENT: Record<string, { title: string; description: string; sections: string[] }> = {
@@ -30,7 +31,7 @@ const POLICY_CONTENT: Record<string, { title: string; description: string; secti
     sections: [
       "We collect only the information required to process orders, support customers, and improve your shopping experience.",
       "Your data is handled securely and never sold to third parties.",
-      "We use cookies and similar technologies as described in our Cookie Policy. You can manage optional Analytics (Google Analytics 4) and Marketing (Meta Pixel) preferences anytime via Cookie Settings in the site footer. Essential shopping and security technologies stay on.",
+      "We use cookies and similar technologies as described in our Cookie Policy. You can manage optional Analytics (Google Analytics 4) and Marketing (Meta Pixel) preferences anytime via Cookie Settings on the Cookie Policy page. Essential shopping and security technologies stay on.",
       "You can request account or data assistance by contacting support.",
     ],
   },
@@ -43,7 +44,7 @@ const POLICY_CONTENT: Record<string, { title: string; description: string; secti
       "Essential (always on): required for core website functionality. This includes authentication and session handling through our authentication provider (Supabase), the private-store access cookie when that feature applies, and first-party browser storage used for shopping essentials such as cart, wishlist, Buy Now, checkout continuity, payment return, and order confirmation access. Turning off optional Analytics or Marketing does not disable these essential technologies, and it does not block browsing, cart, checkout, or payment flows.",
       "Analytics (optional): when you allow Analytics, we initialize Google Analytics 4 (GA4) in your browser to understand aggregate how visitors use O & I Label so we can improve the experience. If you decline Analytics, we do not initialize GA4 in your browser.",
       "Marketing (optional): when you allow Marketing, we initialize the Meta (Facebook) Pixel in your browser to help measure and improve advertising relevance and performance. If you decline Marketing, we do not initialize the browser Meta Pixel and we do not fire browser Meta Pixel events. Declining Marketing does not stop order processing, payment confirmation, or cart clearing. Separately, when an order is successfully paid, we may use server-side Meta Conversions API (CAPI) to help measure completed purchases and improve our advertising. This server-side processing is separate from the optional browser tracking controlled by your cookie preferences.",
-      "You can Accept All, Reject All, or set Preferences from the cookie banner. After you decide, reopen Preferences anytime with Cookie Settings in the footer. Until you choose, optional Analytics and Marketing stay off. Absence of a stored choice is never treated as acceptance.",
+      "You can Accept All, Reject All, or set Preferences from the cookie banner. After you decide, return to this Cookie Policy and use Cookie Settings below anytime to change your Analytics and Marketing preferences. Until you choose, optional Analytics and Marketing stay off. Absence of a stored choice is never treated as acceptance.",
       "When you enable Analytics or Marketing, Google or Meta may set or read their own cookies or similar technologies under their practices. We turn our browser GA4 and Meta Pixel integrations on or off based on your preference; we do not claim to delete or fully control third-party cookies already stored by those services.",
     ],
   },
@@ -93,8 +94,16 @@ export default async function PolicyPage({ params }: Props) {
             <p key={text}>{text}</p>
           ))}
         </div>
+        {slug === "cookies" ? (
+          <div className="mt-8 space-y-3 border-t border-border/60 pt-6">
+            <p className="text-sm text-muted-foreground md:text-base">
+              Use Cookie Settings to review or update your optional Analytics and Marketing
+              preferences at any time.
+            </p>
+            <CookieSettingsButton variant="navy" size="sm" />
+          </div>
+        ) : null}
       </Container>
     </div>
   );
 }
-
