@@ -291,7 +291,10 @@ describe("consent UI and Meta Pixel source contracts", () => {
     assert.match(policy, /Google Analytics 4/);
     assert.match(policy, /Meta \(Facebook\) Pixel/);
     assert.match(policy, /Conversions API/);
-    assert.match(policy, /not controlled by this browser cookie banner/);
+    assert.match(
+      policy,
+      /separate from the optional browser tracking controlled by your cookie preferences/
+    );
     assert.match(policy, /private-store access cookie/);
     assert.match(policy, /Supabase/);
   });
