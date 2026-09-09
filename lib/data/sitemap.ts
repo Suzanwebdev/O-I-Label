@@ -25,6 +25,7 @@ export async function getStoreSitemapEntries(): Promise<SitemapEntry[]> {
     { path: "/policies/shipping", priority: 0.4, changeFrequency: "yearly" },
     { path: "/policies/returns", priority: 0.4, changeFrequency: "yearly" },
     { path: "/policies/privacy", priority: 0.4, changeFrequency: "yearly" },
+    { path: "/policies/cookies", priority: 0.4, changeFrequency: "yearly" },
     { path: "/policies/terms", priority: 0.4, changeFrequency: "yearly" },
   ];
 

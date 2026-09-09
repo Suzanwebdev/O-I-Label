@@ -8,6 +8,7 @@ import type {
   Ga4ViewItemParams,
 } from "@/lib/analytics/ga4-events";
 import { validateEcommerceEventForReporting } from "@/lib/analytics/ga4-reporting";
+import { canUseAnalytics } from "@/lib/consent/storage";
 
 export function isGa4Enabled(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim());
@@ -15,6 +16,7 @@ export function isGa4Enabled(): boolean {
 
 export function trackGa4Event(eventName: string, params: Record<string, unknown>): void {
   if (!isGa4Enabled()) return;
+  if (!canUseAnalytics()) return;
   if (typeof window === "undefined") return;
 
   if (process.env.NODE_ENV === "development") {

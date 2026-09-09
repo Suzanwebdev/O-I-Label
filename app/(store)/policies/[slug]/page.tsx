@@ -30,7 +30,21 @@ const POLICY_CONTENT: Record<string, { title: string; description: string; secti
     sections: [
       "We collect only the information required to process orders, support customers, and improve your shopping experience.",
       "Your data is handled securely and never sold to third parties.",
+      "We use cookies and similar technologies as described in our Cookie Policy. You can manage optional Analytics (Google Analytics 4) and Marketing (Meta Pixel) preferences anytime via Cookie Settings in the site footer. Essential shopping and security technologies stay on.",
       "You can request account or data assistance by contacting support.",
+    ],
+  },
+  cookies: {
+    title: "Cookie Policy",
+    description:
+      "How O & I Label uses cookies and similar technologies for essential shopping features, analytics, and marketing.",
+    sections: [
+      "Cookies and similar technologies are small pieces of data stored on your device or in your browser. They can help a website remember preferences, keep you signed in, and understand how the site is used. On O & I Label, some are essential for the store to work. Optional Analytics and Marketing technologies run only after you make an explicit choice.",
+      "Essential (always on): required for core website functionality. This includes authentication and session handling through our authentication provider (Supabase), the private-store access cookie when that feature applies, and first-party browser storage used for shopping essentials such as cart, wishlist, Buy Now, checkout continuity, payment return, and order confirmation access. Turning off optional Analytics or Marketing does not disable these essential technologies, and it does not block browsing, cart, checkout, or payment flows.",
+      "Analytics (optional): when you allow Analytics, we initialize Google Analytics 4 (GA4) in your browser to understand aggregate how visitors use O & I Label so we can improve the experience. If you decline Analytics, we do not initialize GA4 in your browser.",
+      "Marketing (optional): when you allow Marketing, we initialize the Meta (Facebook) Pixel in your browser to help measure and improve advertising relevance and performance. If you decline Marketing, we do not initialize the browser Meta Pixel and we do not fire browser Meta Pixel events. Declining Marketing does not stop order processing, payment confirmation, or cart clearing. Separately, when an order is paid, our servers may still send a Meta Conversions API (CAPI) Purchase event for advertising measurement; that server-side CAPI Purchase is not controlled by this browser cookie banner.",
+      "You can Accept All, Reject All, or set Preferences from the cookie banner. After you decide, reopen Preferences anytime with Cookie Settings in the footer. Until you choose, optional Analytics and Marketing stay off. Absence of a stored choice is never treated as acceptance.",
+      "When you enable Analytics or Marketing, Google or Meta may set or read their own cookies or similar technologies under their practices. We turn our browser GA4 and Meta Pixel integrations on or off based on your preference; we do not claim to delete or fully control third-party cookies already stored by those services.",
     ],
   },
   terms: {

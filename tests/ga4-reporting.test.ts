@@ -167,11 +167,20 @@ describe("GA4 reporting validation", () => {
 describe("GA4 storefront scope", () => {
   it("mounts GoogleAnalytics only in the storefront layout", () => {
     const storeLayout = readFileSync("app/(store)/layout.tsx", "utf8");
+    const gatedAnalytics = readFileSync(
+      "components/consent/consent-gated-store-analytics.tsx",
+      "utf8"
+    );
     const rootLayout = readFileSync("app/layout.tsx", "utf8");
     const adminLayout = readFileSync("app/admin/layout.tsx", "utf8");
 
-    assert.match(storeLayout, /StoreGoogleAnalytics/);
-    assert.doesNotMatch(rootLayout, /StoreGoogleAnalytics|GoogleAnalytics/);
-    assert.doesNotMatch(adminLayout, /StoreGoogleAnalytics|GoogleAnalytics|trackPurchase|trackAddToCart/);
+    assert.match(storeLayout, /ConsentGatedStoreAnalytics/);
+    assert.match(gatedAnalytics, /StoreGoogleAnalytics/);
+    assert.match(gatedAnalytics, /analyticsAllowed/);
+    assert.doesNotMatch(rootLayout, /StoreGoogleAnalytics|GoogleAnalytics|ConsentGatedStoreAnalytics/);
+    assert.doesNotMatch(
+      adminLayout,
+      /StoreGoogleAnalytics|GoogleAnalytics|ConsentGatedStoreAnalytics|trackPurchase|trackAddToCart/
+    );
   });
 });

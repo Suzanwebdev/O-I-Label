@@ -88,6 +88,7 @@ export const DEFAULT_FOOTER: HomeFooterCms = {
         { href: "/about", label: "Our story" },
         { href: "/blog", label: "Style Journal" },
         { href: "/policies/privacy", label: "Privacy" },
+        { href: "/policies/cookies", label: "Cookie Policy" },
         { href: "/policies/terms", label: "Terms" },
       ],
     },

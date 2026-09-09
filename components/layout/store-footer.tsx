@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Container } from "@/components/store/container";
 import { HomeNewsletter } from "@/components/home/newsletter-block";
 import { MomoNetworkLogos } from "@/components/checkout/momo-network-logos";
+import { CookieSettingsButton } from "@/components/consent/cookie-settings-button";
 import type { HomeFooterCms } from "@/lib/home/homepage-cms";
 import { DEFAULT_FOOTER } from "@/lib/home/homepage-cms";
 
@@ -143,6 +144,19 @@ export function StoreFooter({ footer = DEFAULT_FOOTER }: { footer?: HomeFooterCm
             <p className="text-[11px] tracking-[0.06em] text-white/50">
               © {year} {brand}
             </p>
+            <span className="hidden text-white/25 sm:inline" aria-hidden="true">
+              ·
+            </span>
+            <Link
+              href="/policies/cookies"
+              className="text-[11px] tracking-[0.06em] text-white/50 transition-colors hover:text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+            >
+              Cookie Policy
+            </Link>
+            <span className="hidden text-white/25 sm:inline" aria-hidden="true">
+              ·
+            </span>
+            <CookieSettingsButton />
             <MomoNetworkLogos
               className="inline-flex max-w-full flex-wrap items-center gap-1.5"
               imageClassName="h-[22px] w-auto max-w-[64px] shrink-0 rounded-[2px] object-contain"

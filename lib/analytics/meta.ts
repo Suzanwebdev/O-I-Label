@@ -6,6 +6,7 @@ import type {
   MetaPurchaseParams,
   MetaViewContentParams,
 } from "@/lib/analytics/meta-events";
+import { canUseMarketing } from "@/lib/consent/storage";
 
 type FbqFunction = (
   command: "track" | "init",
@@ -26,6 +27,7 @@ export function isMetaEnabled(): boolean {
 
 function trackMeta(eventName: string, params?: Record<string, unknown>, eventId?: string): boolean {
   if (!isMetaEnabled()) return false;
+  if (!canUseMarketing()) return false;
   if (typeof window === "undefined" || typeof window.fbq !== "function") return false;
 
   if (eventId) {

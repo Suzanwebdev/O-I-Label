@@ -1,6 +1,5 @@
-import { StoreGoogleAnalytics } from "@/components/analytics/google-analytics";
-import { StoreMetaPixel } from "@/components/analytics/meta-pixel";
-import { MetaPageViewTracker } from "@/components/analytics/meta-page-view";
+import { ConsentProvider } from "@/components/consent/consent-provider";
+import { ConsentGatedStoreAnalytics } from "@/components/consent/consent-gated-store-analytics";
 import { StoreHeader } from "@/components/layout/store-header";
 import { StoreFooter } from "@/components/layout/store-footer";
 import { ScrollProgress } from "@/components/layout/scroll-progress";
@@ -29,18 +28,18 @@ export default async function StoreLayout({
 
   return (
     <StoreControlProvider control={control}>
-      <CatalogRefresh />
-      <ScrollProgress />
-      <StoreAnnouncementBanner />
-      <SoftCloseBanner />
-      <PresaleLaunchStrip />
-      <StoreHeader categories={categories} accountEmail={accountEmail} />
-      <main className="flex-1">{children}</main>
-      <StoreFooter footer={footer} />
-      <CartDrawer />
-      <StoreGoogleAnalytics />
-      <StoreMetaPixel />
-      <MetaPageViewTracker />
+      <ConsentProvider>
+        <CatalogRefresh />
+        <ScrollProgress />
+        <StoreAnnouncementBanner />
+        <SoftCloseBanner />
+        <PresaleLaunchStrip />
+        <StoreHeader categories={categories} accountEmail={accountEmail} />
+        <main className="flex-1">{children}</main>
+        <StoreFooter footer={footer} />
+        <CartDrawer />
+        <ConsentGatedStoreAnalytics />
+      </ConsentProvider>
     </StoreControlProvider>
   );
 }
