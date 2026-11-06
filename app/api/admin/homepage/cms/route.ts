@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 import {
   mergeSectionsPatch,
   parseHomepageCms,
@@ -32,7 +33,7 @@ export async function GET() {
   return NextResponse.json({ cms: parseHomepageCms(sections) });
 }
 
-export async function PATCH(request: Request) {
+async function updateHomepageCms(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -102,3 +103,5 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ cms: parseHomepageCms(merged) });
 }
+
+export const PATCH = withPublicCacheExpiry(updateHomepageCms, [PUBLIC_CACHE_TAGS.homeContent]);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import {
   OCCASION_CARDS_LIMIT,
@@ -48,7 +49,7 @@ function compactCard(c: OccasionSectionCardStored): OccasionSectionCardStored {
   return out;
 }
 
-export async function PATCH(request: Request) {
+async function updateShopByOccasion(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -178,3 +179,5 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ ok: true, sections: updated.sections });
 }
+
+export const PATCH = withPublicCacheExpiry(updateShopByOccasion, [PUBLIC_CACHE_TAGS.homeContent]);

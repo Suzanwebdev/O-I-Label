@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+
+/** Products embed their primary category's name and slug, so category edits expire both. */
+const CATEGORY_CACHE_TAGS = [PUBLIC_CACHE_TAGS.categories, PUBLIC_CACHE_TAGS.products] as const;
 
 function toSlug(value: string) {
   return value
@@ -11,7 +15,7 @@ function toSlug(value: string) {
     .replace(/-+/g, "-");
 }
 
-export async function POST(request: Request) {
+async function createCategory(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -60,7 +64,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ category: data }, { status: 201 });
 }
 
-export async function PATCH(request: Request) {
+async function updateCategory(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -108,7 +112,7 @@ export async function PATCH(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(request: Request) {
+async function deleteCategory(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -148,4 +152,8 @@ export async function DELETE(request: Request) {
   }
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withPublicCacheExpiry(createCategory, CATEGORY_CACHE_TAGS);
+export const PATCH = withPublicCacheExpiry(updateCategory, CATEGORY_CACHE_TAGS);
+export const DELETE = withPublicCacheExpiry(deleteCategory, CATEGORY_CACHE_TAGS);
 

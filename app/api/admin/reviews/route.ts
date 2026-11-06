@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 import { listAdminReviews, moderateReview } from "@/lib/reviews/admin";
 import type { ReviewStatus } from "@/lib/reviews/types";
 
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
   return NextResponse.json({ ok: true, ...result });
 }
 
-export async function PATCH(request: Request) {
+async function moderateReviewRequest(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -48,3 +49,6 @@ export async function PATCH(request: Request) {
   }
   return NextResponse.json({ ok: true });
 }
+
+/** A database trigger recomputes products.rating / review_count when reviews are moderated. */
+export const PATCH = withPublicCacheExpiry(moderateReviewRequest, [PUBLIC_CACHE_TAGS.products]);
