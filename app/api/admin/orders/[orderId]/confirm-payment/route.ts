@@ -25,11 +25,13 @@ export async function POST(_request: Request, context: RouteContext) {
   const message =
     reason === "moolre_not_paid"
       ? "Moolre has not confirmed this payment yet. The order stays unpaid."
-      : reason === "no_payment"
-        ? "No payment record found for this order."
-        : reason === "provider_not_moolre"
-          ? "This payment is not a Moolre payment."
-          : `Could not confirm with Moolre (${reason}). Order stays unpaid.`;
+      : reason === "payment_refunded"
+        ? "This payment was refunded and cannot be confirmed again."
+        : reason === "no_payment"
+          ? "No payment record found for this order."
+          : reason === "provider_not_moolre"
+            ? "This payment is not a Moolre payment."
+            : `Could not confirm with Moolre (${reason}). Order stays unpaid.`;
 
   return NextResponse.json(
     {

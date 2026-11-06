@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { invalidateStoreControlEdgeCache } from "@/lib/store-control/edge";
-import { recommendedFlagsForStatus } from "@/lib/store-control/constants";
+import {
+  applySuperadminMaintenanceStatus,
+  STORE_STATE_UNAVAILABLE_RETRY_SECONDS,
+} from "@/lib/store-control/server";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 
 const SELECT =
   "store_name, maintenance_mode, feature_flags, payment_moolre_enabled, payment_paystack_enabled, payment_flutterwave_enabled, tax_enabled, rate_limit_per_min";
@@ -12,7 +16,7 @@ function boolField(body: Record<string, unknown>, key: string): boolean | undefi
   return typeof body[key] === "boolean" ? (body[key] as boolean) : undefined;
 }
 
-export async function PATCH(request: Request) {
+async function updateSiteSettings(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isSuperadmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -40,17 +44,21 @@ export async function PATCH(request: Request) {
   const maintenanceMode = boolField(b, "maintenance_mode");
   if (maintenanceMode !== undefined) {
     update.maintenance_mode = maintenanceMode;
-    const flags = recommendedFlagsForStatus(maintenanceMode ? "maintenance" : "live");
-    await service
-      .from("store_settings")
-      .update({
-        store_status: maintenanceMode ? "maintenance" : "live",
-        browsing_enabled: flags.browsing_enabled,
-        checkout_enabled: flags.checkout_enabled,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", 1);
-    invalidateStoreControlEdgeCache();
+    // Settles overdue schedules first; on failure neither store_settings nor site_settings is written.
+    const statusResult = await applySuperadminMaintenanceStatus(maintenanceMode);
+    if (statusResult.ok || statusResult.settled) invalidateStoreControlEdgeCache();
+    if (!statusResult.ok) {
+      return NextResponse.json(
+        { error: statusResult.error, code: statusResult.code },
+        {
+          status: statusResult.status,
+          headers:
+            statusResult.status === 503
+              ? { "Retry-After": String(STORE_STATE_UNAVAILABLE_RETRY_SECONDS) }
+              : undefined,
+        }
+      );
+    }
   }
 
   for (const key of [
@@ -90,3 +98,6 @@ export async function PATCH(request: Request) {
         : {},
   });
 }
+
+// The maintenance toggle writes store_settings.store_status and its flags.
+export const PATCH = withPublicCacheExpiry(updateSiteSettings, [PUBLIC_CACHE_TAGS.storeSettings]);

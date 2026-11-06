@@ -28,7 +28,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
   const { demo, payment, order: orderId, token } = await searchParams;
   const isDemo = demo === "1";
   let paid = payment === "success";
-  let state: "paid" | "failed" | "pending" = paid ? "paid" : "pending";
+  let state: "paid" | "failed" | "pending" | "refunded" = paid ? "paid" : "pending";
   let orderSummary: {
     order_number: string;
     total_ghs: number;
@@ -53,7 +53,11 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
         .limit(1)
         .maybeSingle();
       const status = typeof paymentRow?.status === "string" ? paymentRow.status : "";
-      if (status === "paid" || (reconciled.ok && reconciled.paid)) {
+      // A refund recorded by an admin is authoritative, even though orders.paid_at stays set.
+      if (status === "refunded") {
+        paid = false;
+        state = "refunded";
+      } else if (status === "paid" || (reconciled.ok && reconciled.paid)) {
         paid = true;
         state = "paid";
       } else if (status === "failed") {
@@ -128,13 +132,15 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
     ? "This was a demo checkout. When live payments are connected, confirmation and tracking details will appear here."
     : state === "paid"
       ? "Payment received. We've sent your confirmation by email and SMS."
-      : state === "failed"
-        ? "Payment was not completed. Please return to checkout and try again."
-        : "Your payment is still being confirmed. If you've already paid, this page will update shortly.";
+      : state === "refunded"
+        ? "This payment has been refunded. If you have any questions about your refund, please contact us."
+        : state === "failed"
+          ? "Payment was not completed. Please return to checkout and try again."
+          : "Your payment is still being confirmed. If you've already paid, this page will update shortly.";
 
   return (
     <div className="border-b border-border/60 bg-background py-14 md:py-20">
-      {!isDemo && orderId ? (
+      {!isDemo && orderId && state !== "refunded" ? (
         <PurchaseTracker
           orderId={orderId}
           state={state}

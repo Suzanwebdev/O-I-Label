@@ -79,7 +79,8 @@ export function StoreControlDashboard({ initial }: { initial: Snapshot }) {
   const [customCampaignHtml, setCustomCampaignHtml] = React.useState("");
   const [emailPreviewHtml, setEmailPreviewHtml] = React.useState<string | null>(null);
 
-  async function save(patch: Record<string, unknown>) {
+  /** Resolves true only when the server accepted the change (any non-2xx, e.g. 409/503, is false). */
+  async function save(patch: Record<string, unknown>): Promise<boolean> {
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -104,8 +105,10 @@ export function StoreControlDashboard({ initial }: { initial: Snapshot }) {
         }));
       }
       setNotice("Saved — changes are live.");
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -114,9 +117,12 @@ export function StoreControlDashboard({ initial }: { initial: Snapshot }) {
   async function confirmStatusChange() {
     if (!pendingStatus) return;
     const nextStatus = pendingStatus;
+    const confirmedStatus = settings.store_status;
     setSettings((s) => ({ ...s, store_status: nextStatus }));
-    await save({ store_status: nextStatus, apply_recommended_flags: true });
-    if (nextStatus === "live") {
+    const saved = await save({ store_status: nextStatus, apply_recommended_flags: true });
+    if (!saved) {
+      setSettings((s) => ({ ...s, store_status: confirmedStatus }));
+    } else if (nextStatus === "live") {
       setSnapshot((prev) => ({
         ...prev,
         banners: prev.banners.map((b) => ({ ...b, enabled: false })),
@@ -569,6 +575,8 @@ export function StoreControlDashboard({ initial }: { initial: Snapshot }) {
                       scheduled_status: settings.scheduled_status,
                       scheduled_timezone: settings.scheduled_timezone,
                       revert_status: settings.revert_status,
+                      // Rejected with 409 if the settings changed since this form was loaded.
+                      expected_updated_at: settings.updated_at,
                     })
                   }
                 >

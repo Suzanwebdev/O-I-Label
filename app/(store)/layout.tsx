@@ -12,7 +12,8 @@ import { SoftCloseBanner } from "@/components/store-control/soft-close-banner";
 import { getHomepageCms } from "@/lib/data/homepage-cms";
 import { getAccountUserEmail } from "@/lib/data/account-orders";
 import { listCategoriesFromDb } from "@/lib/data/catalog";
-import { getEffectiveStoreControl } from "@/lib/store-control/server";
+import { getStorefrontStoreControl } from "@/lib/store-control/public-cache";
+import { storefrontShowsWaitlistCount } from "@/lib/store-control/waitlist-display";
 
 export default async function StoreLayout({
   children,
@@ -21,7 +22,7 @@ export default async function StoreLayout({
 }) {
   const [{ footer }, control, categories, accountEmail] = await Promise.all([
     getHomepageCms(),
-    getEffectiveStoreControl(),
+    getStorefrontStoreControl({ includeWaitlistCount: storefrontShowsWaitlistCount }),
     listCategoriesFromDb(),
     getAccountUserEmail(),
   ]);

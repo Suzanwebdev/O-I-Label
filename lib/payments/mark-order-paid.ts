@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { dispatchMetaCapiPurchaseIfNeeded } from "@/lib/analytics/meta-capi-purchase";
 import { deductStockForPaidOrder } from "@/lib/inventory/deduct-order-stock";
 import { createServiceRoleClient } from "@/lib/supabase/server";
@@ -15,6 +16,95 @@ export type MarkOrderPaidResult =
   | { ok: false; reason: string };
 
 const EXTERNAL_REF_ORDER_RE = /^oi_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_/i;
+
+/** Payment statuses that may still become paid. `paid` and `refunded` never move back. */
+const CLAIMABLE_PAYMENT_STATUSES = ["pending", "processing", "failed"];
+
+/**
+ * The claiming request updates the order immediately after claiming the payment, so a
+ * paid payment claimed this long ago whose order still has no paid_at had that update
+ * fail; anything younger may still be in flight and is left alone.
+ */
+export const ORDER_REPAIR_GRACE_MS = 10 * 60_000;
+
+export type OrderRepairOutcome = "not_needed" | "too_recent" | "not_repairable" | "repaired" | "lost" | "failed";
+
+/**
+ * Narrow recovery for a paid payment whose order update failed: marks the order paid
+ * (only while paid_at is still null and it is pending, or paid by an admin) and, only
+ * when that conditional update wins, sends the Meta Purchase the claiming request could
+ * not. Never repeats stock deduction, email, SMS or payment events.
+ */
+export async function repairIncompletePaidOrder(
+  supabase: SupabaseClient,
+  orderId: string,
+  source: "webhook" | "reconcile" | "admin"
+): Promise<OrderRepairOutcome> {
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id, status, paid_at")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order || order.paid_at) return "not_needed";
+
+  const { data: payment } = await supabase
+    .from("payments")
+    .select("status, updated_at")
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (payment?.status !== "paid") return "not_needed";
+  const claimedAt = Date.parse(String(payment.updated_at ?? ""));
+  if (!Number.isFinite(claimedAt) || Date.now() - claimedAt < ORDER_REPAIR_GRACE_MS) return "too_recent";
+  // An admin has already moved the order on (processing, shipped, cancelled…): leave it to them.
+  if (order.status !== "pending" && order.status !== "paid") return "not_repairable";
+
+  const { data: repaired, error } = await supabase
+    .from("orders")
+    .update({ status: "paid", paid_at: String(payment.updated_at), updated_at: new Date().toISOString() })
+    .eq("id", orderId)
+    .is("paid_at", null)
+    .in("status", ["pending", "paid"])
+    .select("id");
+
+  if (error) {
+    observeOperationalEvent({
+      severity: "critical",
+      category: "payment",
+      surface: source === "admin" ? "admin" : source === "reconcile" ? "cron" : "webhook",
+      code: "paid_order_repair_failed",
+      message: "Paid order could not be repaired after an earlier failed status update",
+      metadata: { source, error_code: error.code ?? null },
+    });
+    return "failed";
+  }
+  if (!repaired || repaired.length !== 1) return "lost";
+
+  if (order.status === "pending") {
+    const { error: historyError } = await supabase.from("order_status_events").insert({
+      order_id: orderId,
+      from_status: "pending",
+      to_status: "paid",
+      payment_status: "paid",
+      actor_id: null,
+      note: "Order marked paid after an earlier failed status update",
+    });
+    // The repair itself stands; only the audit row is missing, so record it and carry on.
+    if (historyError) {
+      observeOperationalEvent({
+        severity: "error",
+        category: "payment",
+        surface: source === "admin" ? "admin" : source === "reconcile" ? "cron" : "webhook",
+        code: "paid_order_repair_status_history_failed",
+        message: "Paid order was repaired but its status-history entry could not be recorded",
+        metadata: { source, error_code: historyError.code ?? null },
+      });
+    }
+  }
+  await dispatchMetaCapiPurchaseIfNeeded(supabase, orderId, { source }).catch(() => {});
+  return "repaired";
+}
 
 /** Idempotently mark payment + order as paid and send customer notifications. */
 export async function markOrderPaidByReference(
@@ -67,9 +157,15 @@ export async function markOrderPaidByReference(
     return { ok: false, reason: "payment_not_found" };
   }
 
+  // Already confirmed: side effects belong to the request that claimed it. The only
+  // follow-up is the guarded repair for an order whose update failed after the claim.
   if (payment.status === "paid") {
-    await dispatchMetaCapiPurchaseIfNeeded(supabase, payment.order_id, { source }).catch(() => {});
+    await repairIncompletePaidOrder(supabase, payment.order_id, source);
     return { ok: true, orderId: payment.order_id, idempotent: true };
+  }
+
+  if (payment.status === "refunded") {
+    return { ok: false, reason: "payment_refunded" };
   }
 
   const { data: order } = await supabase
@@ -91,17 +187,36 @@ export async function markOrderPaidByReference(
   }
 
   const paidAt = new Date().toISOString();
-  const { error: payErr } = await supabase
+  // Atomic claim: concurrent confirmations (webhook, success page, poll, admin) race
+  // on this row; only the one whose update matches runs the side effects below.
+  const { data: claimed, error: payErr } = await supabase
     .from("payments")
     .update({ status: "paid", updated_at: paidAt })
-    .eq("id", payment.id);
+    .eq("id", payment.id)
+    .in("status", CLAIMABLE_PAYMENT_STATUSES)
+    .select("id");
 
   if (payErr) {
     return { ok: false, reason: "payment_update" };
   }
 
+  if (!claimed || claimed.length !== 1) {
+    const { data: current } = await supabase
+      .from("payments")
+      .select("status")
+      .eq("id", payment.id)
+      .maybeSingle();
+    if (current?.status === "paid") {
+      return { ok: true, orderId: payment.order_id, idempotent: true };
+    }
+    if (current?.status === "refunded") {
+      return { ok: false, reason: "payment_refunded" };
+    }
+    return { ok: false, reason: "payment_not_claimed" };
+  }
+
   const fromStatus = order.status ?? "pending";
-  await supabase
+  const { error: orderErr } = await supabase
     .from("orders")
     .update({
       status: "paid",
@@ -109,6 +224,16 @@ export async function markOrderPaidByReference(
       updated_at: paidAt,
     })
     .eq("id", order.id);
+  if (orderErr) {
+    observeOperationalEvent({
+      severity: "critical",
+      category: "payment",
+      surface: source === "admin" ? "admin" : source === "reconcile" ? "cron" : "webhook",
+      code: "paid_order_status_update_failed",
+      message: "Payment confirmed but the order could not be marked paid",
+      metadata: { source, provider, error_code: orderErr.code ?? null },
+    });
+  }
 
   const sourceNote =
     source === "webhook"
@@ -117,21 +242,26 @@ export async function markOrderPaidByReference(
         ? "Payment confirmed via Moolre status check"
         : "Payment confirmed manually by admin";
 
-  await supabase.from("order_status_events").insert({
-    order_id: order.id,
-    from_status: fromStatus,
-    to_status: "paid",
-    payment_status: "paid",
-    actor_id: null,
-    note: sourceNote,
-  });
+  // The status history must not claim a pending → paid move that did not persist.
+  if (!orderErr) {
+    await supabase.from("order_status_events").insert({
+      order_id: order.id,
+      from_status: fromStatus,
+      to_status: "paid",
+      payment_status: "paid",
+      actor_id: null,
+      note: sourceNote,
+    });
+  }
 
   await supabase.from("order_events").insert({
     order_id: order.id,
     event_type: "payment_received",
     actor_id: null,
-    message: "Payment confirmed — order marked as paid",
-    meta: { reference: ref, provider, source },
+    message: orderErr
+      ? "Payment confirmed — order status update failed; mark the order paid manually"
+      : "Payment confirmed — order marked as paid",
+    meta: { reference: ref, provider, source, ...(orderErr ? { order_update_failed: true } : {}) },
   });
 
   const stockResult = await deductStockForPaidOrder(supabase, order.id, {
@@ -195,5 +325,7 @@ export async function markOrderPaidByReference(
 
   await dispatchMetaCapiPurchaseIfNeeded(supabase, order.id, { source }).catch(() => {});
 
+  // The payment is claimed and side effects ran, but the order row was not marked paid.
+  if (orderErr) return { ok: false, reason: "order_update_failed" };
   return { ok: true, orderId: order.id };
 }

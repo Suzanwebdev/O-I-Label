@@ -1,6 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { fetchMoolrePaymentStatus } from "./providers/moolre";
-import { markOrderPaidByReference } from "./mark-order-paid";
+import { markOrderPaidByReference, repairIncompletePaidOrder } from "./mark-order-paid";
 
 export type ReconcileResult =
   | { ok: true; paid: true; idempotent?: boolean }
@@ -37,7 +37,15 @@ export async function reconcileOrderPayment(orderId: string): Promise<ReconcileR
   }
 
   if (payment.status === "paid") {
+    // Polls, success-page loads and admin confirmation reach a paid payment here, so the
+    // guarded repair for an order whose update failed after the claim also runs here.
+    await repairIncompletePaidOrder(supabase, orderId, "reconcile");
     return { ok: true, paid: true, idempotent: true };
+  }
+
+  // A refunded payment must never be re-confirmed, so Moolre is not asked again.
+  if (payment.status === "refunded") {
+    return { ok: true, paid: false, reason: "payment_refunded" };
   }
 
   if (payment.provider !== "moolre") {
