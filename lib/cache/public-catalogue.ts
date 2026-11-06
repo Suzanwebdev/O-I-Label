@@ -6,10 +6,18 @@ import { revalidateTag } from "next/cache";
  */
 export const PUBLIC_CATALOGUE_REVALIDATE_SECONDS = 300;
 
+/**
+ * Store-control settings change store availability, so they get a much shorter
+ * safety-net window than catalogue data (it also bounds the time-bucket key).
+ */
+export const STORE_CONTROL_CACHE_SECONDS = 60;
+
 export const PUBLIC_CACHE_TAGS = {
   products: "public-catalogue:products",
   categories: "public-catalogue:categories",
   homeContent: "public-home-content",
+  storeSettings: "public-store-control:settings",
+  storeBanners: "public-store-control:banners",
 } as const;
 
 export type PublicCacheTag = (typeof PUBLIC_CACHE_TAGS)[keyof typeof PUBLIC_CACHE_TAGS];

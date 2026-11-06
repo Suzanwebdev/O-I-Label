@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { ClosedPageShell } from "@/components/store-control/closed-page-shell";
 import { PresaleLaunchPage } from "@/components/store-control/presale-launch-page";
 import { defaultSupportingMessage } from "@/lib/store-control/constants";
-import { getEffectiveStoreControl } from "@/lib/store-control/server";
+import { getStorefrontStoreControl } from "@/lib/store-control/public-cache";
+import { closedPageShowsWaitlistCount } from "@/lib/store-control/waitlist-display";
 import { getHomepageCms } from "@/lib/data/homepage-cms";
 
 const SLUGS = new Set([
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   if (!SLUGS.has(slug)) return { robots: { index: false, follow: false } };
 
-  const control = await getEffectiveStoreControl();
+  const control = await getStorefrontStoreControl({ includeWaitlistCount: () => false });
   const crawlable =
     slug === "presale" ||
     control.storeStatus === "presale" ||
@@ -42,7 +43,12 @@ export default async function ClosedStatusPage({ params }: Props) {
   const { slug } = await params;
   if (!SLUGS.has(slug)) notFound();
 
-  const [control, cms] = await Promise.all([getEffectiveStoreControl(), getHomepageCms()]);
+  const [control, cms] = await Promise.all([
+    getStorefrontStoreControl({
+      includeWaitlistCount: (c) => closedPageShowsWaitlistCount(slug, c),
+    }),
+    getHomepageCms(),
+  ]);
 
   const instagramFromCms =
     cms.footer.social.find((s) => /instagram/i.test(`${s.label} ${s.href}`))?.href ?? null;

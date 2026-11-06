@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if (!checkoutGate.ok) {
     return NextResponse.json(
       { error: checkoutGate.error, code: checkoutGate.code },
-      { status: checkoutGate.status, headers: { "Retry-After": "3600" } }
+      { status: checkoutGate.status, headers: { "Retry-After": String(checkoutGate.retryAfterSeconds) } }
     );
   }
 

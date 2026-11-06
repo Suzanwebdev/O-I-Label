@@ -4,8 +4,10 @@ import {
   getStoreControlAdminSnapshot,
   parseStoreControlPatch,
   patchStoreSettings,
+  STORE_STATE_UNAVAILABLE_RETRY_SECONDS,
 } from "@/lib/store-control/server";
 import { invalidateStoreControlEdgeCache } from "@/lib/store-control/edge";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 
 export async function GET() {
   const authz = await getRequestAuthz();
@@ -16,7 +18,7 @@ export async function GET() {
   return NextResponse.json(snapshot);
 }
 
-export async function PATCH(request: Request) {
+async function updateStoreControl(request: Request) {
   const authz = await getRequestAuthz();
   if (!hasMinAdminRole(authz, "admin")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -34,11 +36,23 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
-  const result = await patchStoreSettings(parsed.patch);
-  if (!result) {
-    return NextResponse.json({ error: "Could not save store settings" }, { status: 500 });
+  const result = await patchStoreSettings(parsed.patch, { expectedUpdatedAt: parsed.expectedUpdatedAt });
+  if (result.ok || result.settled) invalidateStoreControlEdgeCache();
+  if (!result.ok) {
+    return NextResponse.json(
+      { error: result.error, code: result.code },
+      {
+        status: result.status,
+        headers: result.status === 503 ? { "Retry-After": String(STORE_STATE_UNAVAILABLE_RETRY_SECONDS) } : undefined,
+      }
+    );
   }
 
-  invalidateStoreControlEdgeCache();
-  return NextResponse.json(result);
+  return NextResponse.json({ settings: result.settings, control: result.control });
 }
+
+// Going live also disables banners, so both public store-control tags expire.
+export const PATCH = withPublicCacheExpiry(updateStoreControl, [
+  PUBLIC_CACHE_TAGS.storeSettings,
+  PUBLIC_CACHE_TAGS.storeBanners,
+]);

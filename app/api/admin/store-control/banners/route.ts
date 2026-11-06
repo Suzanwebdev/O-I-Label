@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { invalidateStoreControlEdgeCache } from "@/lib/store-control/edge";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 
-export async function POST(request: Request) {
+async function createBanner(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ banner: data });
 }
 
-export async function PATCH(request: Request) {
+async function updateBanner(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -100,7 +101,7 @@ export async function PATCH(request: Request) {
   return NextResponse.json({ banner: data });
 }
 
-export async function DELETE(request: Request) {
+async function deleteBanner(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -119,3 +120,9 @@ export async function DELETE(request: Request) {
   invalidateStoreControlEdgeCache();
   return NextResponse.json({ ok: true });
 }
+
+const BANNER_CACHE_TAGS = [PUBLIC_CACHE_TAGS.storeBanners] as const;
+
+export const POST = withPublicCacheExpiry(createBanner, BANNER_CACHE_TAGS);
+export const PATCH = withPublicCacheExpiry(updateBanner, BANNER_CACHE_TAGS);
+export const DELETE = withPublicCacheExpiry(deleteBanner, BANNER_CACHE_TAGS);

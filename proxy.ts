@@ -7,6 +7,8 @@ import { getStoreControlEdgeCached } from "@/lib/store-control/edge";
 import {
   isAlwaysAllowedPath,
   isCheckoutApiPath,
+  isCheckoutSuccessPath,
+  isPaymentStatusPoll,
   isStorefrontPath,
 } from "@/lib/store-control/paths";
 
@@ -37,7 +39,11 @@ export async function proxy(request: NextRequest) {
 
   const { control, settings } = await getStoreControlEdgeCached();
 
-  if (isCheckoutApiPath(pathname) && !control.checkoutAllowed) {
+  if (
+    isCheckoutApiPath(pathname) &&
+    !control.checkoutAllowed &&
+    !isPaymentStatusPoll(pathname, request.method)
+  ) {
     return NextResponse.json(
       { error: control.maintenanceMessage, code: "store_checkout_disabled" },
       { status: 503, headers: { "Retry-After": "3600" } }
@@ -57,7 +63,8 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  if (!control.browsingAllowed && isStorefrontPath(pathname)) {
+  // Customers with an existing payment can still reach their order confirmation.
+  if (!control.browsingAllowed && isStorefrontPath(pathname) && !isCheckoutSuccessPath(pathname)) {
     const slug = control.closedPageSlug ?? "maintenance";
     const url = request.nextUrl.clone();
     url.pathname = `/closed/${slug}`;
@@ -79,7 +86,8 @@ export async function proxy(request: NextRequest) {
 
   if (
     !control.checkoutAllowed &&
-    (pathname === "/checkout" || pathname.startsWith("/checkout/"))
+    (pathname === "/checkout" || pathname.startsWith("/checkout/")) &&
+    !isCheckoutSuccessPath(pathname)
   ) {
     const url = request.nextUrl.clone();
     if (control.storeStatus === "soft_close") {

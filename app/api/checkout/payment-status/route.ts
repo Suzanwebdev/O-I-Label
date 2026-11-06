@@ -36,15 +36,19 @@ export async function GET(request: Request) {
   ]);
 
   const paymentStatus = typeof payment?.status === "string" ? payment.status : "pending";
+  const refunded = paymentStatus === "refunded";
+  // The latest payment row is authoritative (a recorded refund keeps orders.paid_at set);
+  // paid_at only decides for orders that have no payment row.
   const paid =
-    paymentStatus === "paid" ||
-    Boolean(order?.paid_at) ||
-    (reconciled.ok && reconciled.paid);
+    !refunded &&
+    (paymentStatus === "paid" ||
+      (!payment && Boolean(order?.paid_at)) ||
+      (reconciled.ok && reconciled.paid));
 
   return NextResponse.json({
     ok: true,
     paid,
-    status: paid ? "paid" : paymentStatus === "failed" ? "failed" : "pending",
+    status: paid ? "paid" : refunded ? "refunded" : paymentStatus === "failed" ? "failed" : "pending",
     orderNumber: order?.order_number ?? null,
     reference: payment?.reference ?? null,
     reconciled: reconciled.ok && reconciled.paid,

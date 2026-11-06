@@ -3,12 +3,19 @@ import {
   applyScheduledTransitions,
   resolveEffectiveStoreControl,
 } from "@/lib/store-control/resolve";
-import type { EffectiveStoreControl, StoreBannerRow, StoreSettingsRow } from "@/lib/store-control/types";
+import type { EffectiveStoreControl, StoreSettingsRow } from "@/lib/store-control/types";
 import { isStoreStatus } from "@/lib/store-control/resolve";
 
 type CacheEntry = { at: number; control: EffectiveStoreControl; settings: StoreSettingsRow };
 let cache: CacheEntry | null = null;
 const TTL_MS = 15_000;
+
+/**
+ * Only the columns middleware access decisions and scheduled transitions read.
+ * Excludes secrets (private_access_password_hash) and display-only fields.
+ */
+export const MIDDLEWARE_STORE_SETTINGS_COLUMNS =
+  "store_status, browsing_enabled, checkout_enabled, maintenance_message, private_access_ips, maintenance_use_503, scheduled_activate_at, scheduled_deactivate_at, scheduled_status, revert_status";
 
 function edgeSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -95,17 +102,18 @@ export async function getStoreControlEdgeCached(): Promise<{
     return { control, settings };
   }
 
-  const [{ data: settingsData }, { data: bannersData }] = await Promise.all([
-    supabase.from("store_settings").select("*").eq("id", 1).maybeSingle(),
-    supabase.from("store_banners").select("*").order("sort_order"),
-  ]);
+  const { data: settingsData } = await supabase
+    .from("store_settings")
+    .select(MIDDLEWARE_STORE_SETTINGS_COLUMNS)
+    .eq("id", 1)
+    .maybeSingle();
 
   const settings = applyScheduledTransitions(
     mapRow((settingsData ?? { store_status: "live" }) as Record<string, unknown>)
   ).settings;
 
-  const banners = (bannersData ?? []) as StoreBannerRow[];
-  const control = resolveEffectiveStoreControl(settings, banners);
+  // Banners only drive the storefront announcement strip, never access decisions.
+  const control = resolveEffectiveStoreControl(settings, []);
   cache = { at: Date.now(), control, settings };
   return { control, settings };
 }
