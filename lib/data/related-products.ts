@@ -1,5 +1,10 @@
 import type { Product } from "@/lib/types";
-import { listProducts } from "@/lib/data/catalog";
+import {
+  getCatalogueSnapshot,
+  listProducts,
+  loadLiveAvailability,
+} from "@/lib/data/catalog";
+import { applyLiveAvailability, type LiveAvailability } from "@/lib/catalog/variant-stock";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 function isPurchasable(product: Product): boolean {
@@ -44,29 +49,63 @@ function scoreRelatedProduct(current: Product, candidate: Product, collectionPee
   return score;
 }
 
+/** Candidates in rank order: score descending, then name. Stock does not affect ranking. */
+export function rankRelatedCandidates(
+  current: Product,
+  catalog: Product[],
+  collectionPeers: Set<string>
+): Product[] {
+  return catalog
+    .filter((p) => p.id !== current.id)
+    .map((product) => ({ product, score: scoreRelatedProduct(current, product, collectionPeers) }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.product.name.localeCompare(b.product.name);
+    })
+    .map((r) => r.product);
+}
+
+/**
+ * First `limit` purchasable products in rank order. Live stock is read only for
+ * successive batches of top-ranked candidates until enough are purchasable.
+ * Returns null if live availability cannot be verified.
+ */
+export async function pickPurchasableInRankOrder(
+  ranked: Product[],
+  limit: number,
+  loadLive: (productIds: string[]) => Promise<LiveAvailability | null>,
+  batchSize = Math.max(limit * 2, 1)
+): Promise<Product[] | null> {
+  const picked: Product[] = [];
+  for (let start = 0; start < ranked.length && picked.length < limit; start += batchSize) {
+    const batch = ranked.slice(start, start + batchSize);
+    const live = await loadLive(batch.map((p) => p.id));
+    if (!live) return null;
+    for (const product of applyLiveAvailability(batch, live)) {
+      if (isPurchasable(product)) picked.push(product);
+      if (picked.length >= limit) break;
+    }
+  }
+  return picked;
+}
+
 /**
  * Automatic related products: collection peers → same category → shared occasions → catalog fallback.
  */
 export async function getRelatedProducts(current: Product, limit = 10): Promise<Product[]> {
-  const [catalog, collectionPeers] = await Promise.all([
-    listProducts(),
+  const [snapshot, collectionPeers] = await Promise.all([
+    getCatalogueSnapshot(),
     getCollectionPeerIds(current.id),
   ]);
 
-  const candidates = catalog.filter((p) => p.id !== current.id && isPurchasable(p));
+  const ranked = rankRelatedCandidates(current, snapshot.products, collectionPeers);
+  if (snapshot.stockIsLive) {
+    return ranked.filter(isPurchasable).slice(0, limit);
+  }
 
-  const ranked = candidates
-    .map((product) => ({
-      product,
-      score: scoreRelatedProduct(current, product, collectionPeers),
-    }))
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return a.product.name.localeCompare(b.product.name);
-    });
+  const picked = await pickPurchasableInRankOrder(ranked, limit, loadLiveAvailability);
+  if (picked) return picked;
 
-  const withSignal = ranked.filter((r) => r.score > 0);
-  const pool = withSignal.length >= limit ? withSignal : ranked;
-
-  return pool.slice(0, limit).map((r) => r.product);
+  const fresh = await listProducts();
+  return rankRelatedCandidates(current, fresh, collectionPeers).filter(isPurchasable).slice(0, limit);
 }

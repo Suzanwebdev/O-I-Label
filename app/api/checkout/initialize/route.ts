@@ -3,6 +3,7 @@ import {
   incrementDiscountUsage,
   resolveCheckoutDiscount,
 } from "@/lib/checkout/discount";
+import { findInactiveProducts } from "@/lib/checkout/active-products";
 import { ensureCustomerRecord } from "@/lib/customers/ensure-customer";
 import { createOrderAccessToken } from "@/lib/auth/signed-token";
 import {
@@ -144,6 +145,25 @@ export async function POST(request: Request) {
   const variantMap = new Map(variants.map((v) => [v.id, v]));
   const missing = variantIds.filter((id) => !variantMap.has(id));
   if (missing.length) {
+    return NextResponse.json({ error: "One or more selected items are no longer available" }, { status: 409 });
+  }
+
+  const productActivity = await findInactiveProducts(
+    service,
+    variants.map((v) => String(v.product_id))
+  );
+  if (!productActivity.ok) {
+    return apiCustomerErrorResponse(500, {
+      operation: "checkout",
+      message: productActivity.error,
+      capture: {
+        category: "checkout",
+        surface: "storefront",
+        code: "products_load",
+      },
+    });
+  }
+  if (productActivity.inactiveProductIds.length) {
     return NextResponse.json({ error: "One or more selected items are no longer available" }, { status: 409 });
   }
 

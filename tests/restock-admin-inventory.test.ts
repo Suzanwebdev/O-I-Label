@@ -221,8 +221,8 @@ describe("checkout/payment stock deduction isolation", () => {
     assert.match(src, /initial_stock/);
     assert.match(src, /maybeNotifyRestockAfterAdminStockChange/);
     // Occasions-only PATCH must not gain stock notify wiring.
-    const patchIdx = src.indexOf("export async function PATCH");
-    const putIdx = src.indexOf("export async function PUT");
+    const patchIdx = src.indexOf("async function updateProductOccasions");
+    const putIdx = src.indexOf("async function updateProduct(");
     assert.ok(putIdx >= 0 && patchIdx > putIdx);
     const putBody = src.slice(putIdx, patchIdx);
     const patchBody = src.slice(patchIdx);

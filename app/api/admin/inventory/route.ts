@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import {
   applySingleVariantStockChange,
@@ -7,7 +8,7 @@ import {
   maybeNotifyRestockAfterAdminStockChange,
 } from "@/lib/restock-notifications/admin-side-effect";
 
-export async function PATCH(request: Request) {
+async function updateVariantStock(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.user) {
     return NextResponse.json({ error: "Sign in required. Open /admin again while logged in." }, { status: 401 });
@@ -85,3 +86,5 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export const PATCH = withPublicCacheExpiry(updateVariantStock, [PUBLIC_CACHE_TAGS.products]);

@@ -1,5 +1,5 @@
 import { listPublishedBlogPosts } from "@/lib/data/blog";
-import { listCategoriesFromDb, listProducts } from "@/lib/data/catalog";
+import { listCategoriesFromDb, listProductsForSitemap } from "@/lib/data/catalog";
 
 export type SitemapEntry = {
   path: string;
@@ -10,7 +10,7 @@ export type SitemapEntry = {
 
 export async function getStoreSitemapEntries(): Promise<SitemapEntry[]> {
   const [products, categories, blogPosts] = await Promise.all([
-    listProducts(),
+    listProductsForSitemap(),
     listCategoriesFromDb(),
     listPublishedBlogPosts(),
   ]);

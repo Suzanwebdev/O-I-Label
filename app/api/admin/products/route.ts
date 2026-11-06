@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 import { mergeProductCategoryIds, parseExtraCategoryIds } from "@/lib/catalog/product-categories";
 import { normalizeProductImagePaths } from "@/lib/catalog/product-image-url";
 import { createServiceRoleClient } from "@/lib/supabase/server";
@@ -78,7 +79,7 @@ function parseVariantId(raw: unknown): string | undefined {
   return UUID_RE.test(s) ? s : undefined;
 }
 
-export async function POST(request: Request) {
+async function createProduct(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -279,7 +280,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, productId: product.id }, { status: 201 });
 }
 
-export async function PUT(request: Request) {
+async function updateProduct(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -570,7 +571,7 @@ export async function PUT(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-export async function PATCH(request: Request) {
+async function updateProductOccasions(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -610,4 +611,8 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withPublicCacheExpiry(createProduct, [PUBLIC_CACHE_TAGS.products]);
+export const PUT = withPublicCacheExpiry(updateProduct, [PUBLIC_CACHE_TAGS.products]);
+export const PATCH = withPublicCacheExpiry(updateProductOccasions, [PUBLIC_CACHE_TAGS.products]);
 

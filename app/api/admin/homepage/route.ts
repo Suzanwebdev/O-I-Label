@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
-export async function PATCH(request: Request) {
+async function updateHomepageSections(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -34,3 +35,5 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ sections: data.sections });
 }
+
+export const PATCH = withPublicCacheExpiry(updateHomepageSections, [PUBLIC_CACHE_TAGS.homeContent]);

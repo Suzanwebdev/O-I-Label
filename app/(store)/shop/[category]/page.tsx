@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShopCatalog } from "@/components/shop/shop-catalog";
 import { toStorefrontProducts } from "@/lib/catalog/storefront-product";
-import { listCategoriesFromDb, listProducts } from "@/lib/data/catalog";
+import { listCategoriesFromDb, listProductsInCategory } from "@/lib/data/catalog";
 import { buildCategoryDescription, buildCategoryKeywords } from "@/lib/seo/descriptions";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 export default async function CategoryShopPage({ params }: CategoryPageProps) {
   const { category } = await params;
   const [catalog, categories] = await Promise.all([
-    listProducts(),
+    listProductsInCategory(category),
     listCategoriesFromDb(),
   ]);
   const products = toStorefrontProducts(catalog);
