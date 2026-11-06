@@ -14,7 +14,7 @@ export async function getEligibleItemsForCustomer(
 ): Promise<EligibleReviewItem[]> {
   const service = createServiceRoleClient();
 
-  let orderQuery = service
+  const orderQuery = service
     .from("orders")
     .select(
       `
