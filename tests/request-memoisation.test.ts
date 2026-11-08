@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
@@ -19,10 +19,27 @@ describe("request-scoped memoisation (react-server build)", () => {
       ["--conditions=react-server", "--import", "tsx", "tests/react-server/request-memoisation.rsc.ts"],
       { encoding: "utf8", env }
     );
-    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-    assert.match(result.stdout, /ℹ fail 0/);
+    assertChildSuitePassed(result);
   });
 });
+
+/**
+ * The child must exit 0 and print exactly one run summary with no failures and
+ * at least one pass. Node's spec reporter prints `ℹ fail 0`; TAP (Node 20's
+ * default without a TTY, as in CI) prints `# fail 0`.
+ */
+function assertChildSuitePassed(result: SpawnSyncReturns<string>): void {
+  const output = `${result.stdout}\n${result.stderr}`;
+  assert.equal(result.error, undefined, output);
+  assert.equal(result.status, 0, output);
+  const summaryCount = (name: "pass" | "fail"): number => {
+    const counts = [...result.stdout.matchAll(new RegExp(`^(?:ℹ|#) ${name} (\\d+)\\r?$`, "gm"))].map((m) => Number(m[1]));
+    assert.equal(counts.length, 1, `expected exactly one "${name}" summary line\n${output}`);
+    return counts[0]!;
+  };
+  assert.equal(summaryCount("fail"), 0, output);
+  assert.ok(summaryCount("pass") > 0, `no passing tests reported\n${output}`);
+}
 
 describe("request-scoped memoisation call sites", () => {
   const source = (file: string) => readFileSync(file, "utf8");
