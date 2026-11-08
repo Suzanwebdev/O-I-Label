@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import type { StorefrontListingProduct } from "@/lib/catalog/storefront-product";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,7 @@ import { isValidRestockEmail } from "@/lib/restock-notifications/helpers";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  product: StorefrontProduct;
+  product: StorefrontListingProduct;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Subscription source for analytics; defaults to PDP. */

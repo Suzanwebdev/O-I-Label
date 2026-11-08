@@ -16,8 +16,12 @@ export type ReviewListQuery = {
   pageSize?: number;
 };
 
+/** Strict mode throws on query errors instead of degrading, so a failed read is never cached. */
+export type ReviewQueryOptions = { strict?: boolean };
+
 export async function getPublishedReviewAggregates(
-  productId: string
+  productId: string,
+  options: ReviewQueryOptions = {}
 ): Promise<ReviewAggregates> {
   const service = createServiceRoleClient();
   const { data, error } = await service
@@ -25,6 +29,10 @@ export async function getPublishedReviewAggregates(
     .select("rating")
     .eq("product_id", productId)
     .eq("status", "published");
+
+  if (error && options.strict) {
+    throw new Error(`[reviews] aggregates query failed: ${error.message}`);
+  }
 
   const distribution: ReviewAggregates["distribution"] = {
     1: 0,
@@ -75,7 +83,8 @@ function mapMedia(rows: unknown): ReviewMediaPublic[] {
 }
 
 export async function listPublishedReviews(
-  query: ReviewListQuery
+  query: ReviewListQuery,
+  options: ReviewQueryOptions = {}
 ): Promise<{ reviews: ReviewPublic[]; total: number; page: number; pageSize: number }> {
   const page = Math.max(1, query.page ?? 1);
   const pageSize = Math.min(20, Math.max(1, query.pageSize ?? 8));
@@ -112,6 +121,7 @@ export async function listPublishedReviews(
 
   const { data, error, count } = await q.range(from, to);
   if (error) {
+    if (options.strict) throw new Error(`[reviews] list query failed: ${error.message}`);
     console.error("[reviews] listPublishedReviews:", error.message);
     return { reviews: [], total: 0, page, pageSize };
   }

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import type { StorefrontListingProduct } from "@/lib/catalog/storefront-product";
 import {
   isStorefrontProductInStock,
   primaryStorefrontVariant,
@@ -15,7 +15,7 @@ import { RestockNotifyListingCta } from "@/components/store/restock-notify-listi
 import { shouldBypassImageOptimization } from "@/lib/media-quality";
 import { HOME_BEST_SELLERS_BATCH } from "@/lib/shop-utils";
 
-export function BestSellersRow({ products }: { products: StorefrontProduct[] }) {
+export function BestSellersRow({ products }: { products: StorefrontListingProduct[] }) {
   const [visibleCount, setVisibleCount] = React.useState(HOME_BEST_SELLERS_BATCH);
 
   const items = React.useMemo(

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import type { StorefrontListingProduct } from "@/lib/catalog/storefront-product";
 import { filterProducts, sortProducts } from "@/lib/shop-utils";
 import type { ProductBadge } from "@/lib/types";
 
@@ -47,13 +47,13 @@ export function ShopCatalog({
   categorySlug,
   title,
 }: {
-  products: StorefrontProduct[];
+  products: StorefrontListingProduct[];
   categorySlug?: string;
   title?: string;
 }) {
   const router = useRouter();
   const sp = useSearchParams();
-  const [quickView, setQuickView] = React.useState<StorefrontProduct | null>(null);
+  const [quickView, setQuickView] = React.useState<StorefrontListingProduct | null>(null);
 
   const q = sp.get("q") ?? "";
   const tag = sp.get("tag") ?? "";

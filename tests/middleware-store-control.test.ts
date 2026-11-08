@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { before, beforeEach, describe, it } from "node:test";
 import type { NextRequest } from "next/server";
 import type { StoreBannerRow, StoreSettingsRow } from "../lib/store-control/types.ts";
@@ -473,5 +474,170 @@ describe("existing-payment access: payment-status poll and checkout success page
     for (const p of ["/checkout", "/checkout/success/", "/checkout/success/extra", "/checkout/successful", "/Checkout/success"]) {
       assert.equal(paths.isCheckoutSuccessPath(p), false, p);
     }
+  });
+});
+
+describe("store-control reads only for paths that use them", () => {
+  const STORE_STATES: Array<[string, Partial<StoreSettingsRow>]> = [
+    ["live", {}],
+    ["presale", { store_status: "presale", browsing_enabled: true, checkout_enabled: false }],
+    ["maintenance", { store_status: "maintenance", browsing_enabled: false, checkout_enabled: false }],
+    ["maintenance 503", { store_status: "maintenance", browsing_enabled: false, checkout_enabled: false, maintenance_use_503: true }],
+    ["private access", { store_status: "private_access", browsing_enabled: true, checkout_enabled: true }],
+    ["soft close", { store_status: "soft_close", browsing_enabled: true, checkout_enabled: false }],
+  ];
+
+  /** Paths whose decisions read store control: storefront pages (including cart and checkout) and the checkout API. */
+  const STORE_CONTROL_PATHS = [
+    "/",
+    "/shop",
+    "/shop/dresses",
+    "/product/silk-dress",
+    "/cart",
+    "/checkout",
+    "/checkout/success",
+    "/account",
+    "/blog",
+    "/about",
+    "/contact",
+    "/track-order",
+    "/policies/terms",
+    "/login",
+    "/signup",
+    "/api/checkout/initialize",
+    "/api/checkout/validate-discount",
+    "/api/checkout/payment-status",
+  ];
+
+  /** Paths that never used a store-control decision. */
+  const UNRELATED_PATHS = [
+    "/robots.txt",
+    "/sitemap.xml",
+    "/api/reviews",
+    "/api/reviews/eligible",
+    "/api/reviews/upload",
+    "/api/track-order",
+    "/api/restock-notifications/subscribe",
+    "/api/restock-notifications/unsubscribe",
+    "/api/cron/reconcile-payments",
+    "/forgot-password",
+    "/reset-password",
+    "/wp-login.php",
+    "/xmlrpc.php",
+    "/.env",
+    "/.git/config",
+    "/phpmyadmin/index.php",
+    "/apple-touch-icon-precomposed.png",
+    "/shopping",
+    "/cartography",
+    "/checkoutx",
+    "/accounts",
+    "/products/x",
+  ];
+
+  it("storefront, cart, checkout and checkout-API requests still read store control", async () => {
+    for (const path of STORE_CONTROL_PATHS) {
+      edge.invalidateStoreControlEdgeCache();
+      requests.length = 0;
+      await run(path);
+      assert.equal(settingsRequests().length, 1, `${path} reads store control`);
+    }
+  });
+
+  for (const [state, overrides] of STORE_STATES) {
+    it(`${state}: unrelated, crawler and probe paths pass through without reading store control`, async () => {
+      db.row = fullRow(overrides);
+      for (const path of UNRELATED_PATHS) {
+        for (const method of ["GET", "POST", "HEAD"]) {
+          assert.deepEqual(await run(path, { method }), { kind: "next" }, `${method} ${path}`);
+        }
+      }
+      assert.equal(settingsRequests().length, 0, "no store_settings request for any unrelated path");
+      assert.equal(requests.length, 0, "no Supabase request of any kind");
+    });
+  }
+
+  it("unrelated paths cannot reach the reader even when the store-state read would fail", async () => {
+    db.fail = true;
+    for (const path of UNRELATED_PATHS) {
+      assert.deepEqual(await run(path), { kind: "next" }, path);
+    }
+    assert.equal(settingsRequests().length, 0);
+  });
+
+  it("the 15-second cache still serves repeated storefront requests with one read", async () => {
+    for (const path of ["/shop", "/product/x", "/checkout", "/api/checkout/initialize", "/robots.txt", "/shop"]) {
+      await run(path);
+    }
+    assert.equal(settingsRequests().length, 1);
+  });
+
+  it("restrictions still apply on storefront and checkout paths in every closed state", async () => {
+    db.row = fullRow({ store_status: "maintenance", browsing_enabled: false, checkout_enabled: false, maintenance_message: "Back soon" });
+    assert.deepEqual(await run("/shop"), { kind: "rewrite", to: "/closed/maintenance", status: 200, retryAfter: "3600" });
+    assert.deepEqual(await run("/api/checkout/initialize", { method: "POST" }), {
+      kind: "json",
+      status: 503,
+      body: { error: "Back soon", code: "store_checkout_disabled" },
+    });
+    edge.invalidateStoreControlEdgeCache();
+    db.row = fullRow({ store_status: "private_access", browsing_enabled: true, checkout_enabled: true });
+    assert.deepEqual(await run("/product/x"), { kind: "rewrite", to: "/closed/private-access", status: 200, retryAfter: "3600" });
+    assert.deepEqual(await run("/cart"), { kind: "rewrite", to: "/closed/private-access", status: 200, retryAfter: "3600" });
+  });
+
+  it("always-allowed paths are unchanged and read nothing", async () => {
+    db.row = fullRow({ store_status: "maintenance", browsing_enabled: false, checkout_enabled: false });
+    for (const path of [
+      "/admin",
+      "/admin/products",
+      "/superadmin",
+      "/api/admin/products",
+      "/api/superadmin/site-settings",
+      "/api/webhooks/moolre",
+      "/api/newsletter/subscribe",
+      "/api/store-control/waitlist",
+      "/api/auth/anything",
+      "/auth/callback",
+      "/closed/maintenance",
+      "/maintenance",
+    ]) {
+      assert.deepEqual(await run(path), { kind: "next" }, path);
+    }
+    assert.equal(settingsRequests().length, 0);
+  });
+
+  it("updateSession still runs (one Auth check for a signed-in visitor) on every kind of path", async () => {
+    const previousAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "unit-test-anon-key";
+    const session = {
+      access_token: "visitor-token",
+      refresh_token: "visitor-refresh",
+      token_type: "bearer",
+      expires_in: 3600,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      user: { id: "visitor", email: "visitor@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {} },
+    };
+    const cookie = `sb-unit-test-auth-token=base64-${Buffer.from(JSON.stringify(session)).toString("base64url")}`;
+    const authChecks = () => requests.filter((u) => u.pathname === "/auth/v1/user").length;
+    try {
+      for (const path of ["/shop", "/api/checkout/initialize", "/robots.txt", "/sitemap.xml", "/api/reviews", "/wp-login.php", "/admin"]) {
+        requests.length = 0;
+        await run(path, { cookie });
+        assert.equal(authChecks(), 1, `${path} runs updateSession`);
+      }
+    } finally {
+      if (previousAnonKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousAnonKey;
+    }
+  });
+
+  it("the gate uses the existing path helpers and sits before the store-control read", () => {
+    const source = readFileSync("proxy.ts", "utf8");
+    const gate = source.indexOf("if (!isStorefrontPath(pathname) && !isCheckoutApiPath(pathname)) {");
+    const read = source.indexOf("await getStoreControlEdgeCached()");
+    assert.ok(gate > 0 && read > gate, "gate precedes the read");
+    assert.equal(source.match(/getStoreControlEdgeCached\(\)/g)?.length, 1, "single read site");
+    assert.match(source, /matcher: \[\s*"\/\(\(\?!_next\/static\|_next\/image\|favicon\.ico\|\.\*\\\\\.\(\?:svg\|png\|jpg\|jpeg\|gif\|webp\)\$\)\.\*\)",\s*\]/);
   });
 });

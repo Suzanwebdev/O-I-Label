@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { linkGuestOrdersToCustomer } from "@/lib/customers/ensure-customer";
 import { createServerSupabaseClient, createServiceRoleClient } from "@/lib/supabase/server";
 
@@ -11,13 +12,17 @@ export type AccountOrderSummary = {
   item_count: number;
 };
 
-export async function getAccountSession() {
+/**
+ * Request-scoped only (React `cache()`): the store layout and the page share one
+ * Auth lookup per request. Never move this into a shared or cross-request cache.
+ */
+export const getAccountSession = cache(async () => {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return { supabase, user };
-}
+});
 
 export async function getAccountUserEmail(): Promise<string | null> {
   const { user } = await getAccountSession();

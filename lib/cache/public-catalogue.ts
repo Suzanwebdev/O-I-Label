@@ -12,12 +12,18 @@ export const PUBLIC_CATALOGUE_REVALIDATE_SECONDS = 300;
  */
 export const STORE_CONTROL_CACHE_SECONDS = 60;
 
+/** The reviews switch hides or shows customer content, so it also gets a short window. */
+export const FEATURE_FLAGS_CACHE_SECONDS = 60;
+
 export const PUBLIC_CACHE_TAGS = {
   products: "public-catalogue:products",
   categories: "public-catalogue:categories",
   homeContent: "public-home-content",
   storeSettings: "public-store-control:settings",
   storeBanners: "public-store-control:banners",
+  reviews: "public-catalogue:reviews",
+  collections: "public-catalogue:collections",
+  featureFlags: "public-site-settings:feature-flags",
 } as const;
 
 export type PublicCacheTag = (typeof PUBLIC_CACHE_TAGS)[keyof typeof PUBLIC_CACHE_TAGS];
@@ -25,6 +31,15 @@ export type PublicCacheTag = (typeof PUBLIC_CACHE_TAGS)[keyof typeof PUBLIC_CACH
 /** Cache keys are scoped to the Supabase project so previews on other databases never share entries. */
 export function publicCacheKeyParts(name: string): string[] {
   return ["public-catalogue", "v1", process.env.NEXT_PUBLIC_SUPABASE_URL ?? "no-supabase-url", name];
+}
+
+/**
+ * Part of a cache key: entries are only reused within one window, so rows changed
+ * outside the admin API (which cannot expire tags) are at most one window old —
+ * unlike `revalidate` alone, which serves a stale entry once before refreshing.
+ */
+export function publicCacheWindow(seconds: number, now = Date.now()): number {
+  return Math.floor(now / (seconds * 1000));
 }
 
 /** Immediate expiry (not stale-while-revalidate) so the next storefront request reads fresh rows. */

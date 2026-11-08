@@ -298,12 +298,23 @@ export async function listProductsInCategory(categorySlug: string): Promise<Prod
   );
 }
 
-/** Sitemap needs product URLs only, so stock is never read. */
+/**
+ * Sitemap needs product URLs only, so stock is never read. Strict: throws when the
+ * catalogue cannot be read, so a failed read is never mistaken for an empty catalogue.
+ */
 export async function listProductsForSitemap(): Promise<Product[]> {
-  return (await getCatalogueSnapshot()).products;
+  try {
+    return await getCachedActiveProducts();
+  } catch {
+    return loadActiveProducts(true);
+  }
 }
 
-const readProductBySlug = cache(
+/**
+ * Product row by slug. `stockIsLive: false` means a data-cache row whose stock must
+ * not be shown; `true` means a fresh database row (cache unavailable) or a miss.
+ */
+export const readProductBySlug = cache(
   async (slug: string): Promise<{ product: Product | null; stockIsLive: boolean }> => {
     try {
       return { product: await getCachedActiveProductBySlug(slug), stockIsLive: false };
@@ -329,16 +340,28 @@ export const getProductBySlugFromDb = cache(async (slug: string): Promise<Produc
   if (!normalized) return null;
   const { product, stockIsLive } = await readProductBySlug(normalized);
   if (!product || stockIsLive) return product;
-  const live = await loadLiveAvailability([product.id]);
+  return applyLiveProductAvailability(normalized, product, await loadLiveAvailability([product.id]));
+});
+
+/**
+ * Overlay a live availability read (which must include `cached.id`) onto a cached
+ * product row: null when the product is no longer publicly visible, and a fresh
+ * database reload when the live read failed.
+ */
+export async function applyLiveProductAvailability(
+  slug: string,
+  cached: Product,
+  live: LiveAvailability | null
+): Promise<Product | null> {
   if (!live) {
     try {
-      return await loadActiveProductBySlug(normalized, false);
+      return await loadActiveProductBySlug(slug, false);
     } catch {
       return null;
     }
   }
-  return applyLiveAvailability([product], live)[0] ?? null;
-});
+  return applyLiveAvailability([cached], live)[0] ?? null;
+}
 
 type PublicCategory = {
   slug: string;
@@ -347,21 +370,35 @@ type PublicCategory = {
   image_url?: string | null;
 };
 
-const getCachedCategories = unstable_cache(
-  async (): Promise<PublicCategory[]> => {
-    const supabase = createPublicSupabaseClient();
-    const { data, error } = await supabase
-      .from("categories")
-      .select("slug, name, description, image_url")
-      .order("sort_order", { ascending: true });
-    if (error) throw new Error(`[catalog] categories query failed: ${error.message}`);
-    return data ?? [];
-  },
-  publicCacheKeyParts("categories"),
-  { revalidate: PUBLIC_CATALOGUE_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAGS.categories] }
-);
+async function loadCategories(): Promise<PublicCategory[]> {
+  const supabase = createPublicSupabaseClient();
+  const { data, error } = await supabase
+    .from("categories")
+    .select("slug, name, description, image_url")
+    .order("sort_order", { ascending: true });
+  if (error) throw new Error(`[catalog] categories query failed: ${error.message}`);
+  return data ?? [];
+}
 
-export async function listCategoriesFromDb(): Promise<PublicCategory[]> {
+const getCachedCategories = unstable_cache(loadCategories, publicCacheKeyParts("categories"), {
+  revalidate: PUBLIC_CATALOGUE_REVALIDATE_SECONDS,
+  tags: [PUBLIC_CACHE_TAGS.categories],
+});
+
+/**
+ * Sitemap categories: the real rows only, never the storefront defaults. Strict:
+ * throws when they cannot be read; an empty table is a valid empty result.
+ */
+export async function listCategoriesForSitemap(): Promise<PublicCategory[]> {
+  try {
+    return await getCachedCategories();
+  } catch {
+    return loadCategories();
+  }
+}
+
+/** Request-scoped: layout, page and metadata share one data-cache read per request. */
+export const listCategoriesFromDb = cache(async (): Promise<PublicCategory[]> => {
   try {
     const data = await getCachedCategories();
     if (data.length) return data;
@@ -370,4 +407,4 @@ export async function listCategoriesFromDb(): Promise<PublicCategory[]> {
   }
   const { mockCategories } = await import("@/lib/mock-data");
   return mockCategories;
-}
+});

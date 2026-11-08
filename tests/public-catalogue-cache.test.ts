@@ -193,7 +193,10 @@ describe("public catalogue caching source contracts", () => {
       ],
       [
         "app/api/admin/reviews/route.ts",
-        [/export const PATCH = withPublicCacheExpiry\(moderateReviewRequest, \[PUBLIC_CACHE_TAGS\.products\]\)/],
+        [
+          /REVIEW_CACHE_TAGS = \[PUBLIC_CACHE_TAGS\.products, PUBLIC_CACHE_TAGS\.reviews\]/,
+          /export const PATCH = withPublicCacheExpiry\(moderateReviewRequest, REVIEW_CACHE_TAGS\)/,
+        ],
       ],
     ];
     for (const [file, patterns] of expectations) {

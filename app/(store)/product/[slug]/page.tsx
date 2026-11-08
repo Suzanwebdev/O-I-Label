@@ -2,9 +2,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { getProductBySlugFromDb } from "@/lib/data/catalog";
 import { ProductViewTracker } from "@/components/analytics/product-view-tracker";
-import { toStorefrontProduct, toStorefrontProducts, primaryStorefrontVariant } from "@/lib/catalog/storefront-product";
+import {
+  primaryStorefrontVariant,
+  toStorefrontListingProducts,
+  toStorefrontProduct,
+} from "@/lib/catalog/storefront-product";
 import { Container } from "@/components/store/container";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductVariantForm } from "@/components/product/product-variant-form";
@@ -13,23 +16,19 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { buildProductDescription, buildProductSeoTitle } from "@/lib/seo/descriptions";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/json-ld";
 import { buildPageMetadata } from "@/lib/seo/metadata";
-import { getRelatedProducts } from "@/lib/data/related-products";
+import { getProductPageData } from "@/lib/data/related-products";
 import { ProductYouMayAlsoLike } from "@/components/product/product-you-may-also-like";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
 import { ProductReviewComposer } from "@/components/reviews/product-review-composer";
 import { StarRating } from "@/components/reviews/star-rating";
-import {
-  getPublishedReviewAggregates,
-  listPublishedReviews,
-} from "@/lib/reviews/queries";
-import { isReviewsFeatureEnabled } from "@/lib/reviews/feature";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getInitialProductReviews, getStorefrontReviewsEnabled } from "@/lib/reviews/public-cache";
+import { getAccountSession } from "@/lib/data/account-orders";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlugFromDb(decodeURIComponent(slug));
+  const { product } = await getProductPageData(decodeURIComponent(slug));
   if (!product) {
     return buildPageMetadata({
       title: "Product Not Found",
@@ -48,36 +47,41 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
+/** The reviews flag gates the aggregate and first-page queries; they never run when reviews are off. */
+async function loadInitialReviews(productId: string) {
+  const reviewsEnabled = await getStorefrontReviewsEnabled();
+  const { aggregates, listed } = reviewsEnabled
+    ? await getInitialProductReviews(productId)
+    : {
+        aggregates: {
+          average: null as number | null,
+          count: 0,
+          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        },
+        listed: { reviews: [], total: 0, page: 1, pageSize: 8 },
+      };
+  return { reviewsEnabled, aggregates, listed };
+}
+
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const product = await getProductBySlugFromDb(decodeURIComponent(slug));
+  const { product, related } = await getProductPageData(decodeURIComponent(slug));
 
   if (!product || product.variants.length === 0) {
     notFound();
   }
 
-  const relatedProducts = toStorefrontProducts(await getRelatedProducts(product, 10));
+  const [{ reviewsEnabled, aggregates, listed }, session] = await Promise.all([
+    loadInitialReviews(product.id),
+    getAccountSession(),
+  ]);
+
+  const relatedProducts = toStorefrontListingProducts(related);
   const storefrontProduct = toStorefrontProduct(product);
   const primaryVariant = primaryStorefrontVariant(storefrontProduct);
   const productPath = `/product/${product.slug}`;
 
-  const supabase = await createServerSupabaseClient();
-  const reviewsEnabled = await isReviewsFeatureEnabled();
-  const [aggregates, listed, userResult] = await Promise.all([
-    reviewsEnabled
-      ? getPublishedReviewAggregates(product.id)
-      : Promise.resolve({
-          average: null as number | null,
-          count: 0,
-          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        }),
-    reviewsEnabled
-      ? listPublishedReviews({ productId: product.id, page: 1, pageSize: 8, sort: "newest" })
-      : Promise.resolve({ reviews: [], total: 0, page: 1, pageSize: 8 }),
-    supabase.auth.getUser(),
-  ]);
-
-  const user = userResult.data.user;
+  const user = session.user;
   const displayName =
     (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name) ||
     (typeof user?.user_metadata?.name === "string" && user.user_metadata.name) ||

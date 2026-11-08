@@ -50,5 +50,10 @@ async function moderateReviewRequest(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-/** A database trigger recomputes products.rating / review_count when reviews are moderated. */
-export const PATCH = withPublicCacheExpiry(moderateReviewRequest, [PUBLIC_CACHE_TAGS.products]);
+/**
+ * Moderation changes which reviews are published, and a database trigger
+ * recomputes products.rating / review_count.
+ */
+const REVIEW_CACHE_TAGS = [PUBLIC_CACHE_TAGS.products, PUBLIC_CACHE_TAGS.reviews] as const;
+
+export const PATCH = withPublicCacheExpiry(moderateReviewRequest, REVIEW_CACHE_TAGS);

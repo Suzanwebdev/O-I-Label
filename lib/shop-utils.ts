@@ -1,4 +1,4 @@
-import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import type { StorefrontListingProduct, StorefrontProduct } from "@/lib/catalog/storefront-product";
 import { isVariantInStock } from "@/lib/catalog/storefront-product";
 import { productBelongsToCategorySlug } from "@/lib/catalog/product-categories";
 import { variantMatchesAnyShopColorFilter } from "@/lib/shop-color-filter";
@@ -17,7 +17,7 @@ export function occasionFromQueryParam(raw: string): OccasionTag | undefined {
   return OCCASION_TAGS.includes(k) ? k : undefined;
 }
 
-type CatalogProduct = StorefrontProduct | Product;
+type CatalogProduct = StorefrontListingProduct | StorefrontProduct | Product;
 
 export function filterProducts<T extends CatalogProduct>(
   products: T[],

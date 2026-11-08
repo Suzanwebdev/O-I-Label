@@ -229,11 +229,14 @@ describe("product page lookups", () => {
     assert.match(source, /const readProductBySlug = cache\(/);
     assert.match(source, /export const getProductBySlugFromDb = cache\(/);
     assert.match(source, /export const getCatalogueSnapshot = cache\(/);
+    const relatedSource = readFileSync("lib/data/related-products.ts", "utf8");
+    assert.match(relatedSource, /export const getProductPageData = cache\(/);
     const page = readFileSync("app/(store)/product/[slug]/page.tsx", "utf8");
     const metadataFn = page.slice(page.indexOf("export async function generateMetadata"), page.indexOf("export default"));
     const pageFn = page.slice(page.indexOf("export default async function ProductPage"));
-    assert.match(metadataFn, /getProductBySlugFromDb\(decodeURIComponent\(slug\)\)/);
-    assert.match(pageFn, /getProductBySlugFromDb\(decodeURIComponent\(slug\)\)/);
+    assert.match(metadataFn, /getProductPageData\(decodeURIComponent\(slug\)\)/);
+    assert.match(pageFn, /getProductPageData\(decodeURIComponent\(slug\)\)/);
+    assert.doesNotMatch(page, /getProductBySlugFromDb|getRelatedProducts/, "one shared loader, no second visibility check");
   });
 });
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz, hasMinAdminRole } from "@/lib/authz";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 import {
   getMergedFeatureFlags,
   setReviewsFeatureEnabled,
@@ -14,7 +15,7 @@ export async function GET() {
   return NextResponse.json({ ok: true, enabled: Boolean(flags.reviews) });
 }
 
-export async function PATCH(request: Request) {
+async function updateReviewsVisibility(request: Request) {
   const authz = await getRequestAuthz();
   if (!hasMinAdminRole(authz, "admin")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -42,3 +43,5 @@ export async function PATCH(request: Request) {
     );
   }
 }
+
+export const PATCH = withPublicCacheExpiry(updateReviewsVisibility, [PUBLIC_CACHE_TAGS.featureFlags]);

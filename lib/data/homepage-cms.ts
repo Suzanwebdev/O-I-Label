@@ -1,12 +1,14 @@
+import { cache } from "react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { getHomeContentSections } from "@/lib/data/home-content";
 import { parseHomepageCms, type HomepageCms } from "@/lib/home/homepage-cms";
 
-export async function getHomepageCms(): Promise<HomepageCms> {
+/** Request-scoped: the store layout and homepage share one parse per request. */
+export const getHomepageCms = cache(async (): Promise<HomepageCms> => {
   const sections = await getHomeContentSections();
   return parseHomepageCms(sections);
-}
+});
 
 export async function getHomepageCmsAdmin(): Promise<HomepageCms> {
   const supabase = createServiceRoleClient();

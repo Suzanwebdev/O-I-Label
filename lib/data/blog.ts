@@ -1,3 +1,4 @@
+import { createPublicSupabaseClient } from "@/lib/supabase/public";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type BlogPostSummary = {
@@ -55,6 +56,26 @@ export async function listPublishedBlogPosts(): Promise<BlogPostSummary[]> {
   } catch {
     return [];
   }
+}
+
+export type SitemapBlogPost = { slug: string; publishedAt: string | null };
+
+/**
+ * Sitemap blog entries: published posts only (`blog_public_read` allows anonymous
+ * reads of published rows), same order as the blog index. Uncached, so publishing
+ * or unpublishing shows immediately. Strict: throws when posts cannot be read.
+ */
+export async function listPublishedBlogPostsForSitemap(): Promise<SitemapBlogPost[]> {
+  const { data, error } = await createPublicSupabaseClient()
+    .from("blog_posts")
+    .select("slug, published_at")
+    .eq("published", true)
+    .order("published_at", { ascending: false, nullsFirst: false });
+  if (error) throw new Error(`[blog] sitemap posts query failed: ${error.message}`);
+  return (data ?? []).map((row) => ({
+    slug: String(row.slug),
+    publishedAt: typeof row.published_at === "string" ? row.published_at : null,
+  }));
 }
 
 export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPost | null> {
