@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import { ShopCatalog } from "@/components/shop/shop-catalog";
-import { toStorefrontProducts } from "@/lib/catalog/storefront-product";
+import { toStorefrontListingProducts } from "@/lib/catalog/storefront-product";
 import { listProducts } from "@/lib/data/catalog";
 import { shopMetadata } from "@/lib/seo/metadata";
 
 export const metadata = shopMetadata;
 
 export default async function ShopPage() {
-  const products = toStorefrontProducts(await listProducts());
+  const products = toStorefrontListingProducts(await listProducts());
 
   return (
     <Suspense fallback={<div className="px-6 py-10 text-sm text-muted-foreground">Loading catalog...</div>}>

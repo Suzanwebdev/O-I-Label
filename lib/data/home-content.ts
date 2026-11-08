@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import {
   PUBLIC_CACHE_TAGS,
@@ -30,13 +31,14 @@ const getCachedHomeContentRow = unstable_cache(
   { revalidate: PUBLIC_CATALOGUE_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAGS.homeContent] }
 );
 
-export async function getHomeContentRow(): Promise<HomeContentRow> {
+/** Request-scoped: layout, page and metadata share one data-cache read per request. */
+export const getHomeContentRow = cache(async (): Promise<HomeContentRow> => {
   try {
     return await getCachedHomeContentRow();
   } catch {
     return { sections: {}, updatedAt: null };
   }
-}
+});
 
 export async function getHomeContentSections(): Promise<Record<string, unknown>> {
   const { sections } = await getHomeContentRow();

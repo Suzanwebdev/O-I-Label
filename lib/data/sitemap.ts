@@ -1,19 +1,54 @@
-import { listPublishedBlogPosts } from "@/lib/data/blog";
-import { listCategoriesFromDb, listProductsForSitemap } from "@/lib/data/catalog";
+import { listPublishedBlogPostsForSitemap } from "@/lib/data/blog";
+import { listCategoriesForSitemap, listProductsForSitemap } from "@/lib/data/catalog";
 
 export type SitemapEntry = {
   path: string;
+  /** Only set when a real modification date is known; never the generation time. */
   lastModified?: Date;
   changeFrequency?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
   priority?: number;
 };
 
+/** A sitemap source could not be read, so the sitemap would be incomplete. */
+export class SitemapSourceError extends Error {
+  constructor(readonly sources: string[]) {
+    super(`[sitemap] unavailable sources: ${sources.join(", ")}`);
+    this.name = "SitemapSourceError";
+  }
+}
+
+function failureMessage(reason: unknown): string {
+  return reason instanceof Error ? reason.message : String(reason);
+}
+
 export async function getStoreSitemapEntries(): Promise<SitemapEntry[]> {
-  const [products, categories, blogPosts] = await Promise.all([
+  const [productsResult, categoriesResult, blogPostsResult] = await Promise.allSettled([
     listProductsForSitemap(),
-    listCategoriesFromDb(),
-    listPublishedBlogPosts(),
+    listCategoriesForSitemap(),
+    listPublishedBlogPostsForSitemap(),
   ]);
+
+  const failed: string[] = [];
+  for (const [source, result] of [
+    ["products", productsResult],
+    ["categories", categoriesResult],
+    ["blog posts", blogPostsResult],
+  ] as const) {
+    if (result.status === "rejected") {
+      failed.push(source);
+      console.error(`[sitemap] ${source} could not be read:`, failureMessage(result.reason));
+    }
+  }
+  if (
+    productsResult.status === "rejected" ||
+    categoriesResult.status === "rejected" ||
+    blogPostsResult.status === "rejected"
+  ) {
+    throw new SitemapSourceError(failed);
+  }
+  const products = productsResult.value;
+  const categories = categoriesResult.value;
+  const blogPosts = blogPostsResult.value;
 
   const staticPages: SitemapEntry[] = [
     { path: "", priority: 1, changeFrequency: "daily" },

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import type { StorefrontListingProduct } from "@/lib/catalog/storefront-product";
 import {
   isStorefrontProductInStock,
   listingBadgesForStorefrontProduct,
@@ -28,7 +28,7 @@ export function QuickViewModal({
   open,
   onOpenChange,
 }: {
-  product: StorefrontProduct | null;
+  product: StorefrontListingProduct | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {

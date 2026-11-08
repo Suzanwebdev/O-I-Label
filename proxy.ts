@@ -37,6 +37,11 @@ export async function proxy(request: NextRequest) {
     return updateSession(request);
   }
 
+  // Every store-control decision below applies only to storefront pages or the checkout API.
+  if (!isStorefrontPath(pathname) && !isCheckoutApiPath(pathname)) {
+    return updateSession(request);
+  }
+
   const { control, settings } = await getStoreControlEdgeCached();
 
   if (

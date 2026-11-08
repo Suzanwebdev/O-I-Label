@@ -1,11 +1,11 @@
-import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import type { StorefrontListingProduct } from "@/lib/catalog/storefront-product";
 import { sortProductSizes } from "@/lib/catalog/product-size-order";
 
 export const RESTOCK_PREF_ANY = "__any__";
 
 /** Notify Me is storefront-visible only when the entire product is sold out. */
 export function shouldShowRestockNotify(
-  product: Pick<StorefrontProduct, "is_active" | "variants">
+  product: Pick<StorefrontListingProduct, "is_active" | "variants">
 ): boolean {
   if (product.is_active === false) return false;
   if (!product.variants.length) return false;
@@ -22,11 +22,11 @@ export function preferenceToApiValue(value: string | null | undefined): string |
   return trimmed;
 }
 
-export function collectProductSizes(product: Pick<StorefrontProduct, "variants">): string[] {
+export function collectProductSizes(product: Pick<StorefrontListingProduct, "variants">): string[] {
   return sortProductSizes(product.variants.map((v) => v.size));
 }
 
-export function collectProductColors(product: Pick<StorefrontProduct, "variants">): string[] {
+export function collectProductColors(product: Pick<StorefrontListingProduct, "variants">): string[] {
   return Array.from(
     new Set(product.variants.map((v) => v.color).filter((c): c is string => Boolean(c?.trim())))
   );

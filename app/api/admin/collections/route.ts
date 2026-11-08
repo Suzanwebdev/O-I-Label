@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthz } from "@/lib/authz";
+import { PUBLIC_CACHE_TAGS, withPublicCacheExpiry } from "@/lib/cache/public-catalogue";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
 function toSlug(value: string) {
@@ -11,7 +12,7 @@ function toSlug(value: string) {
     .replace(/-+/g, "-");
 }
 
-export async function POST(request: Request) {
+async function createCollection(request: Request) {
   const authz = await getRequestAuthz();
   if (!authz.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -56,4 +57,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ collection: data }, { status: 201 });
 }
+
+export const POST = withPublicCacheExpiry(createCollection, [PUBLIC_CACHE_TAGS.collections]);
 

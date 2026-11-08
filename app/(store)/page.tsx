@@ -10,19 +10,18 @@ import { listProducts } from "@/lib/data/catalog";
 import { listCategoriesFromDb } from "@/lib/data/catalog";
 import { getHomeContentRow, getHomeContentSections } from "@/lib/data/home-content";
 import { getHomepageCms } from "@/lib/data/homepage-cms";
-import { heroSlidesForUi, parseHomepageCms, primaryHeroSlideSrc } from "@/lib/home/homepage-cms";
+import { heroSlidesForUi, primaryHeroSlideSrc } from "@/lib/home/homepage-cms";
 import { buildHomeMetadata } from "@/lib/seo/metadata";
 import { withOgCacheBuster } from "@/lib/seo/site";
 import { mergeShopOccasionItemsFromSections } from "@/lib/home/shop-by-occasion";
 import { buildHomeBestSellersList } from "@/lib/shop-utils";
-import { toStorefrontProducts } from "@/lib/catalog/storefront-product";
+import { toStorefrontListingProducts } from "@/lib/catalog/storefront-product";
 import { BestSellersRow } from "@/components/home/best-sellers-row";
 import { HomeHero } from "@/components/home/home-hero";
 import { OccasionSection } from "@/components/home/occasion-section";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { sections, updatedAt } = await getHomeContentRow();
-  const cms = parseHomepageCms(sections);
+  const [{ updatedAt }, cms] = await Promise.all([getHomeContentRow(), getHomepageCms()]);
   const ogImage = withOgCacheBuster(primaryHeroSlideSrc(cms.hero.slides), updatedAt);
   return buildHomeMetadata(ogImage);
 }
@@ -54,7 +53,7 @@ export default async function HomePage() {
   const heroSlides = heroSlidesForUi(cms.hero.slides);
   const labels = cms.homepage_sections;
 
-  const bestSellers = toStorefrontProducts(buildHomeBestSellersList(catalog));
+  const bestSellers = toStorefrontListingProducts(buildHomeBestSellersList(catalog));
 
   return (
     <>

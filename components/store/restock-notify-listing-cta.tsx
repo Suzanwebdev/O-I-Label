@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import type { StorefrontListingProduct } from "@/lib/catalog/storefront-product";
 import { Button } from "@/components/ui/button";
 import { RestockNotifyDialog } from "@/components/store/restock-notify-dialog";
 import { SoldOutMessage } from "@/components/store/sold-out-message";
@@ -9,7 +9,7 @@ import { shouldShowRestockNotify } from "@/lib/restock-notifications/ui";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  product: StorefrontProduct;
+  product: StorefrontListingProduct;
   /** Analytics source for the subscribe API. */
   source?: "card" | "quick_view";
   className?: string;

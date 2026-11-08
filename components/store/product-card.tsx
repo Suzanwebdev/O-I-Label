@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import type { StorefrontProduct } from "@/lib/catalog/storefront-product";
+import type { StorefrontListingProduct } from "@/lib/catalog/storefront-product";
 import {
   isStorefrontProductInStock,
   listingBadgesForStorefrontProduct,
@@ -22,7 +22,7 @@ export function ProductCard({
   className,
   priority,
 }: {
-  product: StorefrontProduct;
+  product: StorefrontListingProduct;
   className?: string;
   priority?: boolean;
 }) {

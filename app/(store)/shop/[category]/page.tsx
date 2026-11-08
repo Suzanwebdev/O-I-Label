@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShopCatalog } from "@/components/shop/shop-catalog";
-import { toStorefrontProducts } from "@/lib/catalog/storefront-product";
+import { toStorefrontListingProducts } from "@/lib/catalog/storefront-product";
 import { listCategoriesFromDb, listProductsInCategory } from "@/lib/data/catalog";
 import { buildCategoryDescription, buildCategoryKeywords } from "@/lib/seo/descriptions";
 import { buildPageMetadata } from "@/lib/seo/metadata";
@@ -39,7 +39,7 @@ export default async function CategoryShopPage({ params }: CategoryPageProps) {
     listProductsInCategory(category),
     listCategoriesFromDb(),
   ]);
-  const products = toStorefrontProducts(catalog);
+  const products = toStorefrontListingProducts(catalog);
 
   const selected = categories.find((c) => c.slug === category);
   if (!selected) {
