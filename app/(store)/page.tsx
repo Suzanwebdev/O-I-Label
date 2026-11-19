@@ -11,6 +11,7 @@ import { listCategoriesFromDb } from "@/lib/data/catalog";
 import { getHomeContentRow, getHomeContentSections } from "@/lib/data/home-content";
 import { getHomepageCms } from "@/lib/data/homepage-cms";
 import { heroSlidesForUi, primaryHeroSlideSrc } from "@/lib/home/homepage-cms";
+import { parseBestSellersProductOrder } from "@/lib/home/homepage-product-order";
 import { buildHomeMetadata } from "@/lib/seo/metadata";
 import { withOgCacheBuster } from "@/lib/seo/site";
 import { mergeShopOccasionItemsFromSections } from "@/lib/home/shop-by-occasion";
@@ -52,8 +53,11 @@ export default async function HomePage() {
   const categoriesToRender = categories.length ? categories : mockCategories;
   const heroSlides = heroSlidesForUi(cms.hero.slides);
   const labels = cms.homepage_sections;
+  const bestSellersOrder = parseBestSellersProductOrder(homeSections);
 
-  const bestSellers = toStorefrontListingProducts(buildHomeBestSellersList(catalog));
+  const bestSellers = toStorefrontListingProducts(
+    buildHomeBestSellersList(catalog, bestSellersOrder)
+  );
 
   return (
     <>

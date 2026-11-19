@@ -17,6 +17,7 @@ import {
   ShoppingBasket,
   Star,
   Store,
+  LayoutTemplate,
   Users,
   UsersRound,
   Workflow,
@@ -55,11 +56,15 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     ],
   },
   {
+    title: "Pages",
+    items: [{ href: "/admin/pages/homepage", label: "Homepage", icon: LayoutTemplate }],
+  },
+  {
     title: "Content",
     items: [
       { href: "/admin/blog", label: "Blog", icon: MessageSquareText },
       { href: "/admin/reviews", label: "Reviews", icon: Star },
-      { href: "/admin/homepage", label: "Homepage", icon: Store },
+      { href: "/admin/homepage", label: "Homepage CMS", icon: Store },
       { href: "/admin/discounts", label: "Discounts", icon: Percent },
       { href: "/admin/marketing", label: "Marketing", icon: Megaphone },
       { href: "/admin/newsletter", label: "Newsletter", icon: Mail },

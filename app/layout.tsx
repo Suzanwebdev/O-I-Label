@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { CartProvider } from "@/components/providers/cart-provider";
 import { WishlistProvider } from "@/components/providers/wishlist-provider";
@@ -7,18 +7,27 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { organizationJsonLd, webSiteJsonLd } from "@/lib/seo/json-ld";
 import { DEFAULT_KEYWORDS, SITE_LOCALE, SITE_NAME, getSiteUrl } from "@/lib/seo/site";
 
-const manrope = Manrope({
-  subsets: ["latin"],
+/** Self-hosted so CI/production builds do not depend on fonts.googleapis.com at build time. */
+const manrope = localFont({
+  src: "./fonts/manrope-normal-200800.woff2",
+  weight: "200 800",
   display: "swap",
   variable: "--font-manrope-next",
   preload: true,
 });
 
-const cormorantGaramond = Cormorant_Garamond({
-  subsets: ["latin"],
+const cormorantGaramond = localFont({
+  src: [
+    { path: "./fonts/cormorant-garamond-normal-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/cormorant-garamond-normal-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/cormorant-garamond-normal-600.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/cormorant-garamond-normal-700.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/cormorant-garamond-italic-400.woff2", weight: "400", style: "italic" },
+    { path: "./fonts/cormorant-garamond-italic-500.woff2", weight: "500", style: "italic" },
+    { path: "./fonts/cormorant-garamond-italic-600.woff2", weight: "600", style: "italic" },
+    { path: "./fonts/cormorant-garamond-italic-700.woff2", weight: "700", style: "italic" },
+  ],
   display: "swap",
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
   variable: "--font-cormorant-next",
   preload: true,
 });
