@@ -10,13 +10,15 @@ export const getHomepageCms = cache(async (): Promise<HomepageCms> => {
   return parseHomepageCms(sections);
 });
 
-export async function getHomepageCmsAdmin(): Promise<HomepageCms> {
+export async function getHomeContentSectionsAdmin(): Promise<Record<string, unknown>> {
   const supabase = createServiceRoleClient();
   const { data } = await supabase.from("home_content").select("sections").eq("id", 1).maybeSingle();
   const s = data?.sections;
-  const sections =
-    s && typeof s === "object" && !Array.isArray(s) ? (s as Record<string, unknown>) : {};
-  return parseHomepageCms(sections);
+  return s && typeof s === "object" && !Array.isArray(s) ? (s as Record<string, unknown>) : {};
+}
+
+export async function getHomepageCmsAdmin(): Promise<HomepageCms> {
+  return parseHomepageCms(await getHomeContentSectionsAdmin());
 }
 
 export async function getHomeContentSectionsRecord(): Promise<Record<string, unknown>> {

@@ -1,6 +1,7 @@
 import type { StorefrontListingProduct, StorefrontProduct } from "@/lib/catalog/storefront-product";
 import { isVariantInStock } from "@/lib/catalog/storefront-product";
 import { productBelongsToCategorySlug } from "@/lib/catalog/product-categories";
+import { applyHomepageProductOrder } from "@/lib/home/homepage-product-order";
 import { variantMatchesAnyShopColorFilter } from "@/lib/shop-color-filter";
 import type { OccasionTag, Product, ProductBadge } from "@/lib/types";
 
@@ -118,8 +119,11 @@ export function sortProducts<T extends CatalogProduct>(
 
 export const HOME_BEST_SELLERS_BATCH = 12;
 
-/** Tagged best sellers first, then popular products for homepage “Show more” batches. */
-export function buildHomeBestSellersList(products: Product[]): Product[] {
+/**
+ * Default homepage Best Sellers list: tagged best sellers first, then the rest.
+ * Used when no manual order is saved, and as the append order for newly uploaded products.
+ */
+export function buildDefaultHomeBestSellersList(products: Product[]): Product[] {
   const withVariants = products.filter((p) => p.variants.length > 0);
   const tagged = filterProducts(withVariants, { tag: "best_seller" });
   const ranked = sortProducts(withVariants, "best_sellers");
@@ -139,4 +143,14 @@ export function buildHomeBestSellersList(products: Product[]): Product[] {
     }
   }
   return list;
+}
+
+/**
+ * Homepage Best Sellers list.
+ * When `orderedIds` is set, products follow that sequence; unknown/new products append after.
+ */
+export function buildHomeBestSellersList(products: Product[], orderedIds: string[] = []): Product[] {
+  const withVariants = products.filter((p) => p.variants.length > 0);
+  const fallback = buildDefaultHomeBestSellersList(withVariants);
+  return applyHomepageProductOrder(withVariants, orderedIds, fallback);
 }
