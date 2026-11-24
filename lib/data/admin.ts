@@ -3,6 +3,10 @@ import { getNewsletterSubscriberCount } from "@/lib/newsletter/subscribers";
 import { mockCategories } from "@/lib/mock-data";
 import { pickProductImageFromJoin } from "@/lib/admin/order-item-image";
 import {
+  listUnifiedAdminContacts,
+  summarizeUnifiedContacts,
+} from "@/lib/admin/unified-contacts";
+import {
   formatOrderCustomerName,
   formatOrderLocationSummary,
 } from "@/lib/orders/format-address";
@@ -261,12 +265,18 @@ export type AdminOrdersKpi = {
   revenuePaid: number;
 };
 
+export type AdminContactSource = "account" | "order" | "waitlist" | "newsletter";
+
 export type AdminCustomerRow = {
+  /** Stable list id: customers.id when an account exists, otherwise `e:<email>` or `p:<phone>`. */
   id: string;
+  /** Linked auth customer id when this contact has an account. */
+  customerId: string | null;
   email: string;
   full_name: string | null;
   phone: string | null;
   tags: string[];
+  sources: AdminContactSource[];
   total_spend_ghs: number;
   orders_count: number;
   last_order_at: string | null;
@@ -279,6 +289,10 @@ export type AdminCustomersKpi = {
   repeat: number;
   highValue: number;
   avgLifetimeValue: number;
+  accounts: number;
+  waitlist: number;
+  newsletter: number;
+  withOrders: number;
 };
 
 const DEFAULT_COLLECTIONS = [
@@ -772,86 +786,10 @@ export async function getAdminOrdersKpi(): Promise<AdminOrdersKpi> {
 }
 
 export async function listAdminCustomers(): Promise<AdminCustomerRow[]> {
-  const supabase = createServiceRoleClient();
-  const [{ data: customers }, { data: orders }] = await Promise.all([
-    supabase
-      .from("customers")
-      .select("id, email, full_name, phone, tags, total_spend_ghs, created_at")
-      .order("created_at", { ascending: false })
-      .limit(1000),
-    supabase
-      .from("orders")
-      .select("id, customer_id, email, total_ghs, created_at")
-      .order("created_at", { ascending: false })
-      .limit(4000),
-  ]);
-
-  const byCustomerId = new Map<string, { count: number; spend: number; lastOrderAt: string | null }>();
-  const byEmail = new Map<string, { count: number; spend: number; lastOrderAt: string | null }>();
-
-  for (const order of orders ?? []) {
-    const spend = Number(order.total_ghs ?? 0);
-    const stamp = order.created_at ?? null;
-    if (order.customer_id) {
-      const agg = byCustomerId.get(order.customer_id) ?? { count: 0, spend: 0, lastOrderAt: null };
-      agg.count += 1;
-      agg.spend += spend;
-      if (!agg.lastOrderAt || (stamp && stamp > agg.lastOrderAt)) agg.lastOrderAt = stamp;
-      byCustomerId.set(order.customer_id, agg);
-    }
-    const email = (order.email ?? "").toLowerCase();
-    if (email) {
-      const agg = byEmail.get(email) ?? { count: 0, spend: 0, lastOrderAt: null };
-      agg.count += 1;
-      agg.spend += spend;
-      if (!agg.lastOrderAt || (stamp && stamp > agg.lastOrderAt)) agg.lastOrderAt = stamp;
-      byEmail.set(email, agg);
-    }
-  }
-
-  return (customers ?? []).map((c) => {
-    const email = (c.email ?? "").toLowerCase();
-    const direct = byCustomerId.get(c.id);
-    const fallback = email ? byEmail.get(email) : undefined;
-    const ordersCount = direct?.count ?? fallback?.count ?? 0;
-    const spend = direct?.spend ?? fallback?.spend ?? Number(c.total_spend_ghs ?? 0);
-    const lastOrderAt = direct?.lastOrderAt ?? fallback?.lastOrderAt ?? null;
-    return {
-      id: c.id,
-      email: c.email ?? "",
-      full_name: c.full_name ?? null,
-      phone: c.phone ?? null,
-      tags: Array.isArray(c.tags) ? c.tags.filter((t) => typeof t === "string") : [],
-      total_spend_ghs: spend,
-      orders_count: ordersCount,
-      last_order_at: lastOrderAt,
-      created_at: c.created_at ?? new Date(0).toISOString(),
-    };
-  });
+  return listUnifiedAdminContacts();
 }
 
 export async function getAdminCustomersKpi(): Promise<AdminCustomersKpi> {
-  const customers = await listAdminCustomers();
-  const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
-
-  let totalSpend = 0;
-  let repeat = 0;
-  let highValue = 0;
-  let new30d = 0;
-
-  for (const c of customers) {
-    totalSpend += c.total_spend_ghs;
-    if (c.orders_count >= 2) repeat += 1;
-    if (c.total_spend_ghs >= 1000) highValue += 1;
-    if (new Date(c.created_at).getTime() >= since) new30d += 1;
-  }
-
-  return {
-    total: customers.length,
-    new30d,
-    repeat,
-    highValue,
-    avgLifetimeValue: customers.length ? totalSpend / customers.length : 0,
-  };
+  return summarizeUnifiedContacts(await listAdminCustomers());
 }
 

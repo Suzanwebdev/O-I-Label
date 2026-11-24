@@ -22,10 +22,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import type { AdminCustomerRow } from "@/lib/data/admin";
+import type { AdminContactSource, AdminCustomerRow } from "@/lib/data/admin";
 
-type Segment = "all" | "new30d" | "repeat" | "highValue";
+type Segment =
+  | "all"
+  | "new30d"
+  | "repeat"
+  | "highValue"
+  | "account"
+  | "order"
+  | "waitlist"
+  | "newsletter";
 type MessageChannel = "email" | "sms" | "both";
+
+const SOURCE_LABELS: Record<AdminContactSource, string> = {
+  account: "Account",
+  order: "Order",
+  waitlist: "Waitlist",
+  newsletter: "Newsletter",
+};
 
 const MESSAGE_TEMPLATES: Array<{ id: string; label: string; subject: string; body: string }> = [
   {
@@ -58,6 +73,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   const [saveBusy, setSaveBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
+  const [detailEditable, setDetailEditable] = React.useState(false);
   const [detail, setDetail] = React.useState<{
     customer: {
       id: string;
@@ -91,7 +107,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   const [tagsInput, setTagsInput] = React.useState("");
 
   const [messageOpen, setMessageOpen] = React.useState(false);
-  const [messageIds, setMessageIds] = React.useState<string[]>([]);
+  const [messageRecipients, setMessageRecipients] = React.useState<AdminCustomerRow[]>([]);
   const [messageChannel, setMessageChannel] = React.useState<MessageChannel>("email");
   const [messageSubject, setMessageSubject] = React.useState("");
   const [messageBody, setMessageBody] = React.useState("");
@@ -105,12 +121,17 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
       if (segment === "new30d" && new Date(c.created_at).getTime() < since) return false;
       if (segment === "repeat" && c.orders_count < 2) return false;
       if (segment === "highValue" && c.total_spend_ghs < 1000) return false;
+      if (segment === "account" && !c.sources.includes("account")) return false;
+      if (segment === "order" && !(c.orders_count > 0 || c.sources.includes("order"))) return false;
+      if (segment === "waitlist" && !c.sources.includes("waitlist")) return false;
+      if (segment === "newsletter" && !c.sources.includes("newsletter")) return false;
       if (!key) return true;
       return (
         (c.email ?? "").toLowerCase().includes(key) ||
         (c.full_name ?? "").toLowerCase().includes(key) ||
         (c.phone ?? "").toLowerCase().includes(key) ||
-        c.tags.join(" ").toLowerCase().includes(key)
+        c.tags.join(" ").toLowerCase().includes(key) ||
+        c.sources.join(" ").toLowerCase().includes(key)
       );
     });
   }, [customers, q, segment]);
@@ -135,10 +156,10 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
     });
   }
 
-  function openMessageComposer(ids: string[]) {
+  function openMessageComposer(rows: AdminCustomerRow[]) {
     setError(null);
     setNotice(null);
-    setMessageIds(ids);
+    setMessageRecipients(rows);
     setMessageChannel("email");
     setMessageSubject(MESSAGE_TEMPLATES[0].subject);
     setMessageBody(MESSAGE_TEMPLATES[0].body);
@@ -149,28 +170,33 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   async function openDetail(customerId: string) {
     setOpenCustomerId(customerId);
     setDetail(null);
+    setDetailEditable(false);
     setDetailBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/customers/${customerId}`);
-      const json = (await res.json()) as { error?: string } & NonNullable<typeof detail>;
+      const res = await fetch(`/api/admin/customers/${encodeURIComponent(customerId)}`);
+      const json = (await res.json()) as {
+        error?: string;
+        editable?: boolean;
+      } & NonNullable<typeof detail>;
       if (!res.ok) {
-        setError(json.error ?? "Could not load customer");
+        setError(json.error ?? "Could not load contact");
         return;
       }
       setDetail(json);
+      setDetailEditable(Boolean(json.editable));
       setFullName(json.customer.full_name ?? "");
       setPhone(json.customer.phone ?? "");
       setTagsInput((json.customer.tags ?? []).join(", "));
     } catch {
-      setError("Network error while loading customer");
+      setError("Network error while loading contact");
     } finally {
       setDetailBusy(false);
     }
   }
 
   async function saveCustomer() {
-    if (!openCustomerId) return;
+    if (!openCustomerId || !detailEditable) return;
     setSaveBusy(true);
     setError(null);
     try {
@@ -178,7 +204,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
-      const res = await fetch(`/api/admin/customers/${openCustomerId}`, {
+      const res = await fetch(`/api/admin/customers/${encodeURIComponent(openCustomerId)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -202,7 +228,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   }
 
   async function sendMessage() {
-    if (!messageIds.length) return;
+    if (!messageRecipients.length) return;
     if (!messageBody.trim()) {
       setError("Message is required.");
       return;
@@ -211,9 +237,9 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
       setError("Subject is required for email.");
       return;
     }
-    if (messageIds.length > 1) {
+    if (messageRecipients.length > 1) {
       const ok = window.confirm(
-        `Send this ${messageChannel} message to ${messageIds.length} customers?`
+        `Send this ${messageChannel} message to ${messageRecipients.length} contacts?`
       );
       if (!ok) return;
     }
@@ -226,11 +252,16 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerIds: messageIds,
+          recipients: messageRecipients.map((r) => ({
+            id: r.id,
+            email: r.email,
+            phone: r.phone,
+            fullName: r.full_name,
+          })),
           channel: messageChannel,
           subject: messageSubject,
           message: messageBody,
-          confirm: messageIds.length > 1,
+          confirm: messageRecipients.length > 1,
           respectPromoOptOut: respectOptOut,
         }),
       });
@@ -245,7 +276,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
       }
       setNotice(json.summary ?? `Sent to ${json.sent ?? 0} recipient action(s).`);
       setMessageOpen(false);
-      if (messageIds.length > 1) {
+      if (messageRecipients.length > 1) {
         setSelected({});
       }
     } catch {
@@ -258,22 +289,27 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant={segment === "all" ? "default" : "outline"} onClick={() => setSegment("all")}>
-          All ({customers.length})
-        </Button>
-        <Button size="sm" variant={segment === "new30d" ? "default" : "outline"} onClick={() => setSegment("new30d")}>
-          New 30d
-        </Button>
-        <Button size="sm" variant={segment === "repeat" ? "default" : "outline"} onClick={() => setSegment("repeat")}>
-          Repeat buyers
-        </Button>
-        <Button
-          size="sm"
-          variant={segment === "highValue" ? "default" : "outline"}
-          onClick={() => setSegment("highValue")}
-        >
-          High value
-        </Button>
+        {(
+          [
+            ["all", `All (${customers.length})`],
+            ["account", "Accounts"],
+            ["order", "Orders"],
+            ["waitlist", "Waitlist"],
+            ["newsletter", "Newsletter"],
+            ["new30d", "New 30d"],
+            ["repeat", "Repeat buyers"],
+            ["highValue", "High value"],
+          ] as const
+        ).map(([key, label]) => (
+          <Button
+            key={key}
+            size="sm"
+            variant={segment === key ? "default" : "outline"}
+            onClick={() => setSegment(key)}
+          >
+            {label}
+          </Button>
+        ))}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Input
@@ -288,7 +324,12 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
       {selectedIds.length > 0 ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2">
           <p className="text-sm font-medium">{selectedIds.length} selected</p>
-          <Button size="sm" onClick={() => openMessageComposer(selectedIds)}>
+          <Button
+            size="sm"
+            onClick={() =>
+              openMessageComposer(filtered.filter((c) => selected[c.id]))
+            }
+          >
             Message selected
           </Button>
           <Button size="sm" variant="outline" onClick={() => setSelected({})}>
@@ -311,7 +352,8 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
                   aria-label="Select all filtered customers"
                 />
               </th>
-              <th className="px-3 py-2">Customer</th>
+              <th className="px-3 py-2">Contact</th>
+              <th className="px-3 py-2">Sources</th>
               <th className="px-3 py-2">Phone</th>
               <th className="px-3 py-2">Tags</th>
               <th className="px-3 py-2">Orders</th>
@@ -338,8 +380,17 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
                   />
                 </td>
                 <td className="px-3 py-3">
-                  <p className="font-medium">{c.full_name ?? "Unnamed customer"}</p>
-                  <p className="text-xs text-muted-foreground">{c.email}</p>
+                  <p className="font-medium">{c.full_name ?? "Unnamed contact"}</p>
+                  <p className="text-xs text-muted-foreground">{c.email || "No email"}</p>
+                </td>
+                <td className="px-3 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {c.sources.map((source) => (
+                      <span key={source} className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                        {SOURCE_LABELS[source]}
+                      </span>
+                    ))}
+                  </div>
                 </td>
                 <td className="px-3 py-3">{c.phone ?? "-"}</td>
                 <td className="px-3 py-3">
@@ -362,7 +413,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
                 </td>
                 <td className="px-3 py-3 text-right">
                   <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="outline" onClick={() => openMessageComposer([c.id])}>
+                    <Button size="sm" variant="outline" onClick={() => openMessageComposer([c])}>
                       Message
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => void openDetail(c.id)}>
@@ -374,8 +425,8 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
             ))}
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
-                  No customers found.
+                <td colSpan={9} className="px-3 py-8 text-center text-muted-foreground">
+                  No contacts found.
                 </td>
               </tr>
             ) : null}
@@ -386,32 +437,66 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
       <Sheet open={Boolean(openCustomerId)} onOpenChange={(open) => !open && setOpenCustomerId(null)}>
         <SheetContent className="w-full max-w-xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Customer detail</SheetTitle>
-            <SheetDescription>Profile, messaging, addresses, and order history.</SheetDescription>
+            <SheetTitle>Contact detail</SheetTitle>
+            <SheetDescription>
+              {detailEditable
+                ? "Account profile, messaging, addresses, and order history."
+                : "Read-only contact assembled from site activity. Messaging still works."}
+            </SheetDescription>
           </SheetHeader>
           {detailBusy ? (
-            <p className="mt-6 text-sm text-muted-foreground">Loading customer...</p>
+            <p className="mt-6 text-sm text-muted-foreground">Loading contact...</p>
           ) : detail ? (
             <div className="mt-6 space-y-6 text-sm">
               <section className="space-y-2">
                 <h3 className="font-medium">Profile</h3>
-                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" />
-                <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" />
+                <p className="text-xs text-muted-foreground">{detail.customer.email}</p>
+                <Input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Full name"
+                  disabled={!detailEditable}
+                />
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Phone"
+                  disabled={!detailEditable}
+                />
                 <Input
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
                   placeholder="Tags (comma separated)"
+                  disabled={!detailEditable}
                 />
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => void saveCustomer()} disabled={saveBusy}>
-                    {saveBusy ? "Saving..." : "Save customer"}
-                  </Button>
+                  {detailEditable ? (
+                    <Button size="sm" onClick={() => void saveCustomer()} disabled={saveBusy}>
+                      {saveBusy ? "Saving..." : "Save customer"}
+                    </Button>
+                  ) : null}
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => openMessageComposer([detail.customer.id])}
+                    onClick={() =>
+                      openMessageComposer([
+                        {
+                          id: detail.customer.id,
+                          customerId: detailEditable ? detail.customer.id : null,
+                          email: detail.customer.email ?? "",
+                          full_name: detail.customer.full_name,
+                          phone: detail.customer.phone,
+                          tags: detail.customer.tags ?? [],
+                          sources: [],
+                          total_spend_ghs: detail.customer.total_spend_ghs,
+                          orders_count: detail.orders.length,
+                          last_order_at: detail.orders[0]?.created_at ?? null,
+                          created_at: detail.customer.created_at,
+                        },
+                      ])
+                    }
                   >
-                    Message customer
+                    Message contact
                   </Button>
                 </div>
               </section>
@@ -448,7 +533,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
               </section>
             </div>
           ) : (
-            <p className="mt-6 text-sm text-muted-foreground">Select a customer to view details.</p>
+            <p className="mt-6 text-sm text-muted-foreground">Select a contact to view details.</p>
           )}
         </SheetContent>
       </Sheet>
@@ -457,7 +542,9 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {messageIds.length === 1 ? "Message customer" : `Message ${messageIds.length} customers`}
+              {messageRecipients.length === 1
+                ? "Message contact"
+                : `Message ${messageRecipients.length} contacts`}
             </DialogTitle>
             <DialogDescription>
               Send a promotional email and/or SMS. Newsletter opt-outs are skipped by default.
