@@ -53,6 +53,44 @@ export async function loadCustomersForMessaging(
   return unique.map((id) => byId.get(id)).filter((row): row is CustomerMessageRecipient => Boolean(row));
 }
 
+/** Normalize client-provided contacts (accounts, waitlist, orders, newsletter). */
+export function normalizeMessagingRecipients(
+  raw: Array<{
+    id?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    fullName?: string | null;
+    full_name?: string | null;
+  }>
+): CustomerMessageRecipient[] {
+  const out: CustomerMessageRecipient[] = [];
+  const seen = new Set<string>();
+
+  for (const row of raw) {
+    const email = typeof row.email === "string" ? row.email.trim() : "";
+    const phone = typeof row.phone === "string" ? row.phone.trim() : "";
+    const full_name =
+      (typeof row.fullName === "string" && row.fullName.trim()) ||
+      (typeof row.full_name === "string" && row.full_name.trim()) ||
+      null;
+    const id =
+      (typeof row.id === "string" && row.id.trim()) ||
+      (email ? `e:${normalizeNewsletterEmail(email)}` : phone ? `p:${phone.replace(/\D/g, "")}` : "");
+    if (!id || (!email && !phone)) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      id,
+      email: email || null,
+      phone: phone || null,
+      full_name,
+    });
+    if (out.length >= MAX_RECIPIENTS) break;
+  }
+
+  return out;
+}
+
 async function optedOutEmailSet(emails: string[]): Promise<Set<string>> {
   const normalized = [...new Set(emails.map((e) => normalizeNewsletterEmail(e)).filter(Boolean))];
   if (!normalized.length) return new Set();

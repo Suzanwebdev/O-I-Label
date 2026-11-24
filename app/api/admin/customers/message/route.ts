@@ -3,6 +3,7 @@ import { getRequestAuthz, hasMinAdminRole } from "@/lib/authz";
 import {
   customerMessageLimits,
   loadCustomersForMessaging,
+  normalizeMessagingRecipients,
   sendCustomerMessages,
   type CustomerMessageChannel,
 } from "@/lib/admin/customer-messaging";
@@ -10,7 +11,8 @@ import {
 /**
  * POST /api/admin/customers/message
  * Body: {
- *   customerIds: string[],
+ *   recipients?: { id?, email?, phone?, fullName? }[],
+ *   customerIds?: string[], // legacy / account-only
  *   channel: "email" | "sms" | "both",
  *   subject?: string,
  *   message: string,
@@ -32,6 +34,7 @@ export async function POST(request: Request) {
   }
 
   const b = body as {
+    recipients?: unknown;
     customerIds?: unknown;
     channel?: unknown;
     subject?: unknown;
@@ -40,21 +43,7 @@ export async function POST(request: Request) {
     respectPromoOptOut?: unknown;
   };
 
-  const customerIds = Array.isArray(b.customerIds)
-    ? b.customerIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
-    : [];
-
-  if (!customerIds.length) {
-    return NextResponse.json({ error: "customerIds is required" }, { status: 400 });
-  }
-
   const { maxRecipients } = customerMessageLimits();
-  if (customerIds.length > maxRecipients) {
-    return NextResponse.json(
-      { error: `Select at most ${maxRecipients} customers per send.` },
-      { status: 400 }
-    );
-  }
 
   const channelRaw = typeof b.channel === "string" ? b.channel.trim() : "";
   if (channelRaw !== "email" && channelRaw !== "sms" && channelRaw !== "both") {
@@ -67,17 +56,49 @@ export async function POST(request: Request) {
   const confirm = b.confirm === true;
   const respectPromoOptOut = b.respectPromoOptOut !== false;
 
-  if (customerIds.length > 1 && !confirm) {
-    return NextResponse.json(
-      { error: "Set confirm: true to send to multiple customers." },
-      { status: 400 }
-    );
-  }
-
   try {
-    const recipients = await loadCustomersForMessaging(customerIds);
+    let recipients = Array.isArray(b.recipients)
+      ? normalizeMessagingRecipients(
+          b.recipients as Array<{
+            id?: string | null;
+            email?: string | null;
+            phone?: string | null;
+            fullName?: string | null;
+            full_name?: string | null;
+          }>
+        )
+      : [];
+
     if (!recipients.length) {
-      return NextResponse.json({ error: "No matching customers found." }, { status: 404 });
+      const customerIds = Array.isArray(b.customerIds)
+        ? b.customerIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+        : [];
+      if (!customerIds.length) {
+        return NextResponse.json({ error: "recipients or customerIds is required" }, { status: 400 });
+      }
+      if (customerIds.length > maxRecipients) {
+        return NextResponse.json(
+          { error: `Select at most ${maxRecipients} customers per send.` },
+          { status: 400 }
+        );
+      }
+      recipients = await loadCustomersForMessaging(customerIds);
+    }
+
+    if (!recipients.length) {
+      return NextResponse.json({ error: "No matching contacts found." }, { status: 404 });
+    }
+    if (recipients.length > maxRecipients) {
+      return NextResponse.json(
+        { error: `Select at most ${maxRecipients} contacts per send.` },
+        { status: 400 }
+      );
+    }
+    if (recipients.length > 1 && !confirm) {
+      return NextResponse.json(
+        { error: "Set confirm: true to send to multiple contacts." },
+        { status: 400 }
+      );
     }
 
     const result = await sendCustomerMessages({
@@ -93,7 +114,7 @@ export async function POST(request: Request) {
       ok: result.sent > 0,
       ...result,
       total: recipients.length,
-      summary: `${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped (${recipients.length} customers)`,
+      summary: `${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped (${recipients.length} contacts)`,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Could not send message";
