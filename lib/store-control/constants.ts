@@ -159,6 +159,10 @@ export function defaultSupportingMessage(status: StoreStatus): string | null {
       return "An intimate first look at what comes next — reserved for those on the list.";
     case "soft_close":
       return "Explore the collection, save your favourites, and return when the boutique reopens.";
+    case "maintenance":
+    case "holiday_break":
+    case "inventory_update":
+      return "A refined collection. A fresh perspective. An experience worth waiting for.";
     default:
       return null;
   }
