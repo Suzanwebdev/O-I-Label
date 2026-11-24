@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/utils";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -10,10 +11,13 @@ export function CountdownDisplay({
   targetIso,
   className,
   label = "Launching in",
+  tone = "default",
 }: {
   targetIso: string;
   className?: string;
   label?: string;
+  /** `onMedia` keeps units legible over a full-bleed photograph. */
+  tone?: "default" | "onMedia";
 }) {
   const target = React.useMemo(() => Date.parse(targetIso), [targetIso]);
   const [now, setNow] = React.useState(() => Date.now());
@@ -38,19 +42,45 @@ export function CountdownDisplay({
     { label: "Seconds", value: seconds },
   ];
 
+  const onMedia = tone === "onMedia";
+
   return (
     <div className={className}>
-      <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
+      <p
+        className={cn(
+          "mb-3 text-[10px] uppercase tracking-[0.2em]",
+          onMedia ? "text-white/70" : "text-muted-foreground"
+        )}
+      >
+        {label}
+      </p>
       <div className="grid grid-cols-4 gap-2 sm:gap-3">
         {units.map((u) => (
           <div
             key={u.label}
-            className="rounded-[var(--radius-md)] border border-border bg-background/80 px-2 py-3 text-center shadow-[var(--shadow-soft)]"
+            className={cn(
+              "rounded-[var(--radius-md)] px-2 py-3 text-center",
+              onMedia
+                ? "border border-white/25 bg-white/10 backdrop-blur-[2px]"
+                : "border border-border bg-background/80 shadow-[var(--shadow-soft)]"
+            )}
           >
-            <p className="font-serif-display text-2xl leading-none text-foreground sm:text-3xl">
+            <p
+              className={cn(
+                "font-serif-display text-2xl leading-none sm:text-3xl",
+                onMedia ? "text-white" : "text-foreground"
+              )}
+            >
               {pad(u.value)}
             </p>
-            <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{u.label}</p>
+            <p
+              className={cn(
+                "mt-1 text-[10px] uppercase tracking-[0.16em]",
+                onMedia ? "text-white/65" : "text-muted-foreground"
+              )}
+            >
+              {u.label}
+            </p>
           </div>
         ))}
       </div>

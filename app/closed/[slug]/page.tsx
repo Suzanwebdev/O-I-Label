@@ -83,20 +83,40 @@ export default async function ClosedStatusPage({ params }: Props) {
   };
 
   const headline = control.maintenanceMessage;
-  const body =
+  const statusForDefaults =
     slug === "pre-launch"
-      ? control.supportingMessage ?? "A new chapter of O & I Label is almost here."
-      : slug === "private-access"
-        ? "This preview is reserved for invited guests."
-        : control.supportingMessage ?? control.maintenanceMessage;
+      ? ("pre_launch" as const)
+      : slug === "holiday"
+        ? ("holiday_break" as const)
+        : slug === "inventory"
+          ? ("inventory_update" as const)
+          : slug === "private-access"
+            ? ("private_access" as const)
+            : ("maintenance" as const);
+
+  // Prefer admin supporting copy; never fall back to the headline (avoids duplicated messaging).
+  const body =
+    slug === "private-access"
+      ? control.supportingMessage?.trim() || "This preview is reserved for invited guests."
+      : control.supportingMessage?.trim() ||
+        defaultSupportingMessage(statusForDefaults) ||
+        "";
 
   const eyebrowMap: Record<string, string> = {
-    maintenance: "Atelier pause",
+    maintenance: "A new chapter",
     "pre-launch": "Coming soon",
     holiday: "Holiday pause",
     inventory: "Collection update",
     "private-access": "Private preview",
     presale: "Presale preview",
+  };
+
+  const waitlistSourceBySlug: Record<string, string> = {
+    maintenance: "maintenance",
+    "pre-launch": "pre-launch",
+    holiday: "holiday",
+    inventory: "inventory",
+    "private-access": "private-access",
   };
 
   return (
@@ -118,6 +138,7 @@ export default async function ClosedStatusPage({ params }: Props) {
         waitlistCount: control.waitlistCount,
         showWaitlistCount: control.showWaitlistCount && slug === "pre-launch",
         presaleCtaLabel: control.presaleCtaLabel,
+        waitlistSource: waitlistSourceBySlug[slug] ?? slug,
       }}
     />
   );
