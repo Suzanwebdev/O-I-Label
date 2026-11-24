@@ -2,7 +2,7 @@ import { getEmailFooterLinks } from "@/lib/email/brand";
 import { dispatchStoreCampaignEmail } from "@/lib/email/resend";
 import { renderCustomerMessageEmail } from "@/lib/email/templates/customer-message";
 import { normalizeNewsletterEmail } from "@/lib/newsletter/subscribe-utils";
-import { normalizeSmsRecipient } from "@/lib/sms/order-notifications";
+import { formatBrandedSms, normalizeSmsRecipient } from "@/lib/sms/order-notifications";
 import { sendMoolreSms } from "@/lib/sms/moolre";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
@@ -242,7 +242,7 @@ export async function sendCustomerMessages(opts: {
         smsBatch.push({
           customerId: recipient.id,
           recipient: normalized,
-          message: `O&I Label: ${message}`.slice(0, 480),
+          message: formatBrandedSms(message, recipient.full_name),
           ref: `cust-${recipient.id.slice(0, 8)}`,
         });
         row.smsStatus = "sent"; // provisional; corrected after batch

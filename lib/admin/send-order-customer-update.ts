@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendOrderStatusEmail } from "@/lib/email/resend";
+import { formatOrderCustomerName } from "@/lib/orders/format-address";
 import {
   buildOrderStatusSmsBody,
   normalizeSmsRecipient,
@@ -54,7 +55,7 @@ export async function sendOrderCustomerUpdate(
 ): Promise<OrderCustomerNotifyResult | { error: string }> {
   const { data: order, error } = await service
     .from("orders")
-    .select("id, order_number, email, phone, status, notify_customer")
+    .select("id, order_number, email, phone, status, notify_customer, shipping_address")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -131,6 +132,7 @@ export async function sendOrderCustomerUpdate(
       orderNumber: order.order_number,
       status,
       trackingNumber,
+      firstName: formatOrderCustomerName(order.shipping_address),
     });
     const sms = await trySendOrderSms({
       recipient: phone,
