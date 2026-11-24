@@ -4,6 +4,17 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -14,15 +25,39 @@ import {
 import type { AdminCustomerRow } from "@/lib/data/admin";
 
 type Segment = "all" | "new30d" | "repeat" | "highValue";
+type MessageChannel = "email" | "sms" | "both";
+
+const MESSAGE_TEMPLATES: Array<{ id: string; label: string; subject: string; body: string }> = [
+  {
+    id: "promo",
+    label: "Promo",
+    subject: "Something special from O & I Label",
+    body: "We thought you'd love this — a fresh note from the boutique, made for you.",
+  },
+  {
+    id: "launch",
+    label: "Launch note",
+    subject: "We're opening soon",
+    body: "The next chapter of O & I Label is almost here. Stay close for early access.",
+  },
+  {
+    id: "custom",
+    label: "Blank",
+    subject: "",
+    body: "",
+  },
+];
 
 export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow[] }) {
   const router = useRouter();
   const [segment, setSegment] = React.useState<Segment>("all");
   const [q, setQ] = React.useState("");
+  const [selected, setSelected] = React.useState<Record<string, boolean>>({});
   const [openCustomerId, setOpenCustomerId] = React.useState<string | null>(null);
   const [detailBusy, setDetailBusy] = React.useState(false);
   const [saveBusy, setSaveBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [notice, setNotice] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<{
     customer: {
       id: string;
@@ -55,6 +90,14 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   const [phone, setPhone] = React.useState("");
   const [tagsInput, setTagsInput] = React.useState("");
 
+  const [messageOpen, setMessageOpen] = React.useState(false);
+  const [messageIds, setMessageIds] = React.useState<string[]>([]);
+  const [messageChannel, setMessageChannel] = React.useState<MessageChannel>("email");
+  const [messageSubject, setMessageSubject] = React.useState("");
+  const [messageBody, setMessageBody] = React.useState("");
+  const [respectOptOut, setRespectOptOut] = React.useState(true);
+  const [messageBusy, setMessageBusy] = React.useState(false);
+
   const filtered = React.useMemo(() => {
     const key = q.trim().toLowerCase();
     const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -71,6 +114,37 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
       );
     });
   }, [customers, q, segment]);
+
+  const selectedIds = React.useMemo(
+    () => filtered.filter((c) => selected[c.id]).map((c) => c.id),
+    [filtered, selected]
+  );
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((c) => selected[c.id]);
+
+  function toggleAllFiltered() {
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (allFilteredSelected) {
+        for (const c of filtered) delete next[c.id];
+      } else {
+        for (const c of filtered) next[c.id] = true;
+      }
+      return next;
+    });
+  }
+
+  function openMessageComposer(ids: string[]) {
+    setError(null);
+    setNotice(null);
+    setMessageIds(ids);
+    setMessageChannel("email");
+    setMessageSubject(MESSAGE_TEMPLATES[0].subject);
+    setMessageBody(MESSAGE_TEMPLATES[0].body);
+    setRespectOptOut(true);
+    setMessageOpen(true);
+  }
 
   async function openDetail(customerId: string) {
     setOpenCustomerId(customerId);
@@ -127,6 +201,60 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
     }
   }
 
+  async function sendMessage() {
+    if (!messageIds.length) return;
+    if (!messageBody.trim()) {
+      setError("Message is required.");
+      return;
+    }
+    if ((messageChannel === "email" || messageChannel === "both") && !messageSubject.trim()) {
+      setError("Subject is required for email.");
+      return;
+    }
+    if (messageIds.length > 1) {
+      const ok = window.confirm(
+        `Send this ${messageChannel} message to ${messageIds.length} customers?`
+      );
+      if (!ok) return;
+    }
+
+    setMessageBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/admin/customers/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerIds: messageIds,
+          channel: messageChannel,
+          subject: messageSubject,
+          message: messageBody,
+          confirm: messageIds.length > 1,
+          respectPromoOptOut: respectOptOut,
+        }),
+      });
+      const json = (await res.json()) as {
+        error?: string;
+        summary?: string;
+        sent?: number;
+      };
+      if (!res.ok) {
+        setError(json.error ?? "Could not send message");
+        return;
+      }
+      setNotice(json.summary ?? `Sent to ${json.sent ?? 0} recipient action(s).`);
+      setMessageOpen(false);
+      if (messageIds.length > 1) {
+        setSelected({});
+      }
+    } catch {
+      setError("Network error while sending message");
+    } finally {
+      setMessageBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -156,11 +284,33 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
         />
         <p className="text-sm text-muted-foreground">{filtered.length} customers</p>
       </div>
+
+      {selectedIds.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+          <p className="text-sm font-medium">{selectedIds.length} selected</p>
+          <Button size="sm" onClick={() => openMessageComposer(selectedIds)}>
+            Message selected
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setSelected({})}>
+            Clear
+          </Button>
+        </div>
+      ) : null}
+
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
+
       <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full min-w-[900px] text-left text-sm">
+        <table className="w-full min-w-[960px] text-left text-sm">
           <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
+              <th className="px-3 py-2 w-10">
+                <Checkbox
+                  checked={allFilteredSelected}
+                  onCheckedChange={() => toggleAllFiltered()}
+                  aria-label="Select all filtered customers"
+                />
+              </th>
               <th className="px-3 py-2">Customer</th>
               <th className="px-3 py-2">Phone</th>
               <th className="px-3 py-2">Tags</th>
@@ -174,17 +324,35 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
             {filtered.map((c) => (
               <tr key={c.id} className="border-t">
                 <td className="px-3 py-3">
+                  <Checkbox
+                    checked={Boolean(selected[c.id])}
+                    onCheckedChange={(v) =>
+                      setSelected((prev) => {
+                        const next = { ...prev };
+                        if (v) next[c.id] = true;
+                        else delete next[c.id];
+                        return next;
+                      })
+                    }
+                    aria-label={`Select ${c.full_name ?? c.email}`}
+                  />
+                </td>
+                <td className="px-3 py-3">
                   <p className="font-medium">{c.full_name ?? "Unnamed customer"}</p>
                   <p className="text-xs text-muted-foreground">{c.email}</p>
                 </td>
                 <td className="px-3 py-3">{c.phone ?? "-"}</td>
                 <td className="px-3 py-3">
                   <div className="flex flex-wrap gap-1">
-                    {c.tags.length ? c.tags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                        {tag}
-                      </span>
-                    )) : <span className="text-xs text-muted-foreground">No tags</span>}
+                    {c.tags.length ? (
+                      c.tags.map((tag) => (
+                        <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                          {tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No tags</span>
+                    )}
                   </div>
                 </td>
                 <td className="px-3 py-3">{c.orders_count}</td>
@@ -193,15 +361,20 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
                   {c.last_order_at ? new Date(c.last_order_at).toLocaleDateString() : "—"}
                 </td>
                 <td className="px-3 py-3 text-right">
-                  <Button size="sm" variant="outline" onClick={() => void openDetail(c.id)}>
-                    Detail
-                  </Button>
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="outline" onClick={() => openMessageComposer([c.id])}>
+                      Message
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => void openDetail(c.id)}>
+                      Detail
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
                   No customers found.
                 </td>
               </tr>
@@ -209,11 +382,12 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
           </tbody>
         </table>
       </div>
+
       <Sheet open={Boolean(openCustomerId)} onOpenChange={(open) => !open && setOpenCustomerId(null)}>
         <SheetContent className="w-full max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Customer detail</SheetTitle>
-            <SheetDescription>Profile, tags, addresses, and order history.</SheetDescription>
+            <SheetDescription>Profile, messaging, addresses, and order history.</SheetDescription>
           </SheetHeader>
           {detailBusy ? (
             <p className="mt-6 text-sm text-muted-foreground">Loading customer...</p>
@@ -223,10 +397,23 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
                 <h3 className="font-medium">Profile</h3>
                 <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" />
                 <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" />
-                <Input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="Tags (comma separated)" />
-                <Button size="sm" onClick={() => void saveCustomer()} disabled={saveBusy}>
-                  {saveBusy ? "Saving..." : "Save customer"}
-                </Button>
+                <Input
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="Tags (comma separated)"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => void saveCustomer()} disabled={saveBusy}>
+                    {saveBusy ? "Saving..." : "Save customer"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openMessageComposer([detail.customer.id])}
+                  >
+                    Message customer
+                  </Button>
+                </div>
               </section>
               <section>
                 <h3 className="font-medium">Addresses</h3>
@@ -265,6 +452,95 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={messageOpen} onOpenChange={setMessageOpen}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {messageIds.length === 1 ? "Message customer" : `Message ${messageIds.length} customers`}
+            </DialogTitle>
+            <DialogDescription>
+              Send a promotional email and/or SMS. Newsletter opt-outs are skipped by default.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="flex flex-wrap gap-2">
+              {MESSAGE_TEMPLATES.map((t) => (
+                <Button
+                  key={t.id}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setMessageSubject(t.subject);
+                    setMessageBody(t.body);
+                  }}
+                >
+                  {t.label}
+                </Button>
+              ))}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="msg-channel">Channel</Label>
+              <select
+                id="msg-channel"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={messageChannel}
+                onChange={(e) => setMessageChannel(e.target.value as MessageChannel)}
+              >
+                <option value="email">Email</option>
+                <option value="sms">SMS</option>
+                <option value="both">Email + SMS</option>
+              </select>
+            </div>
+
+            {messageChannel === "email" || messageChannel === "both" ? (
+              <div className="space-y-1">
+                <Label htmlFor="msg-subject">Subject</Label>
+                <Input
+                  id="msg-subject"
+                  value={messageSubject}
+                  onChange={(e) => setMessageSubject(e.target.value)}
+                  placeholder="Email subject"
+                />
+              </div>
+            ) : null}
+
+            <div className="space-y-1">
+              <Label htmlFor="msg-body">Message</Label>
+              <Textarea
+                id="msg-body"
+                value={messageBody}
+                onChange={(e) => setMessageBody(e.target.value)}
+                placeholder="Write your message…"
+                rows={6}
+              />
+              {messageChannel !== "email" ? (
+                <p className="text-xs text-muted-foreground">{messageBody.length}/480 SMS characters</p>
+              ) : null}
+            </div>
+
+            <label className="flex items-start gap-2 text-sm">
+              <Checkbox
+                checked={respectOptOut}
+                onCheckedChange={(v) => setRespectOptOut(Boolean(v))}
+              />
+              <span>Skip newsletter promo opt-outs (recommended)</span>
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setMessageOpen(false)} disabled={messageBusy}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void sendMessage()} disabled={messageBusy}>
+              {messageBusy ? "Sending…" : "Send"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
