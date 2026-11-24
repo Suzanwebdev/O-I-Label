@@ -6,6 +6,7 @@ import {
   validateFulfillmentChange,
 } from "@/lib/admin/order-status";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { formatOrderCustomerName } from "@/lib/orders/format-address";
 import {
   buildOrderStatusSmsBody,
   normalizeSmsRecipient,
@@ -183,7 +184,7 @@ export async function PATCH(request: Request) {
   if (statusChanged && smsStatuses.has(status)) {
     const { data: orderRow } = await service
       .from("orders")
-      .select("order_number, phone, notify_customer")
+      .select("order_number, phone, notify_customer, shipping_address")
       .eq("id", orderId)
       .maybeSingle();
 
@@ -207,6 +208,7 @@ export async function PATCH(request: Request) {
         orderNumber: orderRow.order_number,
         status,
         trackingNumber: tracking,
+        firstName: formatOrderCustomerName(orderRow.shipping_address),
       });
 
       const smsResult = await trySendOrderSms({

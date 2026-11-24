@@ -12,28 +12,53 @@ export function normalizeSmsRecipient(raw: string | null | undefined): string | 
   return null;
 }
 
+/** First token of a full name for SMS greetings. */
+export function smsGreetingName(fullName?: string | null): string | null {
+  const first = fullName?.trim().split(/\s+/).filter(Boolean)[0];
+  return first || null;
+}
+
+/**
+ * Brand + optional personal greeting + message body.
+ * Example: "O & I Label: Hi Ama, We received your payment..."
+ */
+export function formatBrandedSms(message: string, fullName?: string | null): string {
+  const body = message.trim();
+  const name = smsGreetingName(fullName);
+  const text = name ? `O & I Label: Hi ${name}, ${body}` : `O & I Label: ${body}`;
+  return text.slice(0, 480);
+}
+
 export function buildOrderStatusSmsBody(args: {
   orderNumber: string;
   status: string;
   trackingNumber?: string | null;
+  firstName?: string | null;
 }): string {
   const n = args.orderNumber;
+  let body: string;
   switch (args.status) {
     case "paid":
-      return `O&I Label: We received your payment for order ${n}. Thank you!`;
+      body = `We received your payment for order ${n}. Thank you!`;
+      break;
     case "processing":
-      return `O&I Label: Order ${n} is being prepared. We'll notify you when it ships.`;
+      body = `Order ${n} is being prepared. We'll notify you when it ships.`;
+      break;
     case "shipped": {
       const t = args.trackingNumber?.trim();
-      return t
-        ? `O&I Label: Order ${n} has shipped. Tracking: ${t}`
-        : `O&I Label: Order ${n} has shipped. Check your email for details.`;
+      body = t
+        ? `Order ${n} has shipped. Tracking: ${t}`
+        : `Order ${n} has shipped. Check your email for details.`;
+      break;
     }
     case "delivered":
-      return `O&I Label: Order ${n} is delivered. Thank you for shopping with us!`;
+      body = `Order ${n} is delivered. Thank you for shopping with us!`;
+      break;
     default:
-      return `O&I Label: Order ${n} update: ${args.status}.`;
+      body = `Order ${n} update: ${args.status}.`;
+      break;
   }
+  return formatBrandedSms(body, args.firstName);
 }
 
 export type OrderSmsNotifyResult =

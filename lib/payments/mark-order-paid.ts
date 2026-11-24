@@ -4,6 +4,7 @@ import { deductStockForPaidOrder } from "@/lib/inventory/deduct-order-stock";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { sendOrderConfirmationEmail } from "@/lib/email/resend";
 import { observeOperationalEvent } from "@/lib/errors/capture-event";
+import { formatOrderCustomerName } from "@/lib/orders/format-address";
 import {
   buildOrderStatusSmsBody,
   normalizeSmsRecipient,
@@ -170,7 +171,7 @@ export async function markOrderPaidByReference(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, email, phone, total_ghs, notify_customer, status, paid_at")
+    .select("id, order_number, email, phone, total_ghs, notify_customer, status, paid_at, shipping_address")
     .eq("id", payment.order_id)
     .single();
 
@@ -302,6 +303,7 @@ export async function markOrderPaidByReference(
         orderNumber: order.order_number,
         status: "paid",
         trackingNumber: null,
+        firstName: formatOrderCustomerName(order.shipping_address),
       });
       const smsResult = await trySendOrderSms({
         recipient: phone,
