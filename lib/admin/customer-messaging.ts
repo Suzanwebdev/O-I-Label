@@ -227,6 +227,7 @@ export async function sendCustomerMessages(opts: {
   const smsCounts = emptyChannelCounts();
 
   const smsBatch: { recipient: string; message: string; ref: string; customerId: string }[] = [];
+  const smsRefStamp = Date.now().toString(36);
 
   for (const recipient of opts.recipients) {
     const row: CustomerMessageResultRow = {
@@ -287,7 +288,8 @@ export async function sendCustomerMessages(opts: {
           customerId: recipient.id,
           recipient: normalized,
           message: formatBrandedSms(message, recipient.full_name),
-          ref: `cust-${recipient.id.slice(0, 8)}`,
+          // Moolre requires unique refs within (and across) requests; short id prefixes collide in bulk.
+          ref: `c${smsRefStamp}${smsBatch.length.toString(36)}${normalized.slice(-8)}`,
         });
         row.smsStatus = "sent"; // provisional; corrected after batch
         row.phone = normalized;
