@@ -131,7 +131,9 @@ export function ReviewForm({
               Reviews are for verified customers
             </p>
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-              Once you’ve purchased and received this piece, you can share your experience here.
+              Once your order has arrived, share your experience with us. As a thank-you for your
+              first eligible review, you’ll receive a personal 10% discount code towards your next
+              purchase.
             </p>
             <p className="pt-1 text-sm text-muted-foreground">
               <Link href="/account/orders" className="text-foreground underline underline-offset-4">
