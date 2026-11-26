@@ -67,6 +67,36 @@ const MESSAGE_TEMPLATES: Array<{ id: string; label: string; subject: string; bod
   },
 ];
 
+type MessageResultRow = {
+  email?: string | null;
+  phone?: string | null;
+  emailStatus?: "sent" | "failed" | "skipped";
+  smsStatus?: "sent" | "failed" | "skipped";
+  reason?: string;
+};
+
+const MESSAGE_FAILURE_PREVIEW_LIMIT = 20;
+
+function formatMessageFailureLines(results: MessageResultRow[]): string[] {
+  const lines: string[] = [];
+  for (const row of results) {
+    const emailLabel = row.email?.trim() || null;
+    const phoneLabel = row.phone?.trim() || null;
+    const reason = row.reason?.trim();
+    if (row.emailStatus === "failed") {
+      lines.push(
+        `Email failed: ${emailLabel ?? "unknown email"}${reason ? ` — ${reason}` : ""}`
+      );
+    }
+    if (row.smsStatus === "failed") {
+      lines.push(
+        `SMS failed: ${phoneLabel ?? emailLabel ?? "unknown phone"}${reason ? ` — ${reason}` : ""}`
+      );
+    }
+  }
+  return lines;
+}
+
 export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow[] }) {
   const router = useRouter();
   const [segment, setSegment] = React.useState<Segment>("all");
@@ -77,6 +107,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   const [saveBusy, setSaveBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
+  const [noticeFailures, setNoticeFailures] = React.useState<string[]>([]);
   const [detailEditable, setDetailEditable] = React.useState(false);
   const [detail, setDetail] = React.useState<{
     customer: {
@@ -175,6 +206,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   function openMessageComposer(rows: AdminCustomerRow[]) {
     setError(null);
     setNotice(null);
+    setNoticeFailures([]);
     setMessageRecipients(rows);
     setMessageChannel("email");
     setMessageSubject(MESSAGE_TEMPLATES[0].subject);
@@ -272,6 +304,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
     setMessageBusy(true);
     setError(null);
     setNotice(null);
+    setNoticeFailures([]);
     try {
       const res = await fetch("/api/admin/customers/message", {
         method: "POST",
@@ -294,12 +327,14 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
         error?: string;
         summary?: string;
         sent?: number;
+        results?: MessageResultRow[];
       };
       if (!res.ok) {
         setError(json.error ?? "Could not send message");
         return;
       }
       setNotice(json.summary ?? `Sent to ${json.sent ?? 0} recipient action(s).`);
+      setNoticeFailures(formatMessageFailureLines(json.results ?? []));
       setMessageOpen(false);
       if (messageRecipients.length > 1) {
         setSelected({});
@@ -364,7 +399,28 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
       ) : null}
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
+      {notice ? (
+        <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2">
+          <p className="text-sm text-emerald-800">{notice}</p>
+          {noticeFailures.length > 0 ? (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-red-700">
+                Failed deliveries ({noticeFailures.length})
+              </p>
+              <ul className="max-h-48 list-disc space-y-0.5 overflow-y-auto pl-4 text-xs text-red-700">
+                {noticeFailures.slice(0, MESSAGE_FAILURE_PREVIEW_LIMIT).map((line, i) => (
+                  <li key={`${i}-${line}`}>{line}</li>
+                ))}
+              </ul>
+              {noticeFailures.length > MESSAGE_FAILURE_PREVIEW_LIMIT ? (
+                <p className="text-xs text-red-700">
+                  …and {noticeFailures.length - MESSAGE_FAILURE_PREVIEW_LIMIT} more
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full min-w-[960px] text-left text-sm">
