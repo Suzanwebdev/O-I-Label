@@ -23,6 +23,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { AdminContactSource, AdminCustomerRow } from "@/lib/data/admin";
+import {
+  brandedSmsLength,
+  MOOLRE_SMS_CHAR_LIMIT,
+} from "@/lib/sms/order-notifications";
 
 type Segment =
   | "all"
@@ -113,6 +117,18 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   const [messageBody, setMessageBody] = React.useState("");
   const [respectOptOut, setRespectOptOut] = React.useState(true);
   const [messageBusy, setMessageBusy] = React.useState(false);
+
+  /** Longest branded SMS among selected recipients (includes O & I Label prefix). */
+  const smsBrandedLength = React.useMemo(() => {
+    if (!messageRecipients.length) return brandedSmsLength(messageBody, null);
+    return messageRecipients.reduce(
+      (max, recipient) => Math.max(max, brandedSmsLength(messageBody, recipient.full_name)),
+      brandedSmsLength(messageBody, null)
+    );
+  }, [messageBody, messageRecipients]);
+  const smsOverLimit =
+    (messageChannel === "sms" || messageChannel === "both") &&
+    smsBrandedLength > MOOLRE_SMS_CHAR_LIMIT;
 
   const filtered = React.useMemo(() => {
     const key = q.trim().toLowerCase();
@@ -235,6 +251,15 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
     }
     if ((messageChannel === "email" || messageChannel === "both") && !messageSubject.trim()) {
       setError("Subject is required for email.");
+      return;
+    }
+    if (
+      (messageChannel === "sms" || messageChannel === "both") &&
+      smsBrandedLength > MOOLRE_SMS_CHAR_LIMIT
+    ) {
+      setError(
+        `SMS is too long after branding (${smsBrandedLength}/${MOOLRE_SMS_CHAR_LIMIT}). Shorten the message so it fits including "O & I Label: Hi [Name],".`
+      );
       return;
     }
     if (messageRecipients.length > 1) {
@@ -605,7 +630,28 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
                 rows={6}
               />
               {messageChannel !== "email" ? (
-                <p className="text-xs text-muted-foreground">{messageBody.length}/480 SMS characters</p>
+                <div className="space-y-0.5">
+                  <p
+                    className={
+                      smsOverLimit
+                        ? "text-xs font-medium text-destructive"
+                        : "text-xs text-muted-foreground"
+                    }
+                  >
+                    {smsBrandedLength}/{MOOLRE_SMS_CHAR_LIMIT} SMS characters (includes O & I
+                    Label greeting)
+                  </p>
+                  {smsOverLimit ? (
+                    <p className="text-xs text-destructive">
+                      Shorten the message — Moolre rejects SMS over {MOOLRE_SMS_CHAR_LIMIT}{" "}
+                      characters.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Keep SMS short. Longer updates should go by email.
+                    </p>
+                  )}
+                </div>
               ) : null}
             </div>
 
@@ -622,7 +668,11 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
             <Button type="button" variant="outline" onClick={() => setMessageOpen(false)} disabled={messageBusy}>
               Cancel
             </Button>
-            <Button type="button" onClick={() => void sendMessage()} disabled={messageBusy}>
+            <Button
+              type="button"
+              onClick={() => void sendMessage()}
+              disabled={messageBusy || smsOverLimit}
+            >
               {messageBusy ? "Sending…" : "Send"}
             </Button>
           </DialogFooter>

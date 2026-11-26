@@ -2,7 +2,12 @@ import { getEmailFooterLinks } from "@/lib/email/brand";
 import { dispatchStoreCampaignEmail } from "@/lib/email/resend";
 import { renderCustomerMessageEmail } from "@/lib/email/templates/customer-message";
 import { normalizeNewsletterEmail } from "@/lib/newsletter/subscribe-utils";
-import { formatBrandedSms, normalizeSmsRecipient } from "@/lib/sms/order-notifications";
+import {
+  brandedSmsLength,
+  formatBrandedSms,
+  MOOLRE_SMS_CHAR_LIMIT,
+  normalizeSmsRecipient,
+} from "@/lib/sms/order-notifications";
 import { sendMoolreSms } from "@/lib/sms/moolre";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
@@ -157,8 +162,14 @@ export async function sendCustomerMessages(opts: {
     throw new Error("Subject is required for email.");
   }
   if (channel === "sms" || channel === "both") {
-    if (message.length > 480) {
-      throw new Error("SMS message is too long (max 480 characters).");
+    const longestBranded = opts.recipients.reduce(
+      (max, recipient) => Math.max(max, brandedSmsLength(message, recipient.full_name)),
+      brandedSmsLength(message, null)
+    );
+    if (longestBranded > MOOLRE_SMS_CHAR_LIMIT) {
+      throw new Error(
+        `SMS is too long after branding (${longestBranded}/${MOOLRE_SMS_CHAR_LIMIT} characters including "O & I Label: Hi [Name],"). Shorten the message.`
+      );
     }
   }
 

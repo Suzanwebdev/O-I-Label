@@ -12,10 +12,24 @@ export function normalizeSmsRecipient(raw: string | null | undefined): string | 
   return null;
 }
 
+/** Moolre SMS API limit (characters per message). */
+export const MOOLRE_SMS_CHAR_LIMIT = 160;
+
 /** First token of a full name for SMS greetings. */
 export function smsGreetingName(fullName?: string | null): string | null {
   const first = fullName?.trim().split(/\s+/).filter(Boolean)[0];
   return first || null;
+}
+
+/** Prefix applied before the admin/order SMS body. */
+export function brandedSmsPrefix(fullName?: string | null): string {
+  const name = smsGreetingName(fullName);
+  return name ? `O & I Label: Hi ${name}, ` : "O & I Label: ";
+}
+
+/** Full branded length including prefix (before any truncate). */
+export function brandedSmsLength(message: string, fullName?: string | null): number {
+  return brandedSmsPrefix(fullName).length + message.trim().length;
 }
 
 /**
@@ -23,10 +37,8 @@ export function smsGreetingName(fullName?: string | null): string | null {
  * Example: "O & I Label: Hi Ama, We received your payment..."
  */
 export function formatBrandedSms(message: string, fullName?: string | null): string {
-  const body = message.trim();
-  const name = smsGreetingName(fullName);
-  const text = name ? `O & I Label: Hi ${name}, ${body}` : `O & I Label: ${body}`;
-  return text.slice(0, 480);
+  const text = `${brandedSmsPrefix(fullName)}${message.trim()}`;
+  return text.slice(0, MOOLRE_SMS_CHAR_LIMIT);
 }
 
 export function buildOrderStatusSmsBody(args: {
