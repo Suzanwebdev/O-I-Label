@@ -138,6 +138,37 @@ async function optedOutSmsSet(phones: string[]): Promise<Set<string>> {
   return optedOut;
 }
 
+export type ChannelSendCounts = {
+  sent: number;
+  failed: number;
+  skipped: number;
+};
+
+function emptyChannelCounts(): ChannelSendCounts {
+  return { sent: 0, failed: 0, skipped: 0 };
+}
+
+/** Human-readable send summary with email/SMS broken out. */
+export function formatCustomerMessageSummary(opts: {
+  contacts: number;
+  channel: CustomerMessageChannel;
+  email: ChannelSendCounts;
+  sms: ChannelSendCounts;
+}): string {
+  const parts: string[] = [];
+  if (opts.channel === "email" || opts.channel === "both") {
+    parts.push(
+      `Email: ${opts.email.sent} sent, ${opts.email.failed} failed, ${opts.email.skipped} skipped`
+    );
+  }
+  if (opts.channel === "sms" || opts.channel === "both") {
+    parts.push(
+      `SMS: ${opts.sms.sent} sent, ${opts.sms.failed} failed, ${opts.sms.skipped} skipped`
+    );
+  }
+  return `${parts.join(" · ")} (${opts.contacts} contacts)`;
+}
+
 export async function sendCustomerMessages(opts: {
   recipients: CustomerMessageRecipient[];
   channel: CustomerMessageChannel;
@@ -149,6 +180,9 @@ export async function sendCustomerMessages(opts: {
   sent: number;
   failed: number;
   skipped: number;
+  email: ChannelSendCounts;
+  sms: ChannelSendCounts;
+  summary: string;
   results: CustomerMessageResultRow[];
   campaignId: string | null;
 }> {
@@ -189,9 +223,8 @@ export async function sendCustomerMessages(opts: {
     channel === "email" || channel === "both" ? await getEmailFooterLinks() : null;
 
   const results: CustomerMessageResultRow[] = [];
-  let sent = 0;
-  let failed = 0;
-  let skipped = 0;
+  const emailCounts = emptyChannelCounts();
+  const smsCounts = emptyChannelCounts();
 
   const smsBatch: { recipient: string; message: string; ref: string; customerId: string }[] = [];
 
@@ -207,11 +240,11 @@ export async function sendCustomerMessages(opts: {
       if (!email) {
         row.emailStatus = "skipped";
         row.reason = "Missing email";
-        skipped += 1;
+        emailCounts.skipped += 1;
       } else if (emailOptOut.has(normalizeNewsletterEmail(email))) {
         row.emailStatus = "skipped";
         row.reason = "Email promo opted out";
-        skipped += 1;
+        emailCounts.skipped += 1;
       } else if (footerLinks) {
         const rendered = renderCustomerMessageEmail({
           subject,
@@ -226,15 +259,15 @@ export async function sendCustomerMessages(opts: {
         });
         if ("sent" in result && result.sent) {
           row.emailStatus = "sent";
-          sent += 1;
+          emailCounts.sent += 1;
         } else if ("skipped" in result && result.skipped) {
           row.emailStatus = "skipped";
           row.reason = result.reason;
-          skipped += 1;
+          emailCounts.skipped += 1;
         } else {
           row.emailStatus = "failed";
           row.reason = "error" in result ? result.error : "Email failed";
-          failed += 1;
+          emailCounts.failed += 1;
         }
       }
     }
@@ -244,11 +277,11 @@ export async function sendCustomerMessages(opts: {
       if (!normalized) {
         row.smsStatus = "skipped";
         row.reason = row.reason ?? "Missing or invalid phone";
-        skipped += 1;
+        smsCounts.skipped += 1;
       } else if (smsOptOut.has(normalized)) {
         row.smsStatus = "skipped";
         row.reason = "SMS promo opted out";
-        skipped += 1;
+        smsCounts.skipped += 1;
       } else {
         smsBatch.push({
           customerId: recipient.id,
@@ -274,7 +307,7 @@ export async function sendCustomerMessages(opts: {
           row.smsStatus = "skipped";
           row.reason = "SMS sender ID not configured";
         }
-        skipped += 1;
+        smsCounts.skipped += 1;
       }
     } else {
       try {
@@ -282,7 +315,7 @@ export async function sendCustomerMessages(opts: {
           senderid,
           messages: smsBatch.map(({ recipient, message, ref }) => ({ recipient, message, ref })),
         });
-        sent += smsBatch.length;
+        smsCounts.sent += smsBatch.length;
       } catch (e) {
         const err = e instanceof Error ? e.message : "SMS send failed";
         for (const item of smsBatch) {
@@ -291,11 +324,21 @@ export async function sendCustomerMessages(opts: {
             row.smsStatus = "failed";
             row.reason = err;
           }
-          failed += 1;
+          smsCounts.failed += 1;
         }
       }
     }
   }
+
+  const sent = emailCounts.sent + smsCounts.sent;
+  const failed = emailCounts.failed + smsCounts.failed;
+  const skipped = emailCounts.skipped + smsCounts.skipped;
+  const summary = formatCustomerMessageSummary({
+    contacts: opts.recipients.length,
+    channel,
+    email: emailCounts,
+    sms: smsCounts,
+  });
 
   let campaignId: string | null = null;
   try {
@@ -319,5 +362,14 @@ export async function sendCustomerMessages(opts: {
     /* non-fatal audit */
   }
 
-  return { sent, failed, skipped, results, campaignId };
+  return {
+    sent,
+    failed,
+    skipped,
+    email: emailCounts,
+    sms: smsCounts,
+    summary,
+    results,
+    campaignId,
+  };
 }

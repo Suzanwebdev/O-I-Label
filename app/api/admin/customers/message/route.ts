@@ -114,7 +114,7 @@ export async function POST(request: Request) {
       ok: result.sent > 0,
       ...result,
       total: recipients.length,
-      summary: `${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped (${recipients.length} contacts)`,
+      summary: result.summary,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Could not send message";
