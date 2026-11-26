@@ -46,8 +46,14 @@ export function ProductVariantForm({ product }: { product: StorefrontProduct }) 
     new Set(product.variants.map((v) => v.color).filter(Boolean))
   ) as string[];
 
-  const [size, setSize] = React.useState(sizes[0] ?? "");
-  const [color, setColor] = React.useState(colors[0] ?? "");
+  // Prefer the first in-stock variant so Add to cart / Buy now start usable.
+  const defaultVariant =
+    product.variants.find((v) => isVariantInStock(v)) ?? product.variants[0];
+
+  const [size, setSize] = React.useState(defaultVariant?.size ?? sizes[0] ?? "");
+  const [color, setColor] = React.useState(
+    defaultVariant?.color ?? colors[0] ?? ""
+  );
   const [qty, setQty] = React.useState(1);
 
   const variant = React.useMemo(() => {
