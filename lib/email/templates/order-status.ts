@@ -3,6 +3,7 @@ import { escapeHtml } from "@/lib/orders/format-address";
 import type { OrderEmailContext } from "@/lib/email/fetch-order-email-context";
 import { orderStatusEmailCopy } from "@/lib/email/templates/copy";
 import { wrapTransactionalEmail } from "@/lib/email/templates/layout";
+import { buildReviewRequestPath } from "@/lib/email/templates/review-request";
 import {
   emailCtaButton,
   emailHeroBlock,
@@ -13,6 +14,19 @@ import {
   formatEmailDate,
 } from "@/lib/email/templates/parts";
 
+function deliveredReviewHref(ctx: OrderEmailContext): string {
+  const target = ctx.reviewTargets[0];
+  if (target) {
+    const path = buildReviewRequestPath({
+      productSlug: target.productSlug,
+      orderItemId: target.orderItemId,
+    });
+    if (path.startsWith("http")) return path;
+    return `${EMAIL_BRAND.siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
+  }
+  return `${EMAIL_BRAND.siteUrl}/account/orders`;
+}
+
 export function renderOrderStatusEmail(
   ctx: OrderEmailContext,
   status: string,
@@ -22,17 +36,21 @@ export function renderOrderStatusEmail(
   const copy = orderStatusEmailCopy(status);
   const links = footerLinks;
   const trackUrl = `${links.trackOrder}?order=${encodeURIComponent(ctx.orderNumber)}&email=${encodeURIComponent(ctx.email)}`;
-  const ctaHref =
-    status === "delivered"
-      ? links.shop
-      : status === "cancelled" || status === "refunded"
-        ? links.contact
-        : trackUrl;
+  const isDelivered = status === "delivered";
+  const ctaHref = isDelivered
+    ? deliveredReviewHref(ctx)
+    : status === "cancelled" || status === "refunded"
+      ? links.contact
+      : trackUrl;
 
   const tracking =
     trackingNumber?.trim() && (status === "shipped" || status === "delivered")
       ? emailTrackingBlock(trackingNumber.trim())
       : "";
+
+  const secondaryCta = isDelivered
+    ? `<p style="margin:16px 0 0 0;font-size:13px;line-height:1.65;color:${EMAIL_BRAND.colors.textMuted};" class="email-muted"><a href="${escapeHtml(links.shop)}" style="color:${EMAIL_BRAND.colors.text};text-decoration:underline;" class="email-text">Continue shopping</a></p>`
+    : "";
 
   const content = `
     ${emailHeroBlock({
@@ -56,12 +74,15 @@ export function renderOrderStatusEmail(
       totalGhs: ctx.totalGhs,
     })}
     ${emailCtaButton(copy.ctaLabel, ctaHref)}
-    <p style="margin:0;font-size:13px;line-height:1.65;color:${EMAIL_BRAND.colors.textMuted};" class="email-muted">Questions about your order? We are happy to help at <a href="mailto:${escapeHtml(links.supportEmail)}" style="color:${EMAIL_BRAND.colors.text};text-decoration:underline;" class="email-text">${escapeHtml(links.supportEmail)}</a>.</p>
+    ${secondaryCta}
+    <p style="margin:16px 0 0 0;font-size:13px;line-height:1.65;color:${EMAIL_BRAND.colors.textMuted};" class="email-muted">Questions about your order? We are happy to help at <a href="mailto:${escapeHtml(links.supportEmail)}" style="color:${EMAIL_BRAND.colors.text};text-decoration:underline;" class="email-text">${escapeHtml(links.supportEmail)}</a>.</p>
   `;
 
   return wrapTransactionalEmail({
     title: `${copy.subject} — ${ctx.orderNumber}`,
-    preheader: `${copy.headline} — Order ${ctx.orderNumber}`,
+    preheader: isDelivered
+      ? `Delivered — leave a review for 10% off (order ${ctx.orderNumber})`
+      : `${copy.headline} — Order ${ctx.orderNumber}`,
     contentHtml: content,
     footerLinks: links,
   });
@@ -82,17 +103,21 @@ export function renderOrderStatusEmailFallback(
     ? `${links.trackOrder}?order=${encodeURIComponent(opts.orderNumber)}&email=${encodeURIComponent(opts.email)}`
     : links.trackOrder;
   const tracking = opts.trackingNumber?.trim() ? emailTrackingBlock(opts.trackingNumber.trim()) : "";
+  const isDelivered = opts.status === "delivered";
+  const ctaHref = isDelivered ? `${EMAIL_BRAND.siteUrl}/account/orders` : trackUrl;
 
   const content = `
     ${emailHeroBlock({ eyebrow: copy.eyebrow, headline: copy.headline, body: copy.body })}
     ${emailOrderMetaCard({ orderNumber: opts.orderNumber, placedAt: "—" })}
     ${tracking}
-    ${emailCtaButton(copy.ctaLabel, trackUrl)}
+    ${emailCtaButton(copy.ctaLabel, ctaHref)}
   `;
 
   return wrapTransactionalEmail({
     title: `${copy.subject} — ${opts.orderNumber}`,
-    preheader: `Update for order ${opts.orderNumber}`,
+    preheader: isDelivered
+      ? `Delivered — leave a review for 10% off (order ${opts.orderNumber})`
+      : `Update for order ${opts.orderNumber}`,
     contentHtml: content,
     footerLinks: links,
   });

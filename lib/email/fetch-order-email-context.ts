@@ -12,6 +12,12 @@ export type OrderEmailLineItem = {
   lineTotalGhs: number;
 };
 
+export type OrderEmailReviewTarget = {
+  orderItemId: string;
+  productSlug: string | null;
+  productName: string;
+};
+
 export type OrderEmailContext = {
   orderId: string;
   orderNumber: string;
@@ -25,6 +31,8 @@ export type OrderEmailContext = {
   totalGhs: number;
   createdAt: string;
   items: OrderEmailLineItem[];
+  /** Line items that can deep-link into the PDP review composer. */
+  reviewTargets: OrderEmailReviewTarget[];
 };
 
 export async function fetchOrderEmailContext(
@@ -45,11 +53,12 @@ export async function fetchOrderEmailContext(
     .from("order_items")
     .select(
       `
+      id,
       name,
       quantity,
       unit_price_ghs,
       variants ( size, color ),
-      products ( product_images ( storage_path, sort_order ) )
+      products ( slug, product_images ( storage_path, sort_order ) )
     `
     )
     .eq("order_id", orderId);
@@ -59,8 +68,12 @@ export async function fetchOrderEmailContext(
       ? (order.shipping_address as Record<string, unknown>)
       : null;
 
-  const items: OrderEmailLineItem[] = (rows ?? []).map((row) => {
+  const items: OrderEmailLineItem[] = [];
+  const reviewTargets: OrderEmailReviewTarget[] = [];
+
+  for (const row of rows ?? []) {
     const variant = Array.isArray(row.variants) ? row.variants[0] : row.variants;
+    const products = Array.isArray(row.products) ? row.products[0] : row.products;
     const qty = Number(row.quantity ?? 1);
     const unit = Number(row.unit_price_ghs ?? 0);
     const size =
@@ -71,16 +84,31 @@ export async function fetchOrderEmailContext(
       variant && typeof variant === "object" && "color" in variant && variant.color
         ? String(variant.color)
         : null;
-    return {
-      name: String(row.name ?? "Item"),
+    const productName = String(row.name ?? "Item");
+    const productSlug =
+      products && typeof products === "object" && "slug" in products && products.slug
+        ? String(products.slug)
+        : null;
+    const orderItemId = typeof row.id === "string" ? row.id : null;
+
+    items.push({
+      name: productName,
       imageUrl: orderItemImageFromRow(row.products),
       size,
       color,
       quantity: qty,
       unitPriceGhs: unit,
       lineTotalGhs: unit * qty,
-    };
-  });
+    });
+
+    if (orderItemId) {
+      reviewTargets.push({
+        orderItemId,
+        productSlug,
+        productName,
+      });
+    }
+  }
 
   return {
     orderId: order.id as string,
@@ -95,5 +123,6 @@ export async function fetchOrderEmailContext(
     totalGhs: Number(order.total_ghs ?? 0),
     createdAt: String(order.created_at ?? new Date().toISOString()),
     items,
+    reviewTargets,
   };
 }

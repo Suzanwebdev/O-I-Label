@@ -68,7 +68,8 @@ export function buildOrderStatusSmsBody(args: {
       break;
     }
     case "delivered":
-      body = `Order ${n} is delivered. Thank you for shopping with us!`;
+      // Keep short for Moolre's 160-char limit; deep review links belong in email.
+      body = `Order ${n} delivered. Leave a review for 10% off: oandilabel.com`;
       break;
     default:
       body = `Order ${n} update: ${args.status}.`;

@@ -48,8 +48,8 @@ const statusCopy: Record<OrderStatusKey, OrderStatusEmailCopy> = {
     subject: "Delivered",
     eyebrow: "Arrived",
     headline: "Your order has been delivered",
-    body: "We hope you love every piece. If you need styling advice or support with your order, we are here for you.",
-    ctaLabel: "Shop new arrivals",
+    body: "We hope you love every piece. When you have a moment, leave a short review and enjoy 10% off your next order.",
+    ctaLabel: "Leave a review for 10% off",
   },
   cancelled: {
     subject: "Order update",
