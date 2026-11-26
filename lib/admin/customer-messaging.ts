@@ -31,6 +31,20 @@ export type CustomerMessageResultRow = {
 
 const MAX_RECIPIENTS = 100;
 
+/** Stay under Resend's default 10 requests/second for bulk admin email. */
+const RESEND_MIN_INTERVAL_MS = 150;
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function isResendRateLimitError(message: string | undefined): boolean {
+  if (!message) return false;
+  return /too many requests|rate limit/i.test(message);
+}
+
 export function customerMessageLimits() {
   return { maxRecipients: MAX_RECIPIENTS };
 }
@@ -225,6 +239,7 @@ export async function sendCustomerMessages(opts: {
   const results: CustomerMessageResultRow[] = [];
   const emailCounts = emptyChannelCounts();
   const smsCounts = emptyChannelCounts();
+  let emailApiCalls = 0;
 
   const smsBatch: { recipient: string; message: string; ref: string; customerId: string }[] = [];
   const smsRefStamp = Date.now().toString(36);
@@ -253,11 +268,29 @@ export async function sendCustomerMessages(opts: {
           firstName: recipient.full_name?.split(/\s+/)[0] ?? null,
           footerLinks,
         });
-        const result = await dispatchStoreCampaignEmail({
+        if (emailApiCalls > 0) {
+          await sleep(RESEND_MIN_INTERVAL_MS);
+        }
+        emailApiCalls += 1;
+        let result = await dispatchStoreCampaignEmail({
           to: email,
           subject: rendered.subject,
           html: rendered.html,
         });
+        // One backoff retry if we still hit Resend's per-second cap.
+        if (
+          !("sent" in result && result.sent) &&
+          !("skipped" in result && result.skipped) &&
+          isResendRateLimitError("error" in result ? result.error : undefined)
+        ) {
+          await sleep(1100);
+          emailApiCalls += 1;
+          result = await dispatchStoreCampaignEmail({
+            to: email,
+            subject: rendered.subject,
+            html: rendered.html,
+          });
+        }
         if ("sent" in result && result.sent) {
           row.emailStatus = "sent";
           emailCounts.sent += 1;
