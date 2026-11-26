@@ -149,7 +149,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
   const [respectOptOut, setRespectOptOut] = React.useState(true);
   const [messageBusy, setMessageBusy] = React.useState(false);
 
-  /** Longest branded SMS among selected recipients (includes O & I Label prefix). */
+  /** Longest SMS among selected recipients (includes Hi [Name], when available). */
   const smsBrandedLength = React.useMemo(() => {
     if (!messageRecipients.length) return brandedSmsLength(messageBody, null);
     return messageRecipients.reduce(
@@ -290,7 +290,7 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
       smsBrandedLength > MOOLRE_SMS_CHAR_LIMIT
     ) {
       setError(
-        `SMS is too long after branding (${smsBrandedLength}/${MOOLRE_SMS_CHAR_LIMIT}). Shorten the message so it fits including "O & I Label: Hi [Name],".`
+        `SMS is too long after greeting (${smsBrandedLength}/${MOOLRE_SMS_CHAR_LIMIT}). Shorten the message so it fits including "Hi [Name],".`
       );
       return;
     }
@@ -694,8 +694,8 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
                         : "text-xs text-muted-foreground"
                     }
                   >
-                    {smsBrandedLength}/{MOOLRE_SMS_CHAR_LIMIT} SMS characters (includes O & I
-                    Label greeting)
+                    {smsBrandedLength}/{MOOLRE_SMS_CHAR_LIMIT} SMS characters (includes Hi
+                    [Name], when available)
                   </p>
                   {smsOverLimit ? (
                     <p className="text-xs text-destructive">

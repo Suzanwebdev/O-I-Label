@@ -21,20 +21,24 @@ export function smsGreetingName(fullName?: string | null): string | null {
   return first || null;
 }
 
-/** Prefix applied before the admin/order SMS body. */
+/**
+ * Optional personal greeting before the SMS body.
+ * Brand is omitted — the SMS sender ID already identifies O & I Label.
+ * Example prefix: "Hi Ama, "
+ */
 export function brandedSmsPrefix(fullName?: string | null): string {
   const name = smsGreetingName(fullName);
-  return name ? `O & I Label: Hi ${name}, ` : "O & I Label: ";
+  return name ? `Hi ${name}, ` : "";
 }
 
-/** Full branded length including prefix (before any truncate). */
+/** Full SMS length including greeting prefix (before any truncate). */
 export function brandedSmsLength(message: string, fullName?: string | null): number {
   return brandedSmsPrefix(fullName).length + message.trim().length;
 }
 
 /**
- * Brand + optional personal greeting + message body.
- * Example: "O & I Label: Hi Ama, We received your payment..."
+ * Optional personal greeting + message body.
+ * Example: "Hi Ama, We received your payment..."
  */
 export function formatBrandedSms(message: string, fullName?: string | null): string {
   const text = `${brandedSmsPrefix(fullName)}${message.trim()}`;

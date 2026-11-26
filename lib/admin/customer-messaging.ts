@@ -202,7 +202,7 @@ export async function sendCustomerMessages(opts: {
     );
     if (longestBranded > MOOLRE_SMS_CHAR_LIMIT) {
       throw new Error(
-        `SMS is too long after branding (${longestBranded}/${MOOLRE_SMS_CHAR_LIMIT} characters including "O & I Label: Hi [Name],"). Shorten the message.`
+        `SMS is too long after greeting (${longestBranded}/${MOOLRE_SMS_CHAR_LIMIT} characters including "Hi [Name],"). Shorten the message.`
       );
     }
   }
