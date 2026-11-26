@@ -27,9 +27,18 @@ export function ProductGallery({
   const isInitialMain = active === 0;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:grid md:grid-cols-[4.6rem_minmax(0,1fr)] md:items-start">
-        <div className="order-2 flex gap-2.5 overflow-x-auto pb-1 md:order-1 md:flex-col md:overflow-visible md:pb-0">
+    <div className="min-w-0 space-y-4">
+      <div className="flex w-full min-w-0 flex-col gap-4 md:grid md:grid-cols-[4.6rem_minmax(0,1fr)] md:items-stretch">
+        <div
+          // Inline scrollbar hides beat global `* { scrollbar-width: thin }` in globals.css.
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          className={cn(
+            // Mobile: one horizontal row; bound width so extras scroll instead of shrinking or widening the page.
+            "order-2 flex w-full min-w-0 max-w-full flex-nowrap gap-2.5 overflow-x-auto overscroll-x-contain pb-1 [&::-webkit-scrollbar]:hidden",
+            // Desktop: same vertical strip, height locked to the main image column; overflow scrolls.
+            "md:order-1 md:h-0 md:min-h-full md:max-w-none md:flex-col md:overflow-x-hidden md:overflow-y-auto md:overscroll-y-contain md:pb-0"
+          )}
+        >
           {images.map((src, i) => (
             <button
               key={`${src}-${i}`}
