@@ -115,6 +115,7 @@ export function ReviewForm({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
+  const [rewardCode, setRewardCode] = React.useState<string | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   if (!selected) {
@@ -191,10 +192,13 @@ export function ReviewForm({
           media: photos.map(({ storage_path, public_url }) => ({ storage_path, public_url })),
         }),
       });
-      const json = (await res.json()) as { error?: string };
+      const json = (await res.json()) as { error?: string; rewardCode?: string };
       if (!res.ok) {
         setError(json.error ?? "Your review could not be submitted.");
         return;
+      }
+      if (typeof json.rewardCode === "string" && json.rewardCode.trim()) {
+        setRewardCode(json.rewardCode.trim());
       }
       setDone(true);
     } catch {
@@ -213,6 +217,18 @@ export function ReviewForm({
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           It’s pending moderation and will appear once approved.
         </p>
+        {rewardCode ? (
+          <div className="mt-5 rounded-[var(--radius-lg)] border border-border bg-muted/40 p-4">
+            <p className="text-sm font-medium text-foreground">
+              A thank-you gift for your first review
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              Use code <span className="font-semibold tracking-wide text-foreground">{rewardCode}</span>{" "}
+              for 10% off your next order. We’ve also sent it to your email and/or phone on
+              file.
+            </p>
+          </div>
+        ) : null}
       </div>
     );
   }

@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { assertEligibleOrderItem } from "@/lib/reviews/eligibility";
+import { grantFirstReviewReward } from "@/lib/reviews/first-review-reward";
 import {
   REVIEW_MAX_BODY,
   REVIEW_MAX_TITLE,
@@ -18,7 +19,7 @@ export type SubmitReviewInput = {
 };
 
 export async function submitReview(input: SubmitReviewInput): Promise<
-  | { ok: true; reviewId: string }
+  | { ok: true; reviewId: string; rewardCode?: string }
   | { ok: false; error: string; status?: number }
 > {
   const rating = Number(input.rating);
@@ -93,5 +94,21 @@ export async function submitReview(input: SubmitReviewInput): Promise<
     }
   }
 
-  return { ok: true, reviewId: String(review.id) };
+  const reviewId = String(review.id);
+  let rewardCode: string | undefined;
+  try {
+    const reward = await grantFirstReviewReward({
+      service,
+      customerId: input.customerId,
+      reviewId,
+    });
+    if (reward?.code) rewardCode = reward.code;
+  } catch (e) {
+    console.error(
+      "[reviews] first-reward failed:",
+      e instanceof Error ? e.message : "unknown"
+    );
+  }
+
+  return { ok: true, reviewId, rewardCode };
 }

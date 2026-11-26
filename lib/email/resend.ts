@@ -18,6 +18,7 @@ import {
   renderRestockAvailableEmail,
   restockAvailableEmailSubject,
 } from "@/lib/email/templates/restock-available";
+import { renderFirstReviewRewardEmail } from "@/lib/email/templates/first-review-reward";
 import { observeOperationalEvent } from "@/lib/errors/capture-event";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
@@ -207,6 +208,28 @@ export async function sendNewsletterWelcomeEmail(opts: { to: string }): Promise<
       html: renderNewsletterWelcomeEmail(footerLinks),
     },
     { purpose: "newsletter_welcome" }
+  );
+}
+
+export async function sendFirstReviewRewardEmail(opts: {
+  to: string;
+  code: string;
+  firstName?: string | null;
+}): Promise<EmailSendResult> {
+  const footerLinks = await getEmailFooterLinks();
+  const rendered = renderFirstReviewRewardEmail({
+    firstName: opts.firstName,
+    code: opts.code,
+    footerLinks,
+  });
+  return dispatchEmail(
+    {
+      from: fromAddress(),
+      to: opts.to,
+      subject: rendered.subject,
+      html: rendered.html,
+    },
+    { purpose: "first_review_reward", surface: "storefront" }
   );
 }
 

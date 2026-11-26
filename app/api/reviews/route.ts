@@ -134,5 +134,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: result.error }, { status: result.status ?? 400 });
   }
 
-  return NextResponse.json({ ok: true, reviewId: result.reviewId });
+  return NextResponse.json({
+    ok: true,
+    reviewId: result.reviewId,
+    ...(result.rewardCode ? { rewardCode: result.rewardCode } : {}),
+  });
 }
