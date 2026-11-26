@@ -160,6 +160,15 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
 
         {orderSummary ? <CheckoutSuccessSummary order={orderSummary} /> : null}
 
+        {!isDemo && state === "paid" ? (
+          <p className="mx-auto mt-6 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base">
+            <span className="font-medium text-foreground">A little thank-you for later</span>
+            <br />
+            Once your order arrives, share your experience with us. Your first eligible review earns
+            you a personal 10% discount code for your next purchase.
+          </p>
+        ) : null}
+
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button asChild>
             <Link href="/shop">Continue shopping</Link>
