@@ -36,8 +36,18 @@ type Segment =
   | "account"
   | "order"
   | "waitlist"
-  | "newsletter";
+  | "newsletter"
+  | "withEmail"
+  | "withContact";
 type MessageChannel = "email" | "sms" | "both";
+
+function hasEmail(c: AdminCustomerRow): boolean {
+  return Boolean(c.email?.trim());
+}
+
+function hasContact(c: AdminCustomerRow): boolean {
+  return Boolean(c.phone?.trim());
+}
 
 const SOURCE_LABELS: Record<AdminContactSource, string> = {
   account: "Account",
@@ -161,6 +171,9 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
     (messageChannel === "sms" || messageChannel === "both") &&
     smsBrandedLength > MOOLRE_SMS_CHAR_LIMIT;
 
+  const withEmailCount = React.useMemo(() => customers.filter(hasEmail).length, [customers]);
+  const withContactCount = React.useMemo(() => customers.filter(hasContact).length, [customers]);
+
   const filtered = React.useMemo(() => {
     const key = q.trim().toLowerCase();
     const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -172,6 +185,8 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
       if (segment === "order" && !(c.orders_count > 0 || c.sources.includes("order"))) return false;
       if (segment === "waitlist" && !c.sources.includes("waitlist")) return false;
       if (segment === "newsletter" && !c.sources.includes("newsletter")) return false;
+      if (segment === "withEmail" && !hasEmail(c)) return false;
+      if (segment === "withContact" && !hasContact(c)) return false;
       if (!key) return true;
       return (
         (c.email ?? "").toLowerCase().includes(key) ||
@@ -356,6 +371,8 @@ export function AdminCustomersTable({ customers }: { customers: AdminCustomerRow
             ["order", "Orders"],
             ["waitlist", "Waitlist"],
             ["newsletter", "Newsletter"],
+            ["withEmail", `Email (${withEmailCount})`],
+            ["withContact", `Contact (${withContactCount})`],
             ["new30d", "New 30d"],
             ["repeat", "Repeat buyers"],
             ["highValue", "High value"],
