@@ -28,13 +28,26 @@ function headerHtml(): string {
 </table>`;
 }
 
+function siteLinkLabel(siteUrl: string): string {
+  try {
+    return new URL(siteUrl).hostname.replace(/^www\./, "") || "oandilabel.com";
+  } catch {
+    return "oandilabel.com";
+  }
+}
+
 function footerHtml(links: EmailFooterLinks): string {
   const year = new Date().getFullYear();
+  const siteUrl = EMAIL_BRAND.siteUrl;
+  const siteLabel = siteLinkLabel(siteUrl);
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-top:8px;">
   <tr>
     <td align="center" style="padding:28px 24px 36px 24px;border-top:1px solid ${colors.border};" class="email-border-top">
-      <p style="margin:0 0 14px 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:${colors.textMuted};" class="email-muted">
+      <p style="margin:0 0 10px 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:${colors.textMuted};" class="email-muted">
         <a href="mailto:${escapeHtml(links.supportEmail)}" style="color:${colors.text};text-decoration:underline;" class="email-text">${escapeHtml(links.supportEmail)}</a>
+      </p>
+      <p style="margin:0 0 14px 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;letter-spacing:0.04em;color:${colors.text};" class="email-text">
+        <a href="${escapeHtml(siteUrl)}" target="_blank" rel="noopener noreferrer" style="color:${colors.text};text-decoration:underline;" class="email-text">${escapeHtml(siteLabel)}</a>
       </p>
       <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 16px auto;border-collapse:collapse;">
         <tr>
